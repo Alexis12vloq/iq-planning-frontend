@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Montserrat:wght@400;700&display=swap');
 .form-container {
   max-width: 900px;
   margin: 40px auto;
@@ -6,6 +7,9 @@
 mat-card {
   padding: 20px;
   border-radius: 8px;
+  height: 100%;
+  box-shadow: none;
+  border: none;
 }
 #title{
   width: 100%;
@@ -14,14 +18,48 @@ mat-card {
   justify-content: center;
   margin-bottom: 30px;
 }
+mat-card-title {
+  font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #3c5977;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+  margin-bottom: 0;
+}
 mat-form-field{
   margin: 10px;
 }
 /* Cada fila usará Flexbox para alinear sus columnas */
 .form-row {
   display: flex;
-  gap: 20px; /* Espacio horizontal entre las columnas */
-  margin-bottom: 20px; /* Espacio vertical entre filas */
+  gap: 0px;
+  margin-bottom: 20px;
+  flex-wrap: wrap; /* Permite que los campos bajen si no hay espacio */
+  justify-content: center;
+}
+
+/* Para que un campo ocupe el espacio de dos inputs */
+.form-field.double {
+  flex: 0 0 45.5%;
+  max-width: 45.5%;
+  min-width: 250px;
+}
+
+/* Los demás inputs ocupan 22% */
+.form-field {
+  flex: 1 1 22%;
+  max-width: 22%;
+  min-width: 180px;
+  margin: 10px;
+}
+
+/* Específico para los campos de fecha */
+.form-field.fecha {
+  flex: 0 0 22%;
+  max-width: 22%;
+  min-width: 180px;
 }
 
 /* Cada columna dentro de una fila */
@@ -38,4 +76,58 @@ mat-form-field{
 
 button {
   margin-left: 10px;  /* Espacio entre los botones */
+}
+
+body, .form-container, mat-card, mat-form-field, input, button {
+  font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+}
+.form-actions{
+  padding-top: 100px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Botón Guardar Plan: color personalizado cuando está activo */
+mat-raised-button {
+  background-color: #000000; /* mismo color que el título */
+  color: #fff;
+}
+
+mat-raised-button:disabled {
+  background-color: #000102 !important;
+  color: #fff !important;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+button[type="submit"].mat-raised-button:not(:disabled):hover {
+  background-color: #000000;
+}
+
+/* Botón Guardar Plan: color personalizado cuando está activo usando el id */
+#guardarPlanBtn {
+  background-color: #3c5977;
+  color: #fff;
+  transition: background 0.2s;
+}
+
+#guardarPlanBtn:disabled {
+  background-color: #6d7e92 !important;
+  color: #fff !important;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+#guardarPlanBtn:not(:disabled):hover {
+  background-color: #27405a;
+}
+
+#guardarPlanBtn,
+#cancelarPlanBtn {
+  font-size: 1.15rem;
+  padding: 14px 36px;
+  min-width: 160px;
+  font-weight: 300;
+  letter-spacing: 1px;
 }

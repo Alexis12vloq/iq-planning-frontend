@@ -1,77 +1,133 @@
 <mat-card>
-  <mat-card-header>
-    <mat-card-title>Agregar Plan de Medios</mat-card-title>
+  <mat-card-header id="title">
+    <mat-card-title>Crear Plan de Medios</mat-card-title>
   </mat-card-header>
   <mat-card-content>
-    <form [formGroup]="planMediosForm" (ngSubmit)="onSubmit()">
-      
-      <!-- Nombre de Plan -->
-      <mat-form-field appearance="fill">
-        <mat-label>Nombre de Plan</mat-label>
-        <input matInput placeholder="Ingrese nombre del plan" formControlName="planName" required />
-      </mat-form-field>
+    <form [formGroup]="planMediosForm" (ngSubmit)="onSubmit()" id="planMediosForm">
 
-      <!-- País Facturación -->
-      <mat-form-field appearance="fill">
-        <mat-label>País Facturación</mat-label>
-        <input matInput placeholder="Seleccione un país" formControlName="paisFacturacion" [matAutocomplete]="autoPais" />
-        <mat-autocomplete #autoPais="matAutocomplete">
-          <mat-option *ngFor="let option of filteredPaisFacturacion | async" [value]="option">
-            {{ option }}
-          </mat-option>
-        </mat-autocomplete>
-      </mat-form-field>
+      <!-- Fila 1 -->
+      <div class="form-row">
+        <!-- Número de Plan -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Número de Plan</mat-label>
+          <input matInput formControlName="numeroPlan" required [disabled]="true" />
+        </mat-form-field>
 
-      <!-- Cliente/Anunciante -->
-      <mat-form-field appearance="fill">
-        <mat-label>Cliente/Anunciante</mat-label>
-        <input matInput placeholder="Seleccione un cliente" formControlName="clienteAnunciante" [matAutocomplete]="autoCliente" />
-        <mat-autocomplete #autoCliente="matAutocomplete">
-          <mat-option *ngFor="let option of filteredClienteAnunciante | async" [value]="option">
-            {{ option }}
-          </mat-option>
-        </mat-autocomplete>
-      </mat-form-field>
+        <!-- Versión (nuevo campo, disabled) -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Versión</mat-label>
+          <input matInput formControlName="version" required [disabled]="true" />
+        </mat-form-field>
 
-      <!-- Otros campos -->
-      <mat-form-field appearance="fill">
-        <mat-label>Marca</mat-label>
-        <input matInput placeholder="Ingrese la marca" formControlName="marca" required />
-      </mat-form-field>
+        <!-- País Facturación con Autocomplete -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>País Facturación</mat-label>
+          <input matInput formControlName="paisFacturacion" [matAutocomplete]="autoPaisFacturacion" required />
+          <mat-autocomplete #autoPaisFacturacion="matAutocomplete">
+            <mat-option *ngFor="let option of filteredPaisesFacturacion | async" [value]="option">
+              {{ option }}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
 
-      <mat-form-field appearance="fill">
-        <mat-label>Producto</mat-label>
-        <input matInput placeholder="Ingrese el producto" formControlName="producto" required />
-      </mat-form-field>
-
-      <mat-form-field appearance="fill">
-        <mat-label>Campa&ntilde;a</mat-label>
-        <input matInput placeholder="Ingrese la campaña" formControlName="campana" required />
-      </mat-form-field>
-
-      <mat-form-field appearance="fill">
-        <mat-label>Fecha de Inicio</mat-label>
-        <input matInput [matDatepicker]="startDate" formControlName="startDate" required />
-        <mat-datepicker-toggle matSuffix [for]="startDate"></mat-datepicker-toggle>
-        <mat-datepicker #startDate></mat-datepicker>
-      </mat-form-field>
-
-      <mat-form-field appearance="fill">
-        <mat-label>Fecha de Fin</mat-label>
-        <input matInput [matDatepicker]="endDate" formControlName="endDate" required />
-        <mat-datepicker-toggle matSuffix [for]="endDate"></mat-datepicker-toggle>
-        <mat-datepicker #endDate></mat-datepicker>
-      </mat-form-field>
-
-      <mat-form-field appearance="fill">
-        <mat-label>Versión</mat-label>
-        <input matInput placeholder="Ingrese la versión" formControlName="version" required />
-      </mat-form-field>
-
-      <div class="form-group">
-        <button mat-raised-button color="primary" type="submit" [disabled]="planMediosForm.invalid">Guardar Plan</button>
-        <button mat-raised-button color="accent" type="button" routerLink="/plan-medios">Regresar</button>
+        <!-- Países de Pauta (múltiple) -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Países de Pauta</mat-label>
+          <mat-select formControlName="paisesPauta" multiple required>
+            <mat-option *ngFor="let pais of paises" [value]="pais">{{ pais }}</mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
+
+      <!-- Fila 2: Inputs dependientes en orden lógico -->
+      <div class="form-row">
+        <!-- Cliente / Anunciante -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Cliente / Anunciante</mat-label>
+          <input matInput formControlName="clienteAnunciante" [matAutocomplete]="autoCliente" required />
+          <mat-autocomplete #autoCliente="matAutocomplete">
+            <mat-option *ngFor="let cliente of filteredClientes | async" [value]="cliente">
+              {{ cliente }}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+
+        <!-- Cliente Facturación -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Cliente Facturación</mat-label>
+          <input matInput formControlName="clienteFueActuacion" [matAutocomplete]="autoClienteActuacion" required />
+          <mat-autocomplete #autoClienteActuacion="matAutocomplete">
+            <mat-option *ngFor="let cliente of filteredClientesActuacion | async" [value]="cliente">
+              {{ cliente }}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+
+        <!-- Marca -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Marca</mat-label>
+          <input matInput formControlName="marca" [matAutocomplete]="autoMarca" required />
+          <mat-autocomplete #autoMarca="matAutocomplete">
+            <mat-option *ngFor="let marca of filteredMarcas | async" [value]="marca">
+              {{ marca }}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+
+        <!-- Producto -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Producto</mat-label>
+          <input matInput formControlName="producto" [matAutocomplete]="autoProducto" required />
+          <mat-autocomplete #autoProducto="matAutocomplete">
+            <mat-option *ngFor="let producto of filteredProductos | async" [value]="producto">
+              {{ producto }}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+      </div>
+
+      <!-- Fila 3 -->
+      <div class="form-row">
+        <!-- Campaña -->
+        <mat-form-field appearance="fill" class="form-field double">
+          <mat-label>Campaña</mat-label>
+          <input matInput formControlName="campana" required />
+        </mat-form-field>
+
+        <!-- Fecha Inicio -->
+        <mat-form-field appearance="fill" class="form-field fecha">
+          <mat-label>Fecha de Inicio</mat-label>
+          <input matInput [matDatepicker]="pickerInicio"
+                 formControlName="fechaInicio"
+                 [min]="minFechaInicio"
+                 required />
+          <mat-datepicker-toggle matSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+          <mat-datepicker #pickerInicio></mat-datepicker>
+        </mat-form-field>
+
+        <!-- Fecha Fin -->
+        <mat-form-field appearance="fill" class="form-field fecha">
+          <mat-label>Fecha de Fin</mat-label>
+          <input matInput [matDatepicker]="pickerFin"
+                 formControlName="fechaFin"
+                 [min]="minFechaFin"
+                 [disabled]="!planMediosForm.get('fechaInicio')?.value"
+                 required />
+          <mat-datepicker-toggle matSuffix [for]="pickerFin"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFin></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <!-- Botón -->
+      <div class="form-actions">
+        <button mat-raised-button color="primary" type="submit" [disabled]="planMediosForm.invalid" id="guardarPlanBtn">
+          Guardar Plan
+        </button>
+        <button mat-raised-button color="warn" type="button" routerLink="/" id="cancelarPlanBtn">
+          Cancelar
+        </button>
+      </div>
+
     </form>
   </mat-card-content>
 </mat-card>
