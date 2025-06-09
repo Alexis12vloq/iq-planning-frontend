@@ -1,0 +1,41 @@
+.form-container {
+  max-width: 900px;
+  margin: 40px auto;
+}
+
+mat-card {
+  padding: 20px;
+  border-radius: 8px;
+}
+#title{
+  width: 100%;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+mat-form-field{
+  margin: 10px;
+}
+/* Cada fila usará Flexbox para alinear sus columnas */
+.form-row {
+  display: flex;
+  gap: 20px; /* Espacio horizontal entre las columnas */
+  margin-bottom: 20px; /* Espacio vertical entre filas */
+}
+
+/* Cada columna dentro de una fila */
+.form-col {
+  flex: 1 1 0;     /* Cada columna ocupa un porcentaje igual del espacio disponible */
+}
+
+/* Para los botones al final */
+.button-row {
+  display: flex;
+  justify-content: flex-end; /* Alinea los botones a la derecha */
+  margin-top: 24px;
+}
+
+button {
+  margin-left: 10px;  /* Espacio entre los botones */
+}

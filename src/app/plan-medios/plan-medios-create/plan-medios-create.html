@@ -1,0 +1,77 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Agregar Plan de Medios</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <form [formGroup]="planMediosForm" (ngSubmit)="onSubmit()">
+      
+      <!-- Nombre de Plan -->
+      <mat-form-field appearance="fill">
+        <mat-label>Nombre de Plan</mat-label>
+        <input matInput placeholder="Ingrese nombre del plan" formControlName="planName" required />
+      </mat-form-field>
+
+      <!-- País Facturación -->
+      <mat-form-field appearance="fill">
+        <mat-label>País Facturación</mat-label>
+        <input matInput placeholder="Seleccione un país" formControlName="paisFacturacion" [matAutocomplete]="autoPais" />
+        <mat-autocomplete #autoPais="matAutocomplete">
+          <mat-option *ngFor="let option of filteredPaisFacturacion | async" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <!-- Cliente/Anunciante -->
+      <mat-form-field appearance="fill">
+        <mat-label>Cliente/Anunciante</mat-label>
+        <input matInput placeholder="Seleccione un cliente" formControlName="clienteAnunciante" [matAutocomplete]="autoCliente" />
+        <mat-autocomplete #autoCliente="matAutocomplete">
+          <mat-option *ngFor="let option of filteredClienteAnunciante | async" [value]="option">
+            {{ option }}
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <!-- Otros campos -->
+      <mat-form-field appearance="fill">
+        <mat-label>Marca</mat-label>
+        <input matInput placeholder="Ingrese la marca" formControlName="marca" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Producto</mat-label>
+        <input matInput placeholder="Ingrese el producto" formControlName="producto" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Campa&ntilde;a</mat-label>
+        <input matInput placeholder="Ingrese la campaña" formControlName="campana" required />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Fecha de Inicio</mat-label>
+        <input matInput [matDatepicker]="startDate" formControlName="startDate" required />
+        <mat-datepicker-toggle matSuffix [for]="startDate"></mat-datepicker-toggle>
+        <mat-datepicker #startDate></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Fecha de Fin</mat-label>
+        <input matInput [matDatepicker]="endDate" formControlName="endDate" required />
+        <mat-datepicker-toggle matSuffix [for]="endDate"></mat-datepicker-toggle>
+        <mat-datepicker #endDate></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Versión</mat-label>
+        <input matInput placeholder="Ingrese la versión" formControlName="version" required />
+      </mat-form-field>
+
+      <div class="form-group">
+        <button mat-raised-button color="primary" type="submit" [disabled]="planMediosForm.invalid">Guardar Plan</button>
+        <button mat-raised-button color="accent" type="button" routerLink="/plan-medios">Regresar</button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
