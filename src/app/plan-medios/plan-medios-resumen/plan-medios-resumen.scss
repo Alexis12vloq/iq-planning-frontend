@@ -1,18 +1,33 @@
 .resumen-container {
   padding: 20px;
   background-color: #ffffff;
-  min-height: 100vh;
+  height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .resumen-header {
   margin-bottom: 20px;
+  flex-shrink: 0;
   
-  h1 {
-    font-size: 24px;
-    color: #333;
-    margin: 0;
-    padding: 10px 0;
-    font-weight: normal;
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    h1 {
+      font-size: 24px;
+      color: #333;
+      margin: 0;
+      padding: 10px 0;
+      font-weight: normal;
+    }
+
+    .periodo-selector {
+      width: 250px;
+      margin-left: 20px;
+    }
   }
 }
 
@@ -22,6 +37,7 @@
   border-radius: 4px;
   padding: 20px;
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .plan-info {
@@ -93,6 +109,26 @@
         background-color: darken(#e3f2fd, 5%);
       }
     }
+
+    &.green-button {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+
+      &:hover {
+        background-color: darken(#4caf50, 5%);
+      }
+    }
+
+    &.red-button {
+      background-color: #f44336;
+      color: white;
+      border: none;
+
+      &:hover {
+        background-color: darken(#f44336, 5%);
+      }
+    }
   }
 }
 
@@ -101,58 +137,169 @@
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   padding: 20px;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
 }
 
-table {
+.medios-table {
   width: 100%;
-  margin-bottom: 20px;
   border-collapse: collapse;
+  background-color: white;
 
-  .mat-mdc-header-cell {
-    background-color: #f5f5f5;
-    color: #333;
-    font-weight: bold;
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #1a2732;
+
+    th {
+      position: sticky;
+      top: 0;
+      background-color: #1a2732;
+    }
+  }
+
+  th, td {
     padding: 12px;
     text-align: left;
+    border: 1px solid #e0e0e0;
   }
 
-  .mat-mdc-cell, .mat-mdc-footer-cell {
-    padding: 12px;
-    border-bottom: 1px solid #e0e0e0;
+  th {
+    background-color: #1a2732;
+    color: white;
+    font-weight: normal;
+    text-transform: uppercase;
   }
 
-  .mat-mdc-footer-cell {
-    font-weight: bold;
-    background-color: #f9f9f9;
+  .col-medios {
+    width: 200px;
   }
-}
 
-.semanas-header {
-  display: flex;
-  gap: 10px;
-  justify-content: space-around;
-
-  span {
-    font-weight: bold;
-    color: #333;
+  .col-semanas {
+    text-align: center;
   }
-}
 
-.semanas-cell {
-  display: flex;
-  gap: 10px;
-  justify-content: space-around;
+  .col-total {
+    width: 150px;
+    text-align: right;
+  }
+
+  .col-soi {
+    width: 80px;
+    text-align: right;
+  }
+
+  .semanas-header {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    
+    span {
+      font-weight: normal;
+      color: white;
+    }
+  }
+
+  .semanas-cell {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    min-height: 30px;
+  }
 
   .semana-indicator {
-    width: 24px;
-    height: 24px;
-    border: 1px solid #ccc;
-    background-color: white;
-    border-radius: 4px;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background-color: transparent;
 
     &.activo {
       background-color: #ffd700;
-      border-color: #ffd700;
+    }
+  }
+
+  // Estilos para las filas específicas
+  .fila-medio {
+    background-color: white;
+    
+    td:first-child {
+      color: #0066cc;
+      font-weight: 500;
+    }
+  }
+
+  .fila-salidas {
+    background-color: #f9f9f9;
+    
+    td:first-child {
+      padding-left: 24px;
+      color: #666;
+    }
+  }
+
+  .fila-valor {
+    background-color: #1a2732;
+    color: white;
+    
+    td:first-child {
+      padding-left: 24px;
+    }
+  }
+
+  // Estilos para los valores
+  .valor-total {
+    text-align: right;
+    font-weight: 500;
+  }
+
+  .valor-soi {
+    text-align: right;
+    color: #666;
+  }
+
+  // Estilos para el pie de tabla
+  tfoot {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    
+    tr {
+      background-color: #1a2732;
+      color: white;
+
+      td {
+        position: sticky;
+        bottom: 0;
+        background-color: #1a2732;
+        font-weight: 500;
+        border-color: #2d3a45;
+      }
+
+      &.fila-total-inversion {
+        td {
+          bottom: 0;
+          font-weight: bold;
+          font-size: 1.1em;
+        }
+      }
+
+      &.fila-iva {
+        td {
+          bottom: 48px;
+        }
+      }
+
+      &.fila-total {
+        td {
+          bottom: 96px;
+        }
+      }
+
+      .valor-total {
+        color: white;
+      }
     }
   }
 }
@@ -176,5 +323,18 @@ table {
       font-size: 1.2em;
       font-weight: bold;
     }
+  }
+}
+
+// Estilos para los snackbars
+::ng-deep {
+  .success-snackbar {
+    background-color: #4caf50;
+    color: white;
+  }
+
+  .error-snackbar {
+    background-color: #f44336;
+    color: white;
   }
 } 
