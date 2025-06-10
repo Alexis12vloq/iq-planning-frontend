@@ -109,26 +109,6 @@
         background-color: darken(#e3f2fd, 5%);
       }
     }
-
-    &.green-button {
-      background-color: #4caf50;
-      color: white;
-      border: none;
-
-      &:hover {
-        background-color: darken(#4caf50, 5%);
-      }
-    }
-
-    &.red-button {
-      background-color: #f44336;
-      color: white;
-      border: none;
-
-      &:hover {
-        background-color: darken(#f44336, 5%);
-      }
-    }
   }
 }
 

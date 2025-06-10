@@ -53,12 +53,9 @@
         </button>
       </div>
       <div class="right-buttons">
-        <button mat-flat-button class="action-button" 
-                [class.green-button]="resumenPlan.aprobado"
-                [class.red-button]="!resumenPlan.aprobado"
-                (click)="onAprobarPlan()">
-          <mat-icon>{{ resumenPlan.aprobado ? 'check_circle' : 'warning' }}</mat-icon>
-          {{ resumenPlan.aprobado ? 'Plan Aprobado' : 'Plan No Aprobado' }}
+        <button mat-flat-button class="action-button yellow-button" (click)="onAprobarPlan()">
+          <mat-icon>check_circle</mat-icon>
+          Aprobar Plan
         </button>
         <button mat-flat-button class="action-button blue-button" (click)="onRegresar()">
           <mat-icon>arrow_back</mat-icon>

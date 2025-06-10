@@ -109,14 +109,14 @@ export class PlanMediosResumen implements OnInit {
 
   onAprobarPlan(): void {
     if (this.resumenPlan.aprobado) {
-      this.snackBar.open('¡Plan aprobado exitosamente!', 'Cerrar', {
+      this.snackBar.open('Plan aprobado exitosamente', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
         panelClass: ['success-snackbar']
       });
     } else {
-      this.snackBar.open('El plan debe ser revisado. No se ha aprobado.', 'Cerrar', {
+      this.snackBar.open('El plan debe ser revisado. No se puede aprobar en este momento.', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
