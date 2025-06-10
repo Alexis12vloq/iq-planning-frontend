@@ -1,0 +1,111 @@
+<mat-card class="resumen-card">
+  <mat-card-header>
+    <mat-card-title>
+      Resumen del Plan: {{ resumenPlan.numeroPlan }} | Versión: {{ resumenPlan.version }}
+    </mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="info-header">
+      <div class="info-row">
+        <span class="info-label">CLIENTE:</span>
+        <span class="info-value">{{ resumenPlan.cliente }}</span>
+        <span class="info-label">PRODUCTO:</span>
+        <span class="info-value">{{ resumenPlan.producto }}</span>
+        <span class="info-label">FECHA:</span>
+        <span class="info-value">{{ resumenPlan.fecha }}</span>
+        <span class="info-label">CAMPAÑA:</span>
+        <span class="info-value">{{ resumenPlan.campana }}</span>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <button mat-raised-button color="primary" (click)="onNuevaPauta()">
+        <mat-icon>add</mat-icon>
+        Nueva Pauta
+      </button>
+      <button mat-raised-button color="primary" (click)="onDescargaFlow()">
+        <mat-icon>download</mat-icon>
+        Descarga Flow
+      </button>
+      <button mat-raised-button color="primary" (click)="onDescargaFlowChart()">
+        <mat-icon>bar_chart</mat-icon>
+        Descarga FlowChart
+      </button>
+    </div>
+
+    <table mat-table [dataSource]="resumenPlan.medios" class="mat-elevation-z8">
+      <!-- Medio Column -->
+      <ng-container matColumnDef="medio">
+        <th mat-header-cell *matHeaderCellDef>MEDIOS</th>
+        <td mat-cell *matCellDef="let medio">{{ medio.nombre }}</td>
+        <td mat-footer-cell *matFooterCellDef>Total Inversión Neta</td>
+      </ng-container>
+
+      <!-- Salidas Column -->
+      <ng-container matColumnDef="salidas">
+        <th mat-header-cell *matHeaderCellDef>SALIDAS</th>
+        <td mat-cell *matCellDef="let medio">{{ medio.salidas }}</td>
+        <td mat-footer-cell *matFooterCellDef></td>
+      </ng-container>
+
+      <!-- Valor Neto Column -->
+      <ng-container matColumnDef="valorNeto">
+        <th mat-header-cell *matHeaderCellDef>Valor neto</th>
+        <td mat-cell *matCellDef="let medio">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+        <td mat-footer-cell *matFooterCellDef>{{ resumenPlan.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+      </ng-container>
+
+      <!-- SOI Column -->
+      <ng-container matColumnDef="soi">
+        <th mat-header-cell *matHeaderCellDef>SOI</th>
+        <td mat-cell *matCellDef="let medio">{{ medio.soi }}%</td>
+        <td mat-footer-cell *matFooterCellDef></td>
+      </ng-container>
+
+      <!-- Semanas Column -->
+      <ng-container matColumnDef="semanas">
+        <th mat-header-cell *matHeaderCellDef>
+          <div class="semanas-header">
+            <span *ngFor="let semana of semanasColumnas">{{ semana }}</span>
+          </div>
+        </th>
+        <td mat-cell *matCellDef="let medio">
+          <div class="semanas-cell">
+            <div *ngFor="let activo of medio.semanas" 
+                 class="semana-indicator"
+                 [class.activo]="activo">
+            </div>
+          </div>
+        </td>
+        <td mat-footer-cell *matFooterCellDef></td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      <tr mat-footer-row *matFooterRowDef="displayedColumns"></tr>
+    </table>
+
+    <div class="totales">
+      <div class="total-row">
+        <span>IVA 19%</span>
+        <span>{{ resumenPlan.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+      <div class="total-row">
+        <span>Total Inversión</span>
+        <span>{{ resumenPlan.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
+      </div>
+    </div>
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    <button mat-raised-button color="primary" (click)="onAprobarPlan()">
+      <mat-icon>check</mat-icon>
+      Aprobar Plan
+    </button>
+    <button mat-raised-button (click)="onRegresar()">
+      <mat-icon>arrow_back</mat-icon>
+      Regresar
+    </button>
+  </mat-card-actions>
+</mat-card> 
