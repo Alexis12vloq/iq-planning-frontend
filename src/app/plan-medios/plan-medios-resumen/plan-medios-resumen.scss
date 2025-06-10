@@ -1,56 +1,129 @@
-.resumen-card {
-  margin: 20px;
+.resumen-container {
   padding: 20px;
+  background-color: #ffffff;
+  min-height: 100vh;
+}
 
-  mat-card-header {
-    margin-bottom: 20px;
+.resumen-header {
+  margin-bottom: 20px;
+  
+  h1 {
+    font-size: 24px;
+    color: #333;
+    margin: 0;
+    padding: 10px 0;
+    font-weight: normal;
   }
 }
 
-.info-header {
+.plan-info-container {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 20px;
   margin-bottom: 20px;
+}
 
-  .info-row {
+.plan-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+
+  .info-item {
     display: flex;
-    gap: 20px;
     align-items: center;
-    flex-wrap: wrap;
-  }
+    gap: 8px;
 
-  .info-label {
-    font-weight: bold;
-    color: #666;
-  }
+    .info-label {
+      font-weight: bold;
+      color: #333;
+      text-transform: uppercase;
+    }
 
-  .info-value {
-    margin-right: 20px;
+    .info-value {
+      color: #666;
+    }
   }
 }
 
 .action-buttons {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  align-items: center;
 
-  button {
+  .left-buttons, .right-buttons {
+    display: flex;
+    gap: 10px;
+  }
+
+  .action-button {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    text-transform: none;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    &.yellow-button {
+      background-color: #ffd700;
+      color: #333;
+      border: none;
+
+      &:hover {
+        background-color: darken(#ffd700, 5%);
+      }
+    }
+
+    &.blue-button {
+      background-color: #e3f2fd;
+      color: #333;
+      border: none;
+
+      &:hover {
+        background-color: darken(#e3f2fd, 5%);
+      }
+    }
   }
+}
+
+.table-container {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 20px;
 }
 
 table {
   width: 100%;
   margin-bottom: 20px;
+  border-collapse: collapse;
 
   .mat-mdc-header-cell {
     background-color: #f5f5f5;
-    font-weight: bold;
     color: #333;
+    font-weight: bold;
+    padding: 12px;
+    text-align: left;
+  }
+
+  .mat-mdc-cell, .mat-mdc-footer-cell {
+    padding: 12px;
+    border-bottom: 1px solid #e0e0e0;
   }
 
   .mat-mdc-footer-cell {
     font-weight: bold;
+    background-color: #f9f9f9;
   }
 }
 
@@ -58,6 +131,11 @@ table {
   display: flex;
   gap: 10px;
   justify-content: space-around;
+
+  span {
+    font-weight: bold;
+    color: #333;
+  }
 }
 
 .semanas-cell {
@@ -66,13 +144,15 @@ table {
   justify-content: space-around;
 
   .semana-indicator {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     border: 1px solid #ccc;
     background-color: white;
+    border-radius: 4px;
 
     &.activo {
       background-color: #ffd700;
+      border-color: #ffd700;
     }
   }
 }
@@ -80,31 +160,21 @@ table {
 .totales {
   margin-top: 20px;
   padding: 20px;
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
   border-radius: 4px;
 
   .total-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 10px;
-    font-weight: bold;
+    padding: 8px 0;
+    font-weight: 500;
 
     &:last-child {
-      margin-bottom: 0;
+      margin-top: 8px;
+      padding-top: 16px;
+      border-top: 1px solid #e0e0e0;
       font-size: 1.2em;
+      font-weight: bold;
     }
-  }
-}
-
-mat-card-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  padding: 16px;
-
-  button {
-    display: flex;
-    align-items: center;
-    gap: 5px;
   }
 } 
