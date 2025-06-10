@@ -7,5 +7,6 @@ export const routes: Routes = [
   { path: 'plan-medios-create', component: PlanMediosCreate },
   { path: 'reglas', component: Reglas },
   { path: 'configuracion', component: Configuracion },
-  { path: '', redirectTo: '/reglas', pathMatch: 'full' }
+  { path: '', redirectTo: '/reglas', pathMatch: 'full' },
+  { path: '**', redirectTo: '', pathMatch: 'full' }
 ];
