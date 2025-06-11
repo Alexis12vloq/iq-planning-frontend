@@ -1,0 +1,150 @@
+<mat-card>
+  <mat-card-header id="title" class="consulta-header">
+    <mat-card-title>Consultar Plan de Medios</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <form [formGroup]="filtroForm" (ngSubmit)="buscar()" class="form-container">
+      <div class="form-row">
+        <!-- Anunciante -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Anunciante</mat-label>
+          <input matInput formControlName="anunciante" [matAutocomplete]="autoAnunciante" />
+          <mat-autocomplete #autoAnunciante="matAutocomplete">
+            <mat-option *ngFor="let a of filteredAnunciantes | async" [value]="a">{{ a }}</mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <!-- Cliente -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Cliente</mat-label>
+          <input matInput formControlName="cliente" [matAutocomplete]="autoCliente" />
+          <mat-autocomplete #autoCliente="matAutocomplete">
+            <mat-option *ngFor="let c of filteredClientes | async" [value]="c">{{ c }}</mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <!-- Marca -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Marca</mat-label>
+          <input matInput formControlName="marca" [matAutocomplete]="autoMarca" />
+          <mat-autocomplete #autoMarca="matAutocomplete">
+            <mat-option *ngFor="let m of filteredMarcas | async" [value]="m">{{ m }}</mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+        <!-- Producto -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Producto</mat-label>
+          <input matInput formControlName="producto" [matAutocomplete]="autoProducto" />
+          <mat-autocomplete #autoProducto="matAutocomplete">
+            <mat-option *ngFor="let p of filteredProductos | async" [value]="p">{{ p }}</mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+      </div>
+      <div class="form-row">
+        <!-- Número de Plan -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Número de Plan</mat-label>
+          <input matInput formControlName="numeroPlan" type="number" />
+        </mat-form-field>
+        <!-- Versión -->
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Versión</mat-label>
+          <input matInput formControlName="version" />
+        </mat-form-field>
+        <!-- Fecha Inicio -->
+        <mat-form-field appearance="fill" class="form-field fecha">
+          <mat-label>Fecha Inicio</mat-label>
+          <input matInput [matDatepicker]="pickerInicio" formControlName="fechaInicio" />
+          <mat-datepicker-toggle matSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+          <mat-datepicker #pickerInicio></mat-datepicker>
+        </mat-form-field>
+        <!-- Fecha Fin -->
+        <mat-form-field appearance="fill" class="form-field fecha">
+          <mat-label>Fecha Fin</mat-label>
+          <input matInput [matDatepicker]="pickerFin" formControlName="fechaFin" [min]="minFechaFin" [disabled]="!filtroForm.get('fechaInicio')?.value" />
+          <mat-datepicker-toggle matSuffix [for]="pickerFin"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFin></mat-datepicker>
+        </mat-form-field>
+      </div>
+      <div class="form-row" style="justify-content: space-between; align-items: center;">
+        <div>
+          <button mat-raised-button color="accent" type="button" id="copiarPlanBtn" [disabled]="!selection.hasValue()">
+            <mat-icon>content_copy</mat-icon> Copiar Plan
+          </button>
+          <button mat-raised-button color="primary" type="button" id="nuevaVersionBtn" [disabled]="!selection.hasValue()">
+            <mat-icon>note_add</mat-icon> Nueva Versión
+          </button>
+          <button mat-raised-button color="primary" type="button" id="calendarioBtn" style="background:#26c6da;color:#252525;">
+            <mat-icon>calendar_month</mat-icon> Calendario
+          </button>
+        </div>
+        <div>
+          <button mat-raised-button color="primary" type="submit" id="buscarBtn">
+            <mat-icon>search</mat-icon> Buscar
+          </button>
+          <button mat-raised-button color="warn" type="button" (click)="borrarFiltros()" id="borrarFiltrosBtn" [disabled]="!tieneFiltrosActivos">
+            <mat-icon>filter_alt_off</mat-icon> Borrar filtros
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Tabla de resultados -->
+    <div style="overflow-x:auto; margin-bottom:50px;">
+      <div class="mat-elevation-z8">
+        <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z1" style="width:100%; margin-top:24px;">
+          <ng-container matColumnDef="numeroPlan">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('numeroPlan')">Número de Plan</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'numeroPlan'}">{{ row.numeroPlan }}</td>
+          </ng-container>
+          <ng-container matColumnDef="version">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('version')">Versión</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'version'}">{{ row.version }}</td>
+          </ng-container>
+          <ng-container matColumnDef="pais">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('pais')">País</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'pais'}">{{ row.pais }}</td>
+          </ng-container>
+          <ng-container matColumnDef="tipoCompra">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('tipoCompra')">Tipo de Compra</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'tipoCompra'}">{{ row.tipoCompra }}</td>
+          </ng-container>
+          <ng-container matColumnDef="anunciante">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('anunciante')">Anunciante</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'anunciante'}">{{ row.anunciante }}</td>
+          </ng-container>
+          <ng-container matColumnDef="cliente">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('cliente')">Cliente</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'cliente'}">{{ row.cliente }}</td>
+          </ng-container>
+          <ng-container matColumnDef="marca">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('marca')">Marca</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'marca'}">{{ row.marca }}</td>
+          </ng-container>
+          <ng-container matColumnDef="producto">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('producto')">Producto</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'producto'}">{{ row.producto }}</td>
+          </ng-container>
+          <ng-container matColumnDef="fechaInicio">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('fechaInicio')">Fecha Inicio</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'fechaInicio'}">{{ row.fechaInicio }}</td>
+          </ng-container>
+          <ng-container matColumnDef="fechaFin">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('fechaFin')">Fecha Fin</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'fechaFin'}">{{ row.fechaFin }}</td>
+          </ng-container>
+          <ng-container matColumnDef="campania">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('campania')">Campaña</th>
+            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'campania'}">{{ row.campania }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="selectColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: selectColumns;"
+              [class.selected-row]="selection.isSelected(row)"
+              (click)="rowClick(row, $event)">
+          </tr>
+        </table>
+        <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page"></mat-paginator>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+

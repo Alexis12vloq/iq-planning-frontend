@@ -1,9 +1,9 @@
 <!-- Barra de navegación con Material UI -->
-<mat-toolbar color="primary">
-  <img src="https://vectorlogoseek.com/wp-content/uploads/2023/06/ipg-interpublic-group-vector-logo.png"
+<mat-toolbar style="padding-top: 40px;padding-bottom: 40px;" color="primary">
+  <img src="https://www.grasp.upenn.edu/wp-content/uploads/2020/10/iq.png"
        alt="IPG Logo"
        style="height:32px; width:auto; max-width:120px; margin-right:12px; vertical-align:middle;" />
-  <span>IQ Planning</span>
+  <span>IQPlanning</span>
 
   <!-- Menú de navegación -->
   <span class="example-spacer"></span>
@@ -12,15 +12,18 @@
   <button mat-button [matMenuTriggerFor]="menu">Plan de Medios</button>
   <mat-menu #menu="matMenu">
     <button mat-menu-item routerLink="/plan-medios-create">Agregar Plan de Medios</button>
+    <button mat-menu-item routerLink="/plan-medios-consulta">Consulta Plan de Medios</button>
     <button mat-menu-item routerLink="/plan-medios-resumen">Resumen Plan de Medios</button>
-    <button mat-menu-item>Consultar Plan de Medios</button>
   </mat-menu>
 
   <button mat-button routerLink="/reglas">Reglas</button>
   <button mat-button routerLink="/configuracion">Configuración</button>
 
-  <!-- Botón de "Sign Up" -->
-  <button id="sing" mat-button>Sign Up</button>
+  <!-- Icono de usuario y nombre subrayado, ya no dentro de un botón -->
+  <span style="display:flex; padding-right: 10px; flex-direction:column; align-items:center; margin-left:16px; cursor:pointer;" routerLink="/configuracion">
+    <mat-icon style="font-size:32px;display: flex;justify-content: center;width: auto;height: auto;">account_circle</mat-icon>
+    <span style="text-decoration:underline; font-size:0.7em;color: #3c5977;">Alexis Lujan</span>
+  </span>
 </mat-toolbar>
 
 <!-- Área donde se renderizan las rutas -->
