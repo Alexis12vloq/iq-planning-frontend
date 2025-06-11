@@ -131,7 +131,17 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onNuevaPauta(): void {
-    console.log('Nueva pauta clicked');
+    const planData = {
+      numeroPlan: this.resumenPlan.numeroPlan,
+      version: this.resumenPlan.version,
+      cliente: this.resumenPlan.cliente,
+      producto: this.resumenPlan.producto,
+      campana: this.resumenPlan.campana
+    };
+    
+    this.router.navigate(['/plan-medios-nueva-pauta'], { 
+      state: { planData } 
+    });
   }
 
   onDescargaFlow(): void {
