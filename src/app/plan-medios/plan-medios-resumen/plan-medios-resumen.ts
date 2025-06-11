@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -9,6 +9,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { ResumenPlan, PeriodoPlan, MedioPlan, PlanConsultaData, PERIODOS_EJEMPLO } from '../models/resumen-plan.model';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface FilaMedio {
   tipo: 'nombre' | 'salidas' | 'valor';
@@ -37,6 +39,8 @@ interface FilaMedio {
   styleUrls: ['./plan-medios-resumen.scss']
 })
 export class PlanMediosResumen implements OnInit {
+  @ViewChild('content') content!: ElementRef;
+
   periodos: PeriodoPlan[] = PERIODOS_EJEMPLO;
   periodoSeleccionado: PeriodoPlan;
   resumenPlan: ResumenPlan;
@@ -134,10 +138,6 @@ export class PlanMediosResumen implements OnInit {
     console.log('Descarga Flow clicked');
   }
 
-  onDescargaFlowChart(): void {
-    console.log('Descarga FlowChart clicked');
-  }
-
   onAprobarPlan(): void {
     if (this.resumenPlan.aprobado) {
       this.snackBar.open('Plan aprobado exitosamente', 'Cerrar', {
@@ -158,5 +158,65 @@ export class PlanMediosResumen implements OnInit {
 
   onRegresar(): void {
     this.router.navigate(['/plan-medios-consulta']);
+  }
+
+  async exportarPDF() {
+    try {
+      // Mostrar mensaje de carga
+      this.snackBar.open('Generando FlowChart...', '', {
+        duration: undefined,
+        horizontalPosition: 'center',
+        verticalPosition: 'top'
+      });
+
+      const content = this.content.nativeElement;
+      const canvas = await html2canvas(content, {
+        scale: 2, // Mejor calidad
+        useCORS: true,
+        logging: false
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+
+      // Añadir título
+      pdf.setFontSize(16);
+      pdf.text(`Plan de Medios: ${this.resumenPlan.numeroPlan}`, 15, 15);
+      pdf.setFontSize(12);
+      pdf.text(`Versión: ${this.resumenPlan.version}`, 15, 22);
+      pdf.text(`Cliente: ${this.resumenPlan.cliente}`, 15, 29);
+      pdf.text(`Producto: ${this.resumenPlan.producto}`, 15, 36);
+      pdf.text(`Campaña: ${this.resumenPlan.campana}`, 15, 43);
+      pdf.text(`Período: ${this.periodoSeleccionado.nombre} ${this.periodoSeleccionado.anio}`, 15, 50);
+
+      // Añadir la imagen del contenido
+      pdf.addImage(imgData, 'PNG', 0, 60, imgWidth, imgHeight);
+
+      // Guardar el PDF
+      pdf.save(`flowchart_${this.resumenPlan.numeroPlan}_v${this.resumenPlan.version}.pdf`);
+
+      // Cerrar mensaje de carga y mostrar mensaje de éxito
+      this.snackBar.dismiss();
+      this.snackBar.open('FlowChart generado exitosamente', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['success-snackbar']
+      });
+    } catch (error) {
+      console.error('Error al generar FlowChart:', error);
+      this.snackBar.open('Error al generar el FlowChart', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+    }
   }
 } 

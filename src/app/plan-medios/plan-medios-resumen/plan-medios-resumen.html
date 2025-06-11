@@ -1,142 +1,144 @@
 <div class="resumen-container">
-  <!-- Cabecera con título y selector de período -->
-  <div class="resumen-header">
-    <div class="header-content">
-      <h1>Resumen del Plan: {{ resumenPlan.numeroPlan }} | Versión: {{ resumenPlan.version }}</h1>
-      <mat-form-field class="periodo-selector">
-        <mat-label>Seleccionar Período</mat-label>
-        <mat-select [(ngModel)]="periodoSeleccionado" (ngModelChange)="onPeriodoChange($event)">
-          <mat-option *ngFor="let periodo of periodos" [value]="periodo">
-            {{ periodo.nombre }} {{ periodo.anio }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
-    </div>
-  </div>
-
-  <!-- Información del plan y botones -->
-  <div class="plan-info-container">
-    <!-- Información del plan -->
-    <div class="plan-info">
-      <div class="info-item">
-        <span class="info-label">CLIENTE:</span>
-        <span class="info-value">{{ resumenPlan.cliente }}</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">PRODUCTO:</span>
-        <span class="info-value">{{ resumenPlan.producto }}</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">PERÍODO:</span>
-        <span class="info-value">{{ periodoSeleccionado.nombre }} {{ periodoSeleccionado.anio }}</span>
-      </div>
-      <div class="info-item">
-        <span class="info-label">CAMPAÑA:</span>
-        <span class="info-value">{{ resumenPlan.campana }}</span>
+  <div #content>
+    <!-- Cabecera con título y selector de período -->
+    <div class="resumen-header">
+      <div class="header-content">
+        <h1>Resumen del Plan: {{ resumenPlan.numeroPlan }} | Versión: {{ resumenPlan.version }}</h1>
+        <mat-form-field class="periodo-selector">
+          <mat-label>Seleccionar Período</mat-label>
+          <mat-select [(ngModel)]="periodoSeleccionado" (ngModelChange)="onPeriodoChange($event)">
+            <mat-option *ngFor="let periodo of periodos" [value]="periodo">
+              {{ periodo.nombre }} {{ periodo.anio }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
     </div>
 
-    <!-- Botones de acción -->
-    <div class="action-buttons">
-      <div class="left-buttons">
-        <button mat-flat-button class="action-button yellow-button" (click)="onNuevaPauta()">
-          <mat-icon>note_add</mat-icon>
-          Nueva Pauta
-        </button>
-        <button mat-flat-button class="action-button yellow-button" (click)="onDescargaFlow()">
-          <mat-icon>cloud_download</mat-icon>
-          Descarga Flow
-        </button>
-        <button mat-flat-button class="action-button yellow-button" (click)="onDescargaFlowChart()">
-          <mat-icon>insert_chart</mat-icon>
-          Descarga FlowChart
-        </button>
+    <!-- Información del plan y botones -->
+    <div class="plan-info-container">
+      <!-- Información del plan -->
+      <div class="plan-info">
+        <div class="info-item">
+          <span class="info-label">CLIENTE:</span>
+          <span class="info-value">{{ resumenPlan.cliente }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">PRODUCTO:</span>
+          <span class="info-value">{{ resumenPlan.producto }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">PERÍODO:</span>
+          <span class="info-value">{{ periodoSeleccionado.nombre }} {{ periodoSeleccionado.anio }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">CAMPAÑA:</span>
+          <span class="info-value">{{ resumenPlan.campana }}</span>
+        </div>
       </div>
-      <div class="right-buttons">
-        <button mat-flat-button class="action-button yellow-button" (click)="onAprobarPlan()">
-          <mat-icon>check_circle</mat-icon>
-          Aprobar Plan
-        </button>
-        <button mat-flat-button class="action-button blue-button" (click)="onRegresar()">
-          <mat-icon>arrow_back</mat-icon>
-          Regresar
-        </button>
-      </div>
-    </div>
-  </div>
 
-  <!-- Tabla de medios -->
-  <div class="table-container">
-    <table class="medios-table">
-      <!-- Encabezado -->
-      <thead>
-        <tr>
-          <th class="col-medios">MEDIOS</th>
-          <th class="col-semanas" colspan="5">
-            <div class="semanas-header">
-              <span *ngFor="let semana of semanasColumnas">{{ semana }}</span>
-            </div>
-          </th>
-          <th class="col-total">TOTAL</th>
-          <th class="col-soi">SOI</th>
-        </tr>
-      </thead>
-
-      <!-- Cuerpo de la tabla -->
-      <tbody>
-        <ng-container *ngFor="let medio of periodoSeleccionado.medios">
-          <!-- Fila del medio -->
-          <tr class="fila-medio">
-            <td>{{ medio.nombre }}</td>
-            <td colspan="5">
-              <div class="semanas-cell">
-                <div *ngFor="let activo of medio.semanas" 
-                     class="semana-indicator"
-                     [class.activo]="activo">
+      <!-- Tabla de medios -->
+      <div class="table-container">
+        <table class="medios-table">
+          <!-- Encabezado -->
+          <thead>
+            <tr>
+              <th class="col-medios">MEDIOS</th>
+              <th class="col-semanas" colspan="5">
+                <div class="semanas-header">
+                  <span *ngFor="let semana of semanasColumnas">{{ semana }}</span>
                 </div>
-              </div>
-            </td>
-            <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-            <td class="valor-soi">{{ medio.soi }}%</td>
-          </tr>
-          <!-- Fila de salidas -->
-          <tr class="fila-salidas">
-            <td>SALIDAS</td>
-            <td colspan="5"></td>
-            <td class="valor-total">{{ medio.salidas }}</td>
-            <td></td>
-          </tr>
-          <!-- Fila de valor neto -->
-          <tr class="fila-valor">
-            <td>Valor neto</td>
-            <td colspan="5"></td>
-            <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-            <td></td>
-          </tr>
-        </ng-container>
-      </tbody>
+              </th>
+              <th class="col-total">TOTAL</th>
+              <th class="col-soi">SOI</th>
+            </tr>
+          </thead>
 
-      <!-- Pie de la tabla -->
-      <tfoot>
-        <tr class="fila-total">
-          <td>Total Inversión Neta</td>
-          <td colspan="5"></td>
-          <td class="valor-total">{{ periodoSeleccionado.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-          <td></td>
-        </tr>
-        <tr class="fila-iva">
-          <td>IVA 19%</td>
-          <td colspan="5"></td>
-          <td class="valor-total">{{ periodoSeleccionado.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-          <td></td>
-        </tr>
-        <tr class="fila-total-inversion">
-          <td>Total Inversión</td>
-          <td colspan="5"></td>
-          <td class="valor-total">{{ periodoSeleccionado.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-          <td></td>
-        </tr>
-      </tfoot>
-    </table>
+          <!-- Cuerpo de la tabla -->
+          <tbody>
+            <ng-container *ngFor="let medio of periodoSeleccionado.medios">
+              <!-- Fila del medio -->
+              <tr class="fila-medio">
+                <td>{{ medio.nombre }}</td>
+                <td colspan="5">
+                  <div class="semanas-cell">
+                    <div *ngFor="let activo of medio.semanas" 
+                         class="semana-indicator"
+                         [class.activo]="activo">
+                    </div>
+                  </div>
+                </td>
+                <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+                <td class="valor-soi">{{ medio.soi }}%</td>
+              </tr>
+              <!-- Fila de salidas -->
+              <tr class="fila-salidas">
+                <td>SALIDAS</td>
+                <td colspan="5"></td>
+                <td class="valor-total">{{ medio.salidas }}</td>
+                <td></td>
+              </tr>
+              <!-- Fila de valor neto -->
+              <tr class="fila-valor">
+                <td>Valor neto</td>
+                <td colspan="5"></td>
+                <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+                <td></td>
+              </tr>
+            </ng-container>
+          </tbody>
+
+          <!-- Pie de la tabla -->
+          <tfoot>
+            <tr class="fila-total">
+              <td>Total Inversión Neta</td>
+              <td colspan="5"></td>
+              <td class="valor-total">{{ periodoSeleccionado.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+              <td></td>
+            </tr>
+            <tr class="fila-iva">
+              <td>IVA 19%</td>
+              <td colspan="5"></td>
+              <td class="valor-total">{{ periodoSeleccionado.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+              <td></td>
+            </tr>
+            <tr class="fila-total-inversion">
+              <td>Total Inversión</td>
+              <td colspan="5"></td>
+              <td class="valor-total">{{ periodoSeleccionado.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botones de acción -->
+  <div class="action-buttons">
+    <div class="left-buttons">
+      <button mat-flat-button class="action-button yellow-button" (click)="onNuevaPauta()">
+        <mat-icon>note_add</mat-icon>
+        Nueva Pauta
+      </button>
+      <button mat-flat-button class="action-button yellow-button" (click)="onDescargaFlow()">
+        <mat-icon>cloud_download</mat-icon>
+        Descarga Flow
+      </button>
+      <button mat-flat-button class="action-button yellow-button" (click)="exportarPDF()">
+        <mat-icon>insert_chart</mat-icon>
+        Descarga FlowChart
+      </button>
+    </div>
+    <div class="right-buttons">
+      <button mat-flat-button class="action-button yellow-button" (click)="onAprobarPlan()">
+        <mat-icon>check_circle</mat-icon>
+        Aprobar Plan
+      </button>
+      <button mat-flat-button class="action-button blue-button" (click)="onRegresar()">
+        <mat-icon>arrow_back</mat-icon>
+        Regresar
+      </button>
+    </div>
   </div>
 </div> 
