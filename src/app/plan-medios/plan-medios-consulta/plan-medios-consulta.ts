@@ -2,6 +2,7 @@ import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Observable, startWith, map } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 // Angular Material imports
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -330,7 +331,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   sort: Sort = {active: '', direction: ''};
 
-  selectedRow: Resultado | null = null;
+  selectedRow: any = null;
   selectedColumn: string | null = null;
 
   dataSource = new MatTableDataSource<Resultado>([]);
@@ -339,7 +340,21 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sortMat!: MatSort;
 
-  constructor() {
+  columnLabels: { [key: string]: string } = {
+    numeroPlan: 'Número de Plan',
+    version: 'Versión',
+    pais: 'País',
+    tipoCompra: 'Tipo de Compra',
+    anunciante: 'Anunciante',
+    cliente: 'Cliente',
+    marca: 'Marca',
+    producto: 'Producto',
+    fechaInicio: 'Fecha Inicio',
+    fechaFin: 'Fecha Fin',
+    campania: 'Campaña'
+  };
+
+  constructor(private router: Router) {
     // Autocomplete: Anunciante
     this.filteredAnunciantes = this.filtroForm.get('anunciante')!.valueChanges.pipe(
       startWith(''),
@@ -491,17 +506,33 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     return `${this.selection.isSelected(row) ? 'deselect' : 'select'} row`;
   }
 
-  rowClick(row: Resultado, event: MouseEvent) {
-    // Evita doble toggle si el click viene del checkbox
-    if ((event.target as HTMLElement).tagName.toLowerCase() === 'mat-checkbox' ||
-        (event.target as HTMLElement).closest('mat-checkbox')) {
-      return;
-    }
-    this.selection.toggle(row);
+  rowClick(row: any, event: MouseEvent): void {
+    this.selectedRow = row;
   }
 
   // Llama esto desde el template al hacer click en un th
   selectColumn(column: string) {
     this.selectedColumn = column;
+  }
+
+  onRowDoubleClick(row: Resultado) {
+    this.selectedRow = row;
+    const planData = {
+      numeroPlan: row.numeroPlan,
+      version: row.version,
+      cliente: row.cliente,
+      producto: row.producto,
+      campana: row.campania,
+      fechaInicio: row.fechaInicio,
+      fechaFin: row.fechaFin
+    };
+    
+    this.router.navigate(['/plan-medios-resumen'], { 
+      state: { planData } 
+    });
+  }
+
+  getColumnLabel(column: string): string {
+    return this.columnLabels[column] || column;
   }
 }

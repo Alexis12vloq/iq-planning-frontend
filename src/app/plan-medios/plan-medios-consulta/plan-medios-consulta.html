@@ -90,56 +90,19 @@
     <!-- Tabla de resultados -->
     <div style="overflow-x:auto; margin-bottom:50px;">
       <div class="mat-elevation-z8">
-        <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z1" style="width:100%; margin-top:24px;">
-          <ng-container matColumnDef="numeroPlan">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('numeroPlan')">Número de Plan</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'numeroPlan'}">{{ row.numeroPlan }}</td>
+        <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
+          <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ getColumnLabel(column) }}</th>
+            <td mat-cell *matCellDef="let row" 
+                (click)="rowClick(row, $event)"
+                (dblclick)="onRowDoubleClick(row)"
+                [class.selected-row]="selectedRow === row">
+              {{ row[column] }}
+            </td>
           </ng-container>
-          <ng-container matColumnDef="version">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('version')">Versión</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'version'}">{{ row.version }}</td>
-          </ng-container>
-          <ng-container matColumnDef="pais">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('pais')">País</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'pais'}">{{ row.pais }}</td>
-          </ng-container>
-          <ng-container matColumnDef="tipoCompra">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('tipoCompra')">Tipo de Compra</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'tipoCompra'}">{{ row.tipoCompra }}</td>
-          </ng-container>
-          <ng-container matColumnDef="anunciante">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('anunciante')">Anunciante</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'anunciante'}">{{ row.anunciante }}</td>
-          </ng-container>
-          <ng-container matColumnDef="cliente">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('cliente')">Cliente</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'cliente'}">{{ row.cliente }}</td>
-          </ng-container>
-          <ng-container matColumnDef="marca">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('marca')">Marca</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'marca'}">{{ row.marca }}</td>
-          </ng-container>
-          <ng-container matColumnDef="producto">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('producto')">Producto</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'producto'}">{{ row.producto }}</td>
-          </ng-container>
-          <ng-container matColumnDef="fechaInicio">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('fechaInicio')">Fecha Inicio</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'fechaInicio'}">{{ row.fechaInicio }}</td>
-          </ng-container>
-          <ng-container matColumnDef="fechaFin">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('fechaFin')">Fecha Fin</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'fechaFin'}">{{ row.fechaFin }}</td>
-          </ng-container>
-          <ng-container matColumnDef="campania">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('campania')">Campaña</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'campania'}">{{ row.campania }}</td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="selectColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: selectColumns;"
-              [class.selected-row]="selection.isSelected(row)"
-              (click)="rowClick(row, $event)">
-          </tr>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
         </table>
         <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page"></mat-paginator>
       </div>

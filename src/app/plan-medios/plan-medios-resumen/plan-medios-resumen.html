@@ -5,7 +5,7 @@
       <h1>Resumen del Plan: {{ resumenPlan.numeroPlan }} | Versión: {{ resumenPlan.version }}</h1>
       <mat-form-field class="periodo-selector">
         <mat-label>Seleccionar Período</mat-label>
-        <mat-select [ngModel]="periodoSeleccionado" (ngModelChange)="onPeriodoChange($event)">
+        <mat-select [(ngModel)]="periodoSeleccionado" (ngModelChange)="onPeriodoChange($event)">
           <mat-option *ngFor="let periodo of periodos" [value]="periodo">
             {{ periodo.nombre }} {{ periodo.anio }}
           </mat-option>
@@ -84,7 +84,7 @@
 
       <!-- Cuerpo de la tabla -->
       <tbody>
-        <ng-container *ngFor="let medio of resumenPlan.medios">
+        <ng-container *ngFor="let medio of periodoSeleccionado.medios">
           <!-- Fila del medio -->
           <tr class="fila-medio">
             <td>{{ medio.nombre }}</td>
@@ -121,19 +121,19 @@
         <tr class="fila-total">
           <td>Total Inversión Neta</td>
           <td colspan="5"></td>
-          <td class="valor-total">{{ resumenPlan.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+          <td class="valor-total">{{ periodoSeleccionado.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
           <td></td>
         </tr>
         <tr class="fila-iva">
           <td>IVA 19%</td>
           <td colspan="5"></td>
-          <td class="valor-total">{{ resumenPlan.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+          <td class="valor-total">{{ periodoSeleccionado.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
           <td></td>
         </tr>
         <tr class="fila-total-inversion">
           <td>Total Inversión</td>
           <td colspan="5"></td>
-          <td class="valor-total">{{ resumenPlan.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+          <td class="valor-total">{{ periodoSeleccionado.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
           <td></td>
         </tr>
       </tfoot>

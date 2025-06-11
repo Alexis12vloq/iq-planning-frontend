@@ -7,7 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ResumenPlan, PERIODOS_EJEMPLO, Periodo, MedioPlan } from '../models/resumen-plan.model';
+import { Router } from '@angular/router';
+import { ResumenPlan, PeriodoPlan, MedioPlan, PlanConsultaData, PERIODOS_EJEMPLO } from '../models/resumen-plan.model';
 
 interface FilaMedio {
   tipo: 'nombre' | 'salidas' | 'valor';
@@ -36,16 +37,47 @@ interface FilaMedio {
   styleUrls: ['./plan-medios-resumen.scss']
 })
 export class PlanMediosResumen implements OnInit {
-  periodos = PERIODOS_EJEMPLO;
-  periodoSeleccionado: Periodo;
+  periodos: PeriodoPlan[] = PERIODOS_EJEMPLO;
+  periodoSeleccionado: PeriodoPlan;
   resumenPlan: ResumenPlan;
   displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
   semanasColumnas: string[] = ['L1', 'L7', 'L14', 'L21', 'L28'];
   dataSource: FilaMedio[] = [];
 
-  constructor(private snackBar: MatSnackBar) {
+  constructor(
+    private snackBar: MatSnackBar,
+    private router: Router
+  ) {
+    const navigation = this.router.getCurrentNavigation();
+    const planData = navigation?.extras?.state?.['planData'] as PlanConsultaData;
+
+    if (planData) {
+      // Inicializar el resumen del plan con los datos de la consulta
+      this.resumenPlan = {
+        numeroPlan: planData.numeroPlan,
+        version: Number(planData.version),
+        cliente: planData.cliente,
+        producto: planData.producto,
+        campana: planData.campana,
+        fechaInicio: planData.fechaInicio,
+        fechaFin: planData.fechaFin,
+        periodos: this.periodos
+      };
+    } else {
+      // Si no hay datos de consulta, usar datos de ejemplo
+      this.resumenPlan = {
+        numeroPlan: "0001",
+        version: 1,
+        cliente: "Cliente Ejemplo",
+        producto: "Producto Ejemplo",
+        campana: "Campaña Ejemplo",
+        fechaInicio: "2024-01-01",
+        fechaFin: "2024-12-31",
+        periodos: this.periodos
+      };
+    }
+
     this.periodoSeleccionado = this.periodos[0];
-    this.resumenPlan = this.periodoSeleccionado.resumenPlan;
     this.prepararDataSource();
   }
 
@@ -53,7 +85,7 @@ export class PlanMediosResumen implements OnInit {
 
   prepararDataSource() {
     const filas: FilaMedio[] = [];
-    this.resumenPlan.medios.forEach(medio => {
+    this.periodoSeleccionado.medios.forEach(medio => {
       // Fila del nombre del medio
       filas.push({
         tipo: 'nombre',
@@ -89,9 +121,8 @@ export class PlanMediosResumen implements OnInit {
     }
   }
 
-  onPeriodoChange(periodo: Periodo): void {
+  onPeriodoChange(periodo: PeriodoPlan): void {
     this.periodoSeleccionado = periodo;
-    this.resumenPlan = periodo.resumenPlan;
     this.prepararDataSource();
   }
 
@@ -126,6 +157,6 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onRegresar(): void {
-    console.log('Regresar clicked');
+    this.router.navigate(['/plan-medios-consulta']);
   }
 } 
