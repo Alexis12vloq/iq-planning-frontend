@@ -12,22 +12,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-
-export interface PlanMediosLocal {
-  id: string;
-  numeroPlan: string;
-  version: string;
-  paisFacturacion: string;
-  paisesPauta: string[];
-  clienteAnunciante: string;
-  clienteFueActuacion: string;
-  marca: string;
-  producto: string;
-  campana: string;
-  fechaInicio: string;
-  fechaFin: string;
-  // Puedes agregar más campos aquí en el futuro
-}
+import { PlanMediosLocal } from '../models/plan-medios-local.model';
 
 @Component({
   selector: 'app-plan-medios-create',

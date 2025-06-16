@@ -1,6 +1,7 @@
 import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Observable, startWith, map } from 'rxjs';
+import { PlanMediosLocal } from '../models/plan-medios-local.model';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 // Angular Material imports
@@ -20,7 +21,6 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
-import { PlanMediosLocal } from '../plan-medios-create/plan-medios-create';
 
 type Resultado = {
   numeroPlan: string;
