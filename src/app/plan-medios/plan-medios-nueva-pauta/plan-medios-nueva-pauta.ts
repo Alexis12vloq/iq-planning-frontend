@@ -296,22 +296,37 @@ export class PlanMediosNuevaPauta implements OnInit {
   }
 
   private cargarPautasExistentes(): void {
+    console.log('=== CARGANDO PAUTAS EXISTENTES ===');
+    console.log('Plan Data:', this.planData);
+    
     if (!this.planData?.id) {
+      console.log('No hay ID de plan, no se pueden cargar pautas');
       this.pautasGuardadas = [];
       return;
     }
     
     try {
       const pautasStorage = localStorage.getItem('respuestasPautas');
+      console.log('Contenido de localStorage respuestasPautas:', pautasStorage);
+      
       if (!pautasStorage) {
+        console.log('No hay pautas en localStorage');
         this.pautasGuardadas = [];
         return;
       }
       
       const todasLasPautas = JSON.parse(pautasStorage);
+      console.log('Todas las pautas parseadas:', todasLasPautas);
+      console.log('Buscando pautas para plan ID:', this.planData.id);
+      
       this.pautasGuardadas = todasLasPautas.filter((pauta: RespuestaPauta) => 
         pauta.planId === this.planData?.id
       );
+      
+      console.log('Pautas filtradas para este plan:', this.pautasGuardadas);
+      console.log('Cantidad de pautas encontradas:', this.pautasGuardadas.length);
+      
+      this.cdr.detectChanges();
     } catch (error) {
       console.error('Error al cargar pautas existentes:', error);
       this.pautasGuardadas = [];
@@ -939,11 +954,15 @@ export class ModalNuevaPautaComponent implements OnInit {
   }
 
   guardarPauta(): void {
-    if (!this.plantillaActual || !this.pautaForm.valid) {
+    if (!this.plantillaActual) {
+      this.snackBar.open('Error: No hay plantilla cargada', '', { duration: 3000 });
       return;
     }
 
     const valores = this.pautaForm.value;
+    console.log('Guardando pauta con valores:', valores);
+    console.log('Plan ID:', this.data.planData.id);
+    
     const pauta: RespuestaPauta = {
       id: Date.now().toString(),
       planId: this.data.planData.id,
@@ -954,19 +973,23 @@ export class ModalNuevaPautaComponent implements OnInit {
       fechaCreacion: new Date().toISOString(),
       valorTotal: valores.valor_total || 0,
       valorNeto: valores.valor_neto || 0,
-      totalSpots: valores.total_spots || 0,
+      totalSpots: valores.total_spots || 1,
       diasSeleccionados: [],
       totalDiasSeleccionados: 0
     };
 
+    console.log('Pauta a guardar:', pauta);
     this.guardarPautaEnStorage(pauta);
     this.dialogRef.close(true);
   }
 
   private guardarPautaEnStorage(pauta: RespuestaPauta): void {
     const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    console.log('Pautas existentes antes de guardar:', pautas);
     pautas.push(pauta);
     localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+    console.log('Pautas después de guardar:', pautas);
+    console.log('LocalStorage actualizado');
   }
 }
 
