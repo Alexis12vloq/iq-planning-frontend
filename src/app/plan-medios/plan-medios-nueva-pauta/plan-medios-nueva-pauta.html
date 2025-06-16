@@ -42,8 +42,34 @@
     </mat-card-content>
   </mat-card>
 
+  <!-- Estado de Carga -->
+  <mat-card class="form-card loading-card" *ngIf="cargandoPlantilla">
+    <mat-card-content>
+      <div class="loading-container">
+        <mat-icon class="loading-spinner">refresh</mat-icon>
+        <h3>Cargando formulario...</h3>
+        <p>Preparando la plantilla para el medio seleccionado</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Mensaje de Error -->
+  <mat-card class="form-card error-card" *ngIf="errorPlantilla && !cargandoPlantilla">
+    <mat-card-content>
+      <div class="error-container">
+        <mat-icon class="error-icon">error</mat-icon>
+        <h3>Plantilla no disponible</h3>
+        <p>{{ errorPlantilla }}</p>
+        <button mat-button color="primary" (click)="seleccionForm.get('medio')?.setValue('')">
+          <mat-icon>refresh</mat-icon>
+          Seleccionar otro medio
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
   <!-- Formulario Dinámico de Pauta -->
-  <mat-card class="form-card" *ngIf="plantillaActual">
+  <mat-card class="form-card" *ngIf="plantillaActual && !cargandoPlantilla && !errorPlantilla">
     <mat-card-header>
       <mat-card-title>
         <mat-icon>dynamic_form</mat-icon>
@@ -180,17 +206,7 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Mensaje cuando no hay plantilla -->
-  <mat-card class="empty-card" *ngIf="!plantillaActual && seleccionForm.get('medio')?.value">
-    <mat-card-content>
-      <div class="empty-message">
-        <mat-icon>info</mat-icon>
-        <h3>Plantilla no encontrada</h3>
-        <p>No se encontró una plantilla para el medio "{{ seleccionForm.get('medio')?.value }}" en el país de facturación del plan.</p>
-        <p>Contacta al administrador para agregar esta configuración.</p>
-      </div>
-    </mat-card-content>
-  </mat-card>
+
 
   <!-- Botones de Acción -->
   <div class="action-buttons">

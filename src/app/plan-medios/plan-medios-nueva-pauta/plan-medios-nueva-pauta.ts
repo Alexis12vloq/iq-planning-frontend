@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
 import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { PlantillaPauta, CampoPlantilla, RespuestaPauta } from '../models/plantilla-pauta.model';
@@ -37,7 +38,8 @@ interface PlanData {
     MatIconModule,
     MatTableModule,
     MatSnackBarModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './plan-medios-nueva-pauta.html',
   styleUrls: ['./plan-medios-nueva-pauta.scss']
@@ -54,6 +56,10 @@ export class PlanMediosNuevaPauta implements OnInit {
   
   // Plantilla actual cargada
   plantillaActual: PlantillaPauta | null = null;
+  
+  // Estados de carga
+  cargandoPlantilla: boolean = false;
+  errorPlantilla: string | null = null;
   
   // Pautas guardadas
   pautasGuardadas: RespuestaPauta[] = [];
@@ -99,27 +105,55 @@ export class PlanMediosNuevaPauta implements OnInit {
   }
 
   ngOnInit(): void {
+    // Limpiar estados iniciales
+    this.cargandoPlantilla = false;
+    this.errorPlantilla = null;
+    this.plantillaActual = null;
+    
     this.cargarPautasExistentes();
   }
 
   // Cargar plantilla según el país del plan y el medio seleccionado
   cargarPlantillaPorMedio(medio: string): void {
-    // Obtener país de facturación del plan
-    const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-    const planCompleto = planesLocal.find((plan: any) => plan.id === this.planData?.id);
-    const paisFacturacion = planCompleto?.paisFacturacion || 'Perú';
-
-    // Buscar plantilla
-    this.plantillaActual = this.plantillaService.obtenerPlantilla(paisFacturacion, medio);
+    // Limpiar estados anteriores
+    this.cargandoPlantilla = true;
+    this.errorPlantilla = null;
+    this.plantillaActual = null;
     
-    if (this.plantillaActual) {
-      this.generarFormularioDinamico();
-      this.snackBar.open(`Plantilla cargada para ${medio} en ${paisFacturacion}`, '', { duration: 2000 });
-    } else {
-      this.snackBar.open(`No se encontró plantilla para ${medio} en ${paisFacturacion}`, '', { duration: 3000 });
-      this.plantillaActual = null;
-      this.pautaForm = this.fb.group({});
-    }
+    // Simular carga async para evitar bloqueo de UI
+    setTimeout(() => {
+      try {
+        // Obtener país de facturación del plan
+        const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        const planCompleto = planesLocal.find((plan: any) => plan.id === this.planData?.id);
+        const paisFacturacion = planCompleto?.paisFacturacion || 'Perú';
+
+        // Buscar plantilla
+        this.plantillaActual = this.plantillaService.obtenerPlantilla(paisFacturacion, medio);
+        
+        if (this.plantillaActual) {
+          // Generar formulario de manera optimizada
+          this.generarFormularioDinamico();
+          this.snackBar.open(`Plantilla cargada: ${this.plantillaActual.nombre}`, '', { 
+            duration: 2000,
+            panelClass: ['success-snackbar']
+          });
+          this.errorPlantilla = null;
+        } else {
+          // No se encontró plantilla
+          this.errorPlantilla = `No existe plantilla configurada para "${medio}" en ${paisFacturacion}. ` +
+                               `Contacta al administrador para configurar esta combinación.`;
+          this.pautaForm = this.fb.group({});
+        }
+      } catch (error) {
+        console.error('Error al cargar plantilla:', error);
+        this.errorPlantilla = 'Error al cargar la plantilla. Intenta nuevamente.';
+        this.plantillaActual = null;
+        this.pautaForm = this.fb.group({});
+      } finally {
+        this.cargandoPlantilla = false;
+      }
+    }, 100); // Pequeño delay para permitir que la UI se actualice
   }
 
   // Generar formulario dinámico basado en la plantilla
