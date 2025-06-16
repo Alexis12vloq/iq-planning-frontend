@@ -37,6 +37,26 @@
         </div>
       </div>
 
+      <!-- Botones de acción -->
+      <div class="action-buttons">
+        <div class="left-buttons">
+          <button mat-raised-button class="action-button yellow-button" (click)="onNuevaPauta()">
+            <mat-icon>add</mat-icon> Nueva Pauta
+          </button>
+          <button mat-raised-button class="action-button blue-button" (click)="onDescargaFlow()">
+            <mat-icon>download</mat-icon> Descarga FlowChart
+          </button>
+          <button mat-raised-button class="action-button blue-button" (click)="onAprobarPlan()">
+            <mat-icon>check_circle</mat-icon> Aprobar Plan
+          </button>
+        </div>
+        <div class="right-buttons">
+          <button mat-raised-button color="warn" (click)="onRegresar()">
+            <mat-icon>arrow_back</mat-icon> Regresar
+          </button>
+        </div>
+      </div>
+
       <!-- Tabla de medios -->
       <div class="table-container">
         <table class="medios-table">
@@ -111,26 +131,6 @@
           </tfoot>
         </table>
       </div>
-    </div>
-  </div>
-
-  <!-- Botones de acción -->
-  <div class="action-buttons">
-    <div class="left-buttons">
-      <button mat-raised-button class="action-button yellow-button" (click)="onNuevaPauta()">
-        <mat-icon>add</mat-icon> Nueva Pauta
-      </button>
-      <button mat-raised-button class="action-button blue-button" (click)="onDescargaFlow()">
-        <mat-icon>download</mat-icon> Descarga FlowChart
-      </button>
-      <button mat-raised-button class="action-button blue-button" (click)="onAprobarPlan()">
-        <mat-icon>check_circle</mat-icon> Aprobar Plan
-      </button>
-    </div>
-    <div class="right-buttons">
-      <button mat-raised-button color="warn" (click)="onRegresar()">
-        <mat-icon>arrow_back</mat-icon> Regresar
-      </button>
     </div>
   </div>
 </div> 
