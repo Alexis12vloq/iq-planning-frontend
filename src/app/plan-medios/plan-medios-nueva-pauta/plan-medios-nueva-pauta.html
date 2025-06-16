@@ -99,7 +99,7 @@
           <ng-container *ngFor="let campo of plantillaActual.fields; trackBy: trackByCampo">
             
             <!-- Campo de Input Text/Number -->
-            <mat-form-field *ngIf="!campo.options && !campo.lookupTable">
+            <mat-form-field *ngIf="esInputField(campo)">
               <mat-label>{{ campo.label }}</mat-label>
               <input 
                 matInput 
@@ -109,7 +109,7 @@
             </mat-form-field>
 
             <!-- Campo Select con Opciones Fijas -->
-            <mat-form-field *ngIf="campo.options && !campo.lookupTable">
+            <mat-form-field *ngIf="esSelectField(campo)">
               <mat-label>{{ campo.label }}</mat-label>
               <mat-select [formControlName]="campo.name">
                 <mat-option *ngFor="let opcion of campo.options" [value]="opcion">
@@ -119,7 +119,7 @@
             </mat-form-field>
 
             <!-- Campo Select con Lookup -->
-            <mat-form-field *ngIf="campo.lookupTable">
+            <mat-form-field *ngIf="esLookupField(campo)">
               <mat-label>{{ campo.label }}</mat-label>
               <mat-select [formControlName]="campo.name">
                 <mat-option *ngFor="let item of obtenerOpcionesLookup(campo)" [value]="item.codigo">
@@ -152,26 +152,38 @@
         <mat-icon>list</mat-icon>
         Pautas Guardadas ({{ pautasGuardadas.length }})
       </mat-card-title>
+      <mat-card-subtitle>Haz clic en el ícono de eliminar para borrar una pauta</mat-card-subtitle>
     </mat-card-header>
     
     <mat-card-content>
       <div class="pautas-list">
         <div *ngFor="let pauta of pautasGuardadas; let i = index; trackBy: trackByPauta" class="pauta-item">
           <div class="pauta-header">
-            <h4>{{ pauta.medio }} - Pauta #{{ i + 1 }}</h4>
-            <div class="pauta-meta">
-              <span class="meta-item">
-                <mat-icon>attach_money</mat-icon>
-                {{ pauta.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}
-              </span>
-              <span class="meta-item">
-                <mat-icon>confirmation_number</mat-icon>
-                {{ pauta.totalSpots }} spots
-              </span>
-              <span class="meta-item">
-                <mat-icon>schedule</mat-icon>
-                {{ pauta.semanas?.length || 0 }} semanas
-              </span>
+            <div class="pauta-title">
+              <h4>{{ pauta.medio }} - Pauta #{{ i + 1 }}</h4>
+              <div class="pauta-meta">
+                <span class="meta-item">
+                  <mat-icon>attach_money</mat-icon>
+                  {{ pauta.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}
+                </span>
+                <span class="meta-item">
+                  <mat-icon>confirmation_number</mat-icon>
+                  {{ pauta.totalSpots }} spots
+                </span>
+                <span class="meta-item">
+                  <mat-icon>schedule</mat-icon>
+                  {{ pauta.semanas?.length || 0 }} semanas
+                </span>
+              </div>
+            </div>
+            <div class="pauta-actions">
+              <button 
+                mat-icon-button 
+                color="warn" 
+                (click)="eliminarPauta(pauta.id, i)"
+                matTooltip="Eliminar pauta">
+                <mat-icon>delete</mat-icon>
+              </button>
             </div>
           </div>
           

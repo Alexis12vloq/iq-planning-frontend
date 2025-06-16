@@ -283,9 +283,11 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private cargarPeriodosConPautas(planId: string): PeriodoPlan[] {
-    // Cargar pautas del plan desde localStorage
-    const pautasGuardadas: PautaLocal[] = JSON.parse(localStorage.getItem('pautas') || '[]');
-    const pautasDelPlan = pautasGuardadas.filter(pauta => pauta.planId === planId);
+    // Cargar pautas del plan desde localStorage usando la clave correcta
+    const respuestasPautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    const pautasDelPlan = respuestasPautas.filter((pauta: any) => pauta.planId === planId);
+
+    console.log('Pautas encontradas para el plan:', pautasDelPlan);
 
     // Obtener las fechas del plan para calcular el período
     const planCompleto = JSON.parse(localStorage.getItem('planesMedios') || '[]')
@@ -313,26 +315,36 @@ export class PlanMediosResumen implements OnInit {
     // Agrupar pautas por medio
     const mediosMap = new Map<string, MedioPlan>();
     
-    pautasDelPlan.forEach(pauta => {
-      if (mediosMap.has(pauta.medio)) {
+    pautasDelPlan.forEach((respuestaPauta: any) => {
+      const medio = respuestaPauta.medio;
+      const valorNeto = respuestaPauta.valorNeto || 0;
+      const totalSpots = respuestaPauta.totalSpots || 1;
+      const semanas = respuestaPauta.semanas || [];
+      
+      // Convertir semanas de códigos a array booleano
+      const semanasBoolean = ['L1', 'L7', 'L14', 'L21', 'L28'].map(codigo => 
+        semanas.includes(codigo)
+      );
+      
+      if (mediosMap.has(medio)) {
         // Si el medio ya existe, sumar los valores
-        const medioExistente = mediosMap.get(pauta.medio)!;
-        medioExistente.salidas += pauta.salidas;
-        medioExistente.valorNeto += pauta.valorNeto;
+        const medioExistente = mediosMap.get(medio)!;
+        medioExistente.salidas += totalSpots;
+        medioExistente.valorNeto += valorNeto;
         // Para semanas, hacer OR lógico (si cualquier pauta tiene true, el resultado es true)
         medioExistente.semanas = medioExistente.semanas.map((valor, index) => 
-          valor || pauta.semanas[index]
+          valor || semanasBoolean[index]
         );
-        // Recalcular SOI promedio ponderado
-        medioExistente.soi = Math.round((medioExistente.soi + pauta.soi) / 2);
+        // Calcular SOI promedio
+        medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
       } else {
         // Crear nuevo medio
-        mediosMap.set(pauta.medio, {
-          nombre: pauta.medio,
-          salidas: pauta.salidas,
-          valorNeto: pauta.valorNeto,
-          soi: pauta.soi,
-          semanas: [...pauta.semanas] // Copia del array
+        mediosMap.set(medio, {
+          nombre: medio,
+          salidas: totalSpots,
+          valorNeto: valorNeto,
+          soi: Math.round((valorNeto / totalSpots) || 0),
+          semanas: semanasBoolean
         });
       }
     });
@@ -342,7 +354,7 @@ export class PlanMediosResumen implements OnInit {
     
     // Calcular totales
     const totalInversionNeta = medios.reduce((total, medio) => total + medio.valorNeto, 0);
-    const iva = Math.round(totalInversionNeta * 0.19);
+    const iva = Math.round(totalInversionNeta * 0.18); // Usar 18% como en el cálculo de pautas
     const totalInversion = totalInversionNeta + iva;
 
     return [{
