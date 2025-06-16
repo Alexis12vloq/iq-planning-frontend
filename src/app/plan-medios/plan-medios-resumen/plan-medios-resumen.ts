@@ -9,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { ResumenPlan, PeriodoPlan, MedioPlan, PlanConsultaData, PERIODOS_EJEMPLO } from '../models/resumen-plan.model';
+import { PautaLocal } from '../models/pauta-local.model';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -41,7 +42,7 @@ interface FilaMedio {
 export class PlanMediosResumen implements OnInit {
   @ViewChild('content') content!: ElementRef;
 
-  periodos: PeriodoPlan[] = PERIODOS_EJEMPLO;
+  periodos: PeriodoPlan[] = [];
   periodoSeleccionado: PeriodoPlan;
   resumenPlan: ResumenPlan = this.crearPlanEjemplo(); // Inicializar con plan de ejemplo
   displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
@@ -61,6 +62,9 @@ export class PlanMediosResumen implements OnInit {
       const planCompleto = planesLocal.find((plan: any) => plan.id === planData.id);
       
       if (planCompleto) {
+        // Cargar pautas asociadas al plan desde localStorage
+        const periodosReales = this.cargarPeriodosConPautas(planCompleto.id);
+        
         // Inicializar el resumen del plan con los datos reales del localStorage
         this.resumenPlan = {
           numeroPlan: planCompleto.numeroPlan,
@@ -70,8 +74,9 @@ export class PlanMediosResumen implements OnInit {
           campana: planCompleto.campana,
           fechaInicio: planCompleto.fechaInicio,
           fechaFin: planCompleto.fechaFin,
-          periodos: this.periodos
+          periodos: periodosReales
         };
+        this.periodos = periodosReales;
       } else {
         // Fallback si no se encuentra el plan
         this.inicializarPlanEjemplo();
@@ -93,7 +98,7 @@ export class PlanMediosResumen implements OnInit {
       this.inicializarPlanEjemplo();
     }
 
-    this.periodoSeleccionado = this.periodos[0];
+    this.periodoSeleccionado = this.resumenPlan.periodos[0];
     this.prepararDataSource();
   }
 
@@ -243,19 +248,163 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private crearPlanEjemplo(): ResumenPlan {
+    // Fechas de ejemplo dinámicas
+    const fechaInicio = "2024-01-01";
+    const fechaFin = "2024-12-31";
+    const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
+
+    // Crear un período vacío para el plan de ejemplo
+    const periodoVacio: PeriodoPlan = {
+      id: '1',
+      nombre: periodoInfo.nombre,
+      anio: periodoInfo.anio,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      medios: [], // Sin medios
+      totalInversionNeta: 0,
+      iva: 0,
+      totalInversion: 0
+    };
+
     return {
       numeroPlan: "0001",
       version: 1,
       cliente: "Cliente Ejemplo",
       producto: "Producto Ejemplo",
       campana: "Campaña Ejemplo",
-      fechaInicio: "2024-01-01",
-      fechaFin: "2024-12-31",
-      periodos: this.periodos
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      periodos: [periodoVacio]
     };
   }
 
   private inicializarPlanEjemplo(): void {
     this.resumenPlan = this.crearPlanEjemplo();
+  }
+
+  private cargarPeriodosConPautas(planId: string): PeriodoPlan[] {
+    // Cargar pautas del plan desde localStorage
+    const pautasGuardadas: PautaLocal[] = JSON.parse(localStorage.getItem('pautas') || '[]');
+    const pautasDelPlan = pautasGuardadas.filter(pauta => pauta.planId === planId);
+
+    // Obtener las fechas del plan para calcular el período
+    const planCompleto = JSON.parse(localStorage.getItem('planesMedios') || '[]')
+      .find((plan: any) => plan.id === planId);
+    
+    const fechaInicio = planCompleto?.fechaInicio || this.resumenPlan.fechaInicio;
+    const fechaFin = planCompleto?.fechaFin || this.resumenPlan.fechaFin;
+    const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
+
+    // Si no hay pautas, devolver período vacío con fechas reales
+    if (pautasDelPlan.length === 0) {
+      return [{
+        id: '1',
+        nombre: periodoInfo.nombre,
+        anio: periodoInfo.anio,
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        medios: [], // Sin medios cuando no hay pautas
+        totalInversionNeta: 0,
+        iva: 0,
+        totalInversion: 0
+      }];
+    }
+
+    // Agrupar pautas por medio
+    const mediosMap = new Map<string, MedioPlan>();
+    
+    pautasDelPlan.forEach(pauta => {
+      if (mediosMap.has(pauta.medio)) {
+        // Si el medio ya existe, sumar los valores
+        const medioExistente = mediosMap.get(pauta.medio)!;
+        medioExistente.salidas += pauta.salidas;
+        medioExistente.valorNeto += pauta.valorNeto;
+        // Para semanas, hacer OR lógico (si cualquier pauta tiene true, el resultado es true)
+        medioExistente.semanas = medioExistente.semanas.map((valor, index) => 
+          valor || pauta.semanas[index]
+        );
+        // Recalcular SOI promedio ponderado
+        medioExistente.soi = Math.round((medioExistente.soi + pauta.soi) / 2);
+      } else {
+        // Crear nuevo medio
+        mediosMap.set(pauta.medio, {
+          nombre: pauta.medio,
+          salidas: pauta.salidas,
+          valorNeto: pauta.valorNeto,
+          soi: pauta.soi,
+          semanas: [...pauta.semanas] // Copia del array
+        });
+      }
+    });
+
+    // Convertir map a array
+    const medios = Array.from(mediosMap.values());
+    
+    // Calcular totales
+    const totalInversionNeta = medios.reduce((total, medio) => total + medio.valorNeto, 0);
+    const iva = Math.round(totalInversionNeta * 0.19);
+    const totalInversion = totalInversionNeta + iva;
+
+    return [{
+      id: '1',
+      nombre: periodoInfo.nombre,
+      anio: periodoInfo.anio,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      medios: medios,
+      totalInversionNeta: totalInversionNeta,
+      iva: iva,
+      totalInversion: totalInversion
+    }];
+  }
+
+  private calcularPeriodo(fechaInicio: string, fechaFin: string): { nombre: string, anio: number } {
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    // Asegurar que las fechas se parseen correctamente
+    const fechaIni = new Date(fechaInicio + 'T00:00:00.000Z');
+    const fechaFinal = new Date(fechaFin + 'T00:00:00.000Z');
+    
+    const mesInicio = fechaIni.getUTCMonth(); // 0-11
+    const mesFin = fechaFinal.getUTCMonth(); // 0-11
+    const anioInicio = fechaIni.getUTCFullYear();
+    const anioFin = fechaFinal.getUTCFullYear();
+
+    // Debug: Agregar logs temporales
+    console.log('Calculando período:', {
+      fechaInicio,
+      fechaFin,
+      mesInicio,
+      mesFin,
+      mesInicioNombre: meses[mesInicio],
+      mesFinNombre: meses[mesFin],
+      sonIguales: mesInicio === mesFin
+    });
+
+    // Si es el mismo año
+    if (anioInicio === anioFin) {
+      if (mesInicio === mesFin) {
+        // Mismo mes
+        return {
+          nombre: `${meses[mesInicio]}`,
+          anio: anioInicio
+        };
+      } else {
+        // Diferentes meses del mismo año
+        return {
+          nombre: `${meses[mesInicio]}-${meses[mesFin]}`,
+          anio: anioInicio
+        };
+      }
+    } else {
+      // Diferentes años
+      return {
+        nombre: `${meses[mesInicio]} ${anioInicio} - ${meses[mesFin]} ${anioFin}`,
+        anio: anioInicio // Usar el año de inicio como referencia
+      };
+    }
   }
 } 
