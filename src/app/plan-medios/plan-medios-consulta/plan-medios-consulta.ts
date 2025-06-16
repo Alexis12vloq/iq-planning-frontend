@@ -23,6 +23,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 
 type Resultado = {
+  id: string;
   numeroPlan: string;
   version: string;
   pais: string;
@@ -345,6 +346,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     // Cargar planes guardados en localStorage
     const planesLocal: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
     const planesLocalAsResultados = planesLocal.map(plan => ({
+      id: plan.id, // Agregar el ID para poder recuperar el plan completo
       numeroPlan: plan.numeroPlan,
       version: plan.version,
       pais: plan.paisFacturacion,
@@ -409,6 +411,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   onRowDoubleClick(row: Resultado) {
     this.selectedRow = row;
     const planData = {
+      id: row.id,
       numeroPlan: row.numeroPlan,
       version: row.version,
       cliente: row.cliente,

@@ -32,6 +32,7 @@ export interface MedioPlan {
 
 // Interface para pasar datos desde la consulta al resumen
 export interface PlanConsultaData {
+    id?: string;
     numeroPlan: string;
     version: number;
     cliente: string;

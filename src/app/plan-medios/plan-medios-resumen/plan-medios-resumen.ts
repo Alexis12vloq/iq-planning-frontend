@@ -43,7 +43,7 @@ export class PlanMediosResumen implements OnInit {
 
   periodos: PeriodoPlan[] = PERIODOS_EJEMPLO;
   periodoSeleccionado: PeriodoPlan;
-  resumenPlan: ResumenPlan;
+  resumenPlan: ResumenPlan = this.crearPlanEjemplo(); // Inicializar con plan de ejemplo
   displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
   semanasColumnas: string[] = ['L1', 'L7', 'L14', 'L21', 'L28'];
   dataSource: FilaMedio[] = [];
@@ -55,8 +55,29 @@ export class PlanMediosResumen implements OnInit {
     const navigation = this.router.getCurrentNavigation();
     const planData = navigation?.extras?.state?.['planData'] as PlanConsultaData;
 
-    if (planData) {
-      // Inicializar el resumen del plan con los datos de la consulta
+    if (planData && planData.id) {
+      // Cargar el plan completo desde localStorage usando el ID
+      const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+      const planCompleto = planesLocal.find((plan: any) => plan.id === planData.id);
+      
+      if (planCompleto) {
+        // Inicializar el resumen del plan con los datos reales del localStorage
+        this.resumenPlan = {
+          numeroPlan: planCompleto.numeroPlan,
+          version: Number(planCompleto.version),
+          cliente: planCompleto.clienteFueActuacion,
+          producto: planCompleto.producto,
+          campana: planCompleto.campana,
+          fechaInicio: planCompleto.fechaInicio,
+          fechaFin: planCompleto.fechaFin,
+          periodos: this.periodos
+        };
+      } else {
+        // Fallback si no se encuentra el plan
+        this.inicializarPlanEjemplo();
+      }
+    } else if (planData) {
+      // Compatibilidad con navegación anterior (sin ID)
       this.resumenPlan = {
         numeroPlan: planData.numeroPlan,
         version: Number(planData.version),
@@ -69,16 +90,7 @@ export class PlanMediosResumen implements OnInit {
       };
     } else {
       // Si no hay datos de consulta, usar datos de ejemplo
-      this.resumenPlan = {
-        numeroPlan: "0001",
-        version: 1,
-        cliente: "Cliente Ejemplo",
-        producto: "Producto Ejemplo",
-        campana: "Campaña Ejemplo",
-        fechaInicio: "2024-01-01",
-        fechaFin: "2024-12-31",
-        periodos: this.periodos
-      };
+      this.inicializarPlanEjemplo();
     }
 
     this.periodoSeleccionado = this.periodos[0];
@@ -228,5 +240,22 @@ export class PlanMediosResumen implements OnInit {
         panelClass: ['error-snackbar']
       });
     }
+  }
+
+  private crearPlanEjemplo(): ResumenPlan {
+    return {
+      numeroPlan: "0001",
+      version: 1,
+      cliente: "Cliente Ejemplo",
+      producto: "Producto Ejemplo",
+      campana: "Campaña Ejemplo",
+      fechaInicio: "2024-01-01",
+      fechaFin: "2024-12-31",
+      periodos: this.periodos
+    };
+  }
+
+  private inicializarPlanEjemplo(): void {
+    this.resumenPlan = this.crearPlanEjemplo();
   }
 } 
