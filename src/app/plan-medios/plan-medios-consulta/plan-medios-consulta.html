@@ -103,10 +103,6 @@
             <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('pais')">País</th>
             <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'pais'}">{{ row.pais }}</td>
           </ng-container>
-          <ng-container matColumnDef="tipoCompra">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('tipoCompra')">Tipo de Compra</th>
-            <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'tipoCompra'}">{{ row.tipoCompra }}</td>
-          </ng-container>
           <ng-container matColumnDef="anunciante">
             <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn('anunciante')">Anunciante</th>
             <td mat-cell *matCellDef="let row" [ngClass]="{'selected-column': selectedColumn === 'anunciante'}">{{ row.anunciante }}</td>

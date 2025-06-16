@@ -19,12 +19,12 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
+import { PlanMediosLocal } from '../plan-medios-create/plan-medios-create';
 
 type Resultado = {
   numeroPlan: string;
   version: string;
   pais: string;
-  tipoCompra: string;
   anunciante: string;
   cliente: string;
   marca: string;
@@ -156,188 +156,29 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   filteredProductos!: Observable<string[]>;
 
   // Datos de ejemplo para la tabla
-  resultados: Resultado[] = [
-    {
-      numeroPlan: '0001',
-      version: '1',
-      pais: 'México',
-      tipoCompra: 'DIRECTO',
-      anunciante: 'Nestlé',
-      cliente: 'Gerber',
-      marca: 'NESPRESSO',
-      producto: 'NESPRESSO 1',
-      fechaInicio: '2025-07-01',
-      fechaFin: '2025-05-15',
-      campania: 'Campaña Verano'
-    },
-    {
-      numeroPlan: '0002',
-      version: '2',
-      pais: 'Perú',
-      tipoCompra: 'ORION',
-      anunciante: 'Unilever',
-      cliente: 'Magnum',
-      marca: 'HELADOS',
-      producto: 'MAGNUM CLASSIC',
-      fechaInicio: '2025-07-10',
-      fechaFin: '2025-07-20',
-      campania: 'Campaña Invierno'
-    },
-    {
-      numeroPlan: '0003',
-      version: '1',
-      pais: 'Colombia',
-      tipoCompra: 'KINESSO',
-      anunciante: 'Colgate',
-      cliente: 'Palmolive',
-      marca: 'HIGIENE',
-      producto: 'CREMA DENTAL',
-      fechaInicio: '2025-07-01',
-      fechaFin: '2025-07-31',
-      campania: 'Campaña Escolar'
-    },
-    {
-      numeroPlan: '0004',
-      version: '1',
-      pais: 'Chile',
-      tipoCompra: 'DIRECTO',
-      anunciante: 'Coca-Cola',
-      cliente: 'Coca-Cola Perú',
-      marca: 'Fanta',
-      producto: 'Fanta Naranja',
-      fechaInicio: '2025-08-01',
-      fechaFin: '2025-08-15',
-      campania: 'Campaña Primavera'
-    },
-    {
-      numeroPlan: '0005',
-      version: '2',
-      pais: 'México',
-      tipoCompra: 'ORION',
-      anunciante: 'Nestlé',
-      cliente: 'Nestlé Chile',
-      marca: 'Milo',
-      producto: 'Milo Polvo',
-      fechaInicio: '2025-09-01',
-      fechaFin: '2025-09-30',
-      campania: 'Campaña Escolar'
-    },
-    {
-      numeroPlan: '0006',
-      version: '1',
-      pais: 'Argentina',
-      tipoCompra: 'KINESSO',
-      anunciante: 'Unilever',
-      cliente: 'Unilever Argentina',
-      marca: 'Axe',
-      producto: 'Axe Apollo',
-      fechaInicio: '2025-10-01',
-      fechaFin: '2025-10-31',
-      campania: 'Campaña Otoño'
-    },
-    {
-      numeroPlan: '0007',
-      version: '1',
-      pais: 'Colombia',
-      tipoCompra: 'DIRECTO',
-      anunciante: 'Unilever',
-      cliente: 'Unilever Colombia',
-      marca: 'Sedal',
-      producto: 'Sedal Liso',
-      fechaInicio: '2025-11-01',
-      fechaFin: '2025-11-30',
-      campania: 'Campaña Belleza'
-    },
-    {
-      numeroPlan: '0008',
-      version: '2',
-      pais: 'Perú',
-      tipoCompra: 'ORION',
-      anunciante: 'Coca-Cola',
-      cliente: 'Coca-Cola México',
-      marca: 'Sprite',
-      producto: 'Sprite Sin Azúcar',
-      fechaInicio: '2025-12-01',
-      fechaFin: '2025-12-31',
-      campania: 'Campaña Navidad'
-    },
-    {
-      numeroPlan: '0009',
-      version: '1',
-      pais: 'Chile',
-      tipoCompra: 'KINESSO',
-      anunciante: 'Nestlé',
-      cliente: 'Nestlé Chile',
-      marca: 'Nescafé',
-      producto: 'Nescafé Gold',
-      fechaInicio: '2026-01-01',
-      fechaFin: '2026-01-31',
-      campania: 'Campaña Año Nuevo'
-    },
-    {
-      numeroPlan: '0010',
-      version: '1',
-      pais: 'México',
-      tipoCompra: 'DIRECTO',
-      anunciante: 'Unilever',
-      cliente: 'Unilever Argentina',
-      marca: 'Rexona',
-      producto: 'Rexona Women',
-      fechaInicio: '2026-02-01',
-      fechaFin: '2026-02-28',
-      campania: 'Campaña Verano'
-    },
-    {
-      numeroPlan: '0011',
-      version: '2',
-      pais: 'Argentina',
-      tipoCompra: 'ORION',
-      anunciante: 'Coca-Cola',
-      cliente: 'Coca-Cola Perú',
-      marca: 'Coca-Cola',
-      producto: 'Coca-Cola Light',
-      fechaInicio: '2026-03-01',
-      fechaFin: '2026-03-31',
-      campania: 'Campaña Salud'
-    },
-    {
-      numeroPlan: '0012',
-      version: '1',
-      pais: 'Colombia',
-      tipoCompra: 'KINESSO',
-      anunciante: 'Nestlé',
-      cliente: 'Nestlé Chile',
-      marca: 'Milo',
-      producto: 'Milo Bebida',
-      fechaInicio: '2026-04-01',
-      fechaFin: '2026-04-30',
-      campania: 'Campaña Deportes'
-    }
-  ];
+  resultados: Resultado[] = [];
 
-  resultadosPaginados: Resultado[] = [];
-  paginaActual = 0;
-  pageSize = 10;
-
-  minFechaFin: Date | null = null;
-
-  // Elimina la columna 'select' de selectColumns, usa solo displayedColumns para la tabla
   displayedColumns: string[] = [
-    'numeroPlan', 'version', 'pais', 'tipoCompra', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania'
+    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania'
   ];
 
-  selectColumns: string[] = [ 'numeroPlan', 'version', 'pais', 'tipoCompra', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania'];
+  selectColumns: string[] = [
+    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania'
+  ];
 
   sort: Sort = {active: '', direction: ''};
-
   selectedRow: Resultado | null = null;
   selectedColumn: string | null = null;
 
   dataSource = new MatTableDataSource<Resultado>([]);
-  selection = new SelectionModel<Resultado>(false, []); // solo una selección
+  selection = new SelectionModel<Resultado>(false, []);
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sortMat!: MatSort;
+
+  minFechaFin: Date | null = null; // <-- agrega esta propiedad
+
+  allResultados: Resultado[] = []; // almacena todos los resultados para filtrar
 
   constructor() {
     // Autocomplete: Anunciante
@@ -433,8 +274,44 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   buscar() {
-    // Aquí iría la lógica para filtrar los resultados según los valores del formulario
-    console.log('Filtros:', this.filtroForm.value);
+    // Filtra la data según los valores del formulario
+    const filtros = this.filtroForm.value;
+    let filtrados = this.allResultados;
+
+    if (filtros.numeroPlan) {
+      filtrados = filtrados.filter(r => r.numeroPlan.includes(filtros.numeroPlan as string));
+    }
+    if (filtros.version) {
+      filtrados = filtrados.filter(r => r.version.includes(filtros.version as string));
+    }
+    if (filtros.anunciante) {
+      filtrados = filtrados.filter(r => r.anunciante.toLowerCase().includes((filtros.anunciante as string).toLowerCase()));
+    }
+    if (filtros.cliente) {
+      filtrados = filtrados.filter(r => r.cliente.toLowerCase().includes((filtros.cliente as string).toLowerCase()));
+    }
+    if (filtros.marca) {
+      filtrados = filtrados.filter(r => r.marca.toLowerCase().includes((filtros.marca as string).toLowerCase()));
+    }
+    if (filtros.producto) {
+      filtrados = filtrados.filter(r => r.producto.toLowerCase().includes((filtros.producto as string).toLowerCase()));
+    }
+    if (filtros.fechaInicio) {
+      filtrados = filtrados.filter(r => r.fechaInicio === this.formatDate(filtros.fechaInicio));
+    }
+    if (filtros.fechaFin) {
+      filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
+    }
+
+    this.dataSource.data = filtrados;
+  }
+
+  private formatDate(date: any): string {
+    if (!date) return '';
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
   }
 
   borrarFiltros() {
@@ -442,6 +319,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     this.clientesOptions = [];
     this.marcasOptions = [];
     this.productosOptions = [];
+    this.dataSource.data = this.allResultados; // restablece la tabla al quitar filtros
   }
 
   get tieneFiltrosActivos(): boolean {
@@ -449,8 +327,22 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
-    // Inicializa dataSource con todos los resultados (puedes filtrar si lo deseas)
-    this.dataSource = new MatTableDataSource<Resultado>(this.resultados);
+    // Cargar planes guardados en localStorage
+    const planesLocal: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+    const planesLocalAsResultados = planesLocal.map(plan => ({
+      numeroPlan: plan.numeroPlan,
+      version: plan.version,
+      pais: plan.paisFacturacion,
+      anunciante: plan.clienteAnunciante,
+      cliente: plan.clienteFueActuacion,
+      marca: plan.marca,
+      producto: plan.producto,
+      fechaInicio: plan.fechaInicio,
+      fechaFin: plan.fechaFin,
+      campania: plan.campana
+    }));
+    this.allResultados = planesLocalAsResultados;
+    this.dataSource = new MatTableDataSource<Resultado>(this.allResultados);
   }
 
   ngAfterViewInit() {
@@ -459,7 +351,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   sortData(sort: Sort) {
-    // Ya no necesitas lógica aquí, MatTableDataSource maneja el ordenamiento automáticamente
+    // No es necesario implementar nada aquí, MatTableDataSource maneja el ordenamiento automáticamente
   }
 
   seleccionarFila(resultado: Resultado) {
@@ -500,7 +392,6 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     this.selection.toggle(row);
   }
 
-  // Llama esto desde el template al hacer click en un th
   selectColumn(column: string) {
     this.selectedColumn = column;
   }

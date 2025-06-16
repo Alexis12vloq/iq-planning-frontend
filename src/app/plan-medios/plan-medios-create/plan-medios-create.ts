@@ -11,6 +11,23 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+
+export interface PlanMediosLocal {
+  id: string;
+  numeroPlan: string;
+  version: string;
+  paisFacturacion: string;
+  paisesPauta: string[];
+  clienteAnunciante: string;
+  clienteFueActuacion: string;
+  marca: string;
+  producto: string;
+  campana: string;
+  fechaInicio: string;
+  fechaFin: string;
+  // Puedes agregar más campos aquí en el futuro
+}
 
 @Component({
   selector: 'app-plan-medios-create',
@@ -25,7 +42,8 @@ import { MatNativeDateModule } from '@angular/material/core';
     MatButtonModule,
     MatAutocompleteModule,
     MatDatepickerModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    MatSnackBarModule
   ],
   templateUrl: './plan-medios-create.html',
   styleUrls: ['./plan-medios-create.scss']
@@ -118,7 +136,7 @@ export class PlanMediosCreate implements AfterViewInit {
 
   // Formulario reactivo
   planMediosForm = new FormGroup({
-    numeroPlan: new FormControl({ value: 'AUTO-XXXX', disabled: true }, Validators.required),
+    numeroPlan: new FormControl({ value: 'Auto', disabled: true }, Validators.required),
     version: new FormControl({ value: '1', disabled: true }, [Validators.required]),
     paisFacturacion: new FormControl('', Validators.required),
     paisesPauta: new FormControl([], [Validators.required, Validators.minLength(1)]),
@@ -141,7 +159,9 @@ export class PlanMediosCreate implements AfterViewInit {
   minFechaInicio = new Date();
   minFechaFin: Date | null = null;
 
-  constructor() {
+  constructor(
+    private snackBar: MatSnackBar
+  ) {
     // 1. Autocomplete: País Facturación
     this.filteredPaisesFacturacion = this.planMediosForm.get('paisFacturacion')!.valueChanges.pipe(
       startWith(''),
@@ -249,7 +269,52 @@ export class PlanMediosCreate implements AfterViewInit {
 
   onSubmit() {
     if (this.planMediosForm.valid) {
-      console.log(this.planMediosForm.value);
+      this.snackBar.open('Creando plan de medios...', '', { duration: 1200 });
+
+      const planesGuardados: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+      let lastNumeroPlan = 1000;
+      if (planesGuardados.length > 0) {
+        const max = Math.max(
+          ...planesGuardados
+            .map(p => parseInt(p.numeroPlan, 10))
+            .filter(n => !isNaN(n))
+        );
+        if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
+      }
+
+      const formValue = this.planMediosForm.getRawValue();
+
+      // Formatea fechas a 'YYYY-MM-DD'
+      const formatDate = (date: any) => {
+        if (!date) return '';
+        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().slice(0, 10);
+      };
+
+      const nuevoPlan: PlanMediosLocal = {
+        id: Date.now().toString(),
+        numeroPlan: lastNumeroPlan.toString(),
+        version: formValue.version ?? '',
+        paisFacturacion: formValue.paisFacturacion ?? '',
+        paisesPauta: formValue.paisesPauta ?? [],
+        clienteAnunciante: formValue.clienteAnunciante ?? '',
+        clienteFueActuacion: formValue.clienteFueActuacion ?? '',
+        marca: formValue.marca ?? '',
+        producto: formValue.producto ?? '',
+        campana: formValue.campana ?? '',
+        fechaInicio: formatDate(formValue.fechaInicio),
+        fechaFin: formatDate(formValue.fechaFin)
+      };
+
+      planesGuardados.push(nuevoPlan);
+      localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
+
+      setTimeout(() => {
+        this.snackBar.open('Plan de medios creado correctamente', '', { duration: 2000 });
+        // Opcional: limpiar el formulario o redirigir
+      }, 1200);
     } else {
       console.log('Formulario inválido:', this.planMediosForm.errors, this.planMediosForm.status, this.planMediosForm.value);
       Object.keys(this.planMediosForm.controls).forEach(key => {
