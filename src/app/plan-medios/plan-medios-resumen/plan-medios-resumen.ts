@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -7,7 +7,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ResumenPlan, PERIODOS_EJEMPLO, Periodo, MedioPlan } from '../models/resumen-plan.model';
+import { Router } from '@angular/router';
+import { ResumenPlan, PeriodoPlan, MedioPlan, PlanConsultaData, PERIODOS_EJEMPLO } from '../models/resumen-plan.model';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface FilaMedio {
   tipo: 'nombre' | 'salidas' | 'valor';
@@ -36,16 +39,49 @@ interface FilaMedio {
   styleUrls: ['./plan-medios-resumen.scss']
 })
 export class PlanMediosResumen implements OnInit {
-  periodos = PERIODOS_EJEMPLO;
-  periodoSeleccionado: Periodo;
+  @ViewChild('content') content!: ElementRef;
+
+  periodos: PeriodoPlan[] = PERIODOS_EJEMPLO;
+  periodoSeleccionado: PeriodoPlan;
   resumenPlan: ResumenPlan;
   displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
   semanasColumnas: string[] = ['L1', 'L7', 'L14', 'L21', 'L28'];
   dataSource: FilaMedio[] = [];
 
-  constructor(private snackBar: MatSnackBar) {
+  constructor(
+    private snackBar: MatSnackBar,
+    private router: Router
+  ) {
+    const navigation = this.router.getCurrentNavigation();
+    const planData = navigation?.extras?.state?.['planData'] as PlanConsultaData;
+
+    if (planData) {
+      // Inicializar el resumen del plan con los datos de la consulta
+      this.resumenPlan = {
+        numeroPlan: planData.numeroPlan,
+        version: Number(planData.version),
+        cliente: planData.cliente,
+        producto: planData.producto,
+        campana: planData.campana,
+        fechaInicio: planData.fechaInicio,
+        fechaFin: planData.fechaFin,
+        periodos: this.periodos
+      };
+    } else {
+      // Si no hay datos de consulta, usar datos de ejemplo
+      this.resumenPlan = {
+        numeroPlan: "0001",
+        version: 1,
+        cliente: "Cliente Ejemplo",
+        producto: "Producto Ejemplo",
+        campana: "Campaña Ejemplo",
+        fechaInicio: "2024-01-01",
+        fechaFin: "2024-12-31",
+        periodos: this.periodos
+      };
+    }
+
     this.periodoSeleccionado = this.periodos[0];
-    this.resumenPlan = this.periodoSeleccionado.resumenPlan;
     this.prepararDataSource();
   }
 
@@ -53,7 +89,7 @@ export class PlanMediosResumen implements OnInit {
 
   prepararDataSource() {
     const filas: FilaMedio[] = [];
-    this.resumenPlan.medios.forEach(medio => {
+    this.periodoSeleccionado.medios.forEach(medio => {
       // Fila del nombre del medio
       filas.push({
         tipo: 'nombre',
@@ -89,22 +125,27 @@ export class PlanMediosResumen implements OnInit {
     }
   }
 
-  onPeriodoChange(periodo: Periodo): void {
+  onPeriodoChange(periodo: PeriodoPlan): void {
     this.periodoSeleccionado = periodo;
-    this.resumenPlan = periodo.resumenPlan;
     this.prepararDataSource();
   }
 
   onNuevaPauta(): void {
-    console.log('Nueva pauta clicked');
+    const planData = {
+      numeroPlan: this.resumenPlan.numeroPlan,
+      version: this.resumenPlan.version,
+      cliente: this.resumenPlan.cliente,
+      producto: this.resumenPlan.producto,
+      campana: this.resumenPlan.campana
+    };
+    
+    this.router.navigate(['/plan-medios-nueva-pauta'], { 
+      state: { planData } 
+    });
   }
 
   onDescargaFlow(): void {
     console.log('Descarga Flow clicked');
-  }
-
-  onDescargaFlowChart(): void {
-    console.log('Descarga FlowChart clicked');
   }
 
   onAprobarPlan(): void {
@@ -126,6 +167,66 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onRegresar(): void {
-    console.log('Regresar clicked');
+    this.router.navigate(['/plan-medios-consulta']);
+  }
+
+  async exportarPDF() {
+    try {
+      // Mostrar mensaje de carga
+      this.snackBar.open('Generando FlowChart...', '', {
+        duration: undefined,
+        horizontalPosition: 'center',
+        verticalPosition: 'top'
+      });
+
+      const content = this.content.nativeElement;
+      const canvas = await html2canvas(content, {
+        scale: 2, // Mejor calidad
+        useCORS: true,
+        logging: false
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+
+      // Añadir título
+      pdf.setFontSize(16);
+      pdf.text(`Plan de Medios: ${this.resumenPlan.numeroPlan}`, 15, 15);
+      pdf.setFontSize(12);
+      pdf.text(`Versión: ${this.resumenPlan.version}`, 15, 22);
+      pdf.text(`Cliente: ${this.resumenPlan.cliente}`, 15, 29);
+      pdf.text(`Producto: ${this.resumenPlan.producto}`, 15, 36);
+      pdf.text(`Campaña: ${this.resumenPlan.campana}`, 15, 43);
+      pdf.text(`Período: ${this.periodoSeleccionado.nombre} ${this.periodoSeleccionado.anio}`, 15, 50);
+
+      // Añadir la imagen del contenido
+      pdf.addImage(imgData, 'PNG', 0, 60, imgWidth, imgHeight);
+
+      // Guardar el PDF
+      pdf.save(`flowchart_${this.resumenPlan.numeroPlan}_v${this.resumenPlan.version}.pdf`);
+
+      // Cerrar mensaje de carga y mostrar mensaje de éxito
+      this.snackBar.dismiss();
+      this.snackBar.open('FlowChart generado exitosamente', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['success-snackbar']
+      });
+    } catch (error) {
+      console.error('Error al generar FlowChart:', error);
+      this.snackBar.open('Error al generar el FlowChart', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+    }
   }
 } 
