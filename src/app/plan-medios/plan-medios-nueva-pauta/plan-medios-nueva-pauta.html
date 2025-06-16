@@ -96,51 +96,36 @@
 
         <!-- Campos Dinámicos -->
         <div class="form-grid">
-          <ng-container *ngFor="let campo of plantillaActual.fields">
+          <ng-container *ngFor="let campo of plantillaActual.fields; trackBy: trackByCampo">
             
             <!-- Campo de Input Text/Number -->
             <mat-form-field *ngIf="!campo.options && !campo.lookupTable">
-              <mat-label>{{ campo.label }} <span *ngIf="esRequerido(campo)" class="required">*</span></mat-label>
+              <mat-label>{{ campo.label }}</mat-label>
               <input 
                 matInput 
                 [formControlName]="campo.name"
                 [type]="obtenerTipoCampo(campo)"
                 [step]="campo.type === 'decimal' || campo.type === 'money' ? '0.01' : null">
-              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['required']">
-                {{ campo.label }} es requerido
-              </mat-error>
-              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['min']">
-                Valor mínimo: {{ campo.min }}
-              </mat-error>
-              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['max']">
-                Valor máximo: {{ campo.max }}
-              </mat-error>
             </mat-form-field>
 
             <!-- Campo Select con Opciones Fijas -->
             <mat-form-field *ngIf="campo.options && !campo.lookupTable">
-              <mat-label>{{ campo.label }} <span *ngIf="esRequerido(campo)" class="required">*</span></mat-label>
+              <mat-label>{{ campo.label }}</mat-label>
               <mat-select [formControlName]="campo.name">
                 <mat-option *ngFor="let opcion of campo.options" [value]="opcion">
                   {{ opcion }}
                 </mat-option>
               </mat-select>
-              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['required']">
-                {{ campo.label }} es requerido
-              </mat-error>
             </mat-form-field>
 
             <!-- Campo Select con Lookup -->
             <mat-form-field *ngIf="campo.lookupTable">
-              <mat-label>{{ campo.label }} <span *ngIf="esRequerido(campo)" class="required">*</span></mat-label>
+              <mat-label>{{ campo.label }}</mat-label>
               <mat-select [formControlName]="campo.name">
                 <mat-option *ngFor="let item of obtenerOpcionesLookup(campo)" [value]="item.codigo">
                   {{ item.valor }}
                 </mat-option>
               </mat-select>
-              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['required']">
-                {{ campo.label }} es requerido
-              </mat-error>
             </mat-form-field>
 
           </ng-container>
@@ -151,8 +136,7 @@
           <button 
             mat-raised-button 
             color="primary" 
-            type="submit" 
-            [disabled]="!pautaForm.valid">
+            type="submit">
             <mat-icon>add</mat-icon>
             Agregar Pauta
           </button>
@@ -172,7 +156,7 @@
     
     <mat-card-content>
       <div class="pautas-list">
-        <div *ngFor="let pauta of pautasGuardadas; let i = index" class="pauta-item">
+        <div *ngFor="let pauta of pautasGuardadas; let i = index; trackBy: trackByPauta" class="pauta-item">
           <div class="pauta-header">
             <h4>{{ pauta.medio }} - Pauta #{{ i + 1 }}</h4>
             <div class="pauta-meta">

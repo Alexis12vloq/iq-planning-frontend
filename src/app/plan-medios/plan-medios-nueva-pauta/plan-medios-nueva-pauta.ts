@@ -96,10 +96,16 @@ export class PlanMediosNuevaPauta implements OnInit {
       medio: ['', Validators.required]
     });
 
-    // Observar cambios en el medio seleccionado
+    // Observar cambios en el medio seleccionado (optimizado)
     this.seleccionForm.get('medio')?.valueChanges.subscribe(medio => {
-      if (medio) {
+      if (medio && medio.trim()) {
         this.cargarPlantillaPorMedio(medio);
+      } else {
+        // Limpiar formulario si no hay medio seleccionado
+        this.plantillaActual = null;
+        this.errorPlantilla = null;
+        this.cargandoPlantilla = false;
+        this.pautaForm = this.fb.group({});
       }
     });
   }
@@ -120,7 +126,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     this.errorPlantilla = null;
     this.plantillaActual = null;
     
-    // Simular carga async para evitar bloqueo de UI
+    // Usar setTimeout mínimo para mostrar loading
     setTimeout(() => {
       try {
         // Obtener país de facturación del plan
@@ -132,10 +138,10 @@ export class PlanMediosNuevaPauta implements OnInit {
         this.plantillaActual = this.plantillaService.obtenerPlantilla(paisFacturacion, medio);
         
         if (this.plantillaActual) {
-          // Generar formulario de manera optimizada
-          this.generarFormularioDinamico();
+          // Generar formulario simplificado
+          this.generarFormularioSimplificado();
           this.snackBar.open(`Plantilla cargada: ${this.plantillaActual.nombre}`, '', { 
-            duration: 2000,
+            duration: 1500,
             panelClass: ['success-snackbar']
           });
           this.errorPlantilla = null;
@@ -153,41 +159,29 @@ export class PlanMediosNuevaPauta implements OnInit {
       } finally {
         this.cargandoPlantilla = false;
       }
-    }, 100); // Pequeño delay para permitir que la UI se actualice
+    }, 50); // Delay mínimo solo para mostrar loading
   }
 
-  // Generar formulario dinámico basado en la plantilla
-  generarFormularioDinamico(): void {
-    if (!this.plantillaActual) return;
+  // Generar formulario simplificado sin validadores (máxima velocidad)
+  generarFormularioSimplificado(): void {
+    if (!this.plantillaActual) {
+      this.pautaForm = this.fb.group({});
+      return;
+    }
 
-    const formControls: { [key: string]: FormControl } = {};
+    // Configuración básica sin validadores
+    const formConfig: { [key: string]: any } = {
+      // Campo de semanas básico
+      semanas: [[]]
+    };
 
-    // Agregar campos de semanas
-    formControls['semanas'] = new FormControl([], Validators.required);
+    // Agregar campos de la plantilla sin validadores
+    for (const campo of this.plantillaActual.fields) {
+      formConfig[campo.name] = [campo.defaultValue || ''];
+    }
 
-    // Generar campos dinámicos
-    this.plantillaActual.fields.forEach(campo => {
-      const validators = [];
-      
-      // Validaciones básicas
-      if (campo.required) {
-        validators.push(Validators.required);
-      }
-      
-      // Validaciones por tipo
-      if (campo.type === 'integer' || campo.type === 'decimal' || campo.type === 'money') {
-        if (campo.min !== undefined) validators.push(Validators.min(campo.min));
-        if (campo.max !== undefined) validators.push(Validators.max(campo.max));
-      }
-      
-      if (campo.type === 'string' && campo.maxLength) {
-        validators.push(Validators.maxLength(campo.maxLength));
-      }
-
-      formControls[campo.name] = new FormControl(campo.defaultValue || '', validators);
-    });
-
-    this.pautaForm = this.fb.group(formControls);
+    // Crear formulario de una vez
+    this.pautaForm = this.fb.group(formConfig);
   }
 
   // Obtener opciones para campos de lookup
@@ -200,8 +194,8 @@ export class PlanMediosNuevaPauta implements OnInit {
 
   // Guardar pauta
   onSubmit(): void {
-    if (!this.pautaForm.valid || !this.plantillaActual || !this.planData) {
-      this.snackBar.open('Por favor completa todos los campos requeridos', '', { duration: 3000 });
+    if (!this.plantillaActual || !this.planData) {
+      this.snackBar.open('Error: No hay plantilla o datos del plan', '', { duration: 3000 });
       return;
     }
 
@@ -243,14 +237,28 @@ export class PlanMediosNuevaPauta implements OnInit {
     localStorage.setItem('respuestasPautas', JSON.stringify(pautasExistentes));
   }
 
-  // Cargar pautas existentes del plan
+  // Cargar pautas existentes del plan (optimizado)
   private cargarPautasExistentes(): void {
-    if (!this.planData?.id) return;
+    if (!this.planData?.id) {
+      this.pautasGuardadas = [];
+      return;
+    }
     
-    const todasLasPautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    this.pautasGuardadas = todasLasPautas.filter((pauta: RespuestaPauta) => 
-      pauta.planId === this.planData?.id
-    );
+    try {
+      const pautasStorage = localStorage.getItem('respuestasPautas');
+      if (!pautasStorage) {
+        this.pautasGuardadas = [];
+        return;
+      }
+      
+      const todasLasPautas = JSON.parse(pautasStorage);
+      this.pautasGuardadas = todasLasPautas.filter((pauta: RespuestaPauta) => 
+        pauta.planId === this.planData?.id
+      );
+    } catch (error) {
+      console.error('Error al cargar pautas existentes:', error);
+      this.pautasGuardadas = [];
+    }
   }
 
   // Otros métodos
@@ -269,8 +277,14 @@ export class PlanMediosNuevaPauta implements OnInit {
   }
 
   // Helpers para el template
-  esRequerido(campo: CampoPlantilla): boolean {
-    return campo.required;
+  // TrackBy function para optimizar renderizado de campos
+  trackByCampo(index: number, campo: any): string {
+    return campo.name || index.toString();
+  }
+
+  // TrackBy function para optimizar renderizado de pautas
+  trackByPauta(index: number, pauta: RespuestaPauta): string {
+    return pauta.id || index.toString();
   }
 
   obtenerTipoCampo(campo: CampoPlantilla): string {
