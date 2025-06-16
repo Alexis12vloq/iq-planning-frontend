@@ -2,7 +2,7 @@
   <!-- Información del Plan -->
   <mat-card class="info-card">
     <mat-card-header>
-      <mat-card-title>Nueva Pauta - Plan {{ planData?.numeroPlan }}</mat-card-title>
+      <mat-card-title>Gestión de Pautas - Plan {{ planData?.numeroPlan }}</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <div class="info-plan">
@@ -22,137 +22,27 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Selección de Medio -->
-  <mat-card class="selection-card">
-    <mat-card-header>
-      <mat-card-title>Seleccionar Medio</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <form [formGroup]="seleccionForm">
-        <mat-form-field class="full-width">
-          <mat-label>Medio</mat-label>
-          <mat-select formControlName="medio">
-            <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
-              {{ medio }}
-            </mat-option>
-          </mat-select>
-          <mat-hint>Selecciona el medio para cargar la plantilla correspondiente</mat-hint>
-        </mat-form-field>
-      </form>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Estado de Carga -->
-  <mat-card class="form-card loading-card" *ngIf="cargandoPlantilla">
-    <mat-card-content>
-      <div class="loading-container">
-        <mat-icon class="loading-spinner">refresh</mat-icon>
-        <h3>Cargando formulario...</h3>
-        <p>Preparando la plantilla para el medio seleccionado</p>
-      </div>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Mensaje de Error -->
-  <mat-card class="form-card error-card" *ngIf="errorPlantilla && !cargandoPlantilla">
-    <mat-card-content>
-      <div class="error-container">
-        <mat-icon class="error-icon">error</mat-icon>
-        <h3>Plantilla no disponible</h3>
-        <p>{{ errorPlantilla }}</p>
-        <button mat-button color="primary" (click)="seleccionForm.get('medio')?.setValue('')">
-          <mat-icon>refresh</mat-icon>
-          Seleccionar otro medio
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Formulario Dinámico de Pauta -->
-  <mat-card class="form-card" *ngIf="plantillaActual && !cargandoPlantilla && !errorPlantilla">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>dynamic_form</mat-icon>
-        {{ plantillaActual.nombre }}
-      </mat-card-title>
-      <mat-card-subtitle>{{ plantillaActual.descripcion }}</mat-card-subtitle>
-    </mat-card-header>
-    
-    <mat-card-content>
-      <form [formGroup]="pautaForm" (ngSubmit)="onSubmit()">
-        
-        <!-- Selección de Semanas -->
-        <div class="semanas-section">
-          <h3>Semanas de Pauta</h3>
-          <div class="semanas-checkboxes">
-            <mat-checkbox 
-              *ngFor="let semana of semanasDisponibles" 
-              [value]="semana.codigo"
-              (change)="toggleSemana(semana.codigo, $event.checked)">
-              {{ semana.nombre }}
-            </mat-checkbox>
-          </div>
-        </div>
-
-        <!-- Campos Dinámicos -->
-        <div class="form-grid">
-          <ng-container *ngFor="let campo of plantillaActual.fields; trackBy: trackByCampo">
-            
-            <!-- Campo de Input Text/Number -->
-            <mat-form-field *ngIf="esInputField(campo)">
-              <mat-label>{{ campo.label }}</mat-label>
-              <input 
-                matInput 
-                [formControlName]="campo.name"
-                [type]="obtenerTipoCampo(campo)"
-                [step]="campo.type === 'decimal' || campo.type === 'money' ? '0.01' : null">
-            </mat-form-field>
-
-            <!-- Campo Select con Opciones Fijas -->
-            <mat-form-field *ngIf="esSelectField(campo)">
-              <mat-label>{{ campo.label }}</mat-label>
-              <mat-select [formControlName]="campo.name">
-                <mat-option *ngFor="let opcion of campo.options" [value]="opcion">
-                  {{ opcion }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <!-- Campo Select con Lookup -->
-            <mat-form-field *ngIf="esLookupField(campo)">
-              <mat-label>{{ campo.label }}</mat-label>
-              <mat-select [formControlName]="campo.name">
-                <mat-option *ngFor="let item of obtenerOpcionesLookup(campo)" [value]="item.codigo">
-                  {{ item.valor }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-
-          </ng-container>
-        </div>
-
-        <!-- Botón de agregar pauta -->
-        <div class="form-actions">
-          <button 
-            mat-raised-button 
-            color="primary" 
-            type="submit">
-            <mat-icon>add</mat-icon>
-            Agregar Pauta
-          </button>
-        </div>
-      </form>
-    </mat-card-content>
-  </mat-card>
+  <!-- Botón para Agregar Nueva Pauta -->
+  <div class="add-pauta-section">
+    <button 
+      mat-raised-button 
+      color="primary" 
+      class="add-pauta-btn"
+      (click)="abrirModalNuevaPauta()">
+      <mat-icon>add_circle</mat-icon>
+      Agregar Nueva Pauta
+    </button>
+    <p class="add-pauta-hint">Haz clic para abrir el formulario de nueva pauta en una ventana modal</p>
+  </div>
 
   <!-- Lista de Pautas Guardadas -->
   <mat-card class="pautas-card" *ngIf="pautasGuardadas.length > 0">
     <mat-card-header>
       <mat-card-title>
         <mat-icon>list</mat-icon>
-        Pautas Guardadas ({{ pautasGuardadas.length }})
+        Pautas Creadas ({{ pautasGuardadas.length }})
       </mat-card-title>
-      <mat-card-subtitle>Haz clic en el ícono de eliminar para borrar una pauta</mat-card-subtitle>
+      <mat-card-subtitle>Gestiona tus pautas: eliminar, configurar calendario o ver detalles</mat-card-subtitle>
     </mat-card-header>
     
     <mat-card-content>
@@ -170,13 +60,24 @@
                   <mat-icon>confirmation_number</mat-icon>
                   {{ pauta.totalSpots }} spots
                 </span>
-                <span class="meta-item">
-                  <mat-icon>schedule</mat-icon>
-                  {{ pauta.semanas?.length || 0 }} semanas
+                <span class="meta-item" *ngIf="pauta.totalDiasSeleccionados">
+                  <mat-icon>event</mat-icon>
+                  {{ pauta.totalDiasSeleccionados }} días
+                </span>
+                <span class="meta-item" *ngIf="!pauta.totalDiasSeleccionados">
+                  <mat-icon>event_busy</mat-icon>
+                  Sin calendario
                 </span>
               </div>
             </div>
             <div class="pauta-actions">
+              <button 
+                mat-icon-button 
+                color="primary" 
+                (click)="abrirCalendarioPauta(pauta)"
+                matTooltip="Configurar calendario">
+                <mat-icon>event</mat-icon>
+              </button>
               <button 
                 mat-icon-button 
                 color="warn" 
@@ -196,13 +97,38 @@
                 </div>
               </ng-container>
             </div>
+            
+            <!-- Información del Calendario -->
+            <div class="calendario-info" *ngIf="pauta.diasSeleccionados && pauta.diasSeleccionados.length > 0">
+              <h5>
+                <mat-icon>event</mat-icon>
+                Calendario Configurado
+              </h5>
+              <div class="calendario-resumen">
+                <span class="calendario-stat">
+                  <strong>{{ pauta.totalDiasSeleccionados }}</strong> días seleccionados
+                </span>
+                <span class="calendario-stat">
+                  <strong>{{ (pauta.valorTotal! / pauta.totalDiasSeleccionados!) | currency:'USD':'symbol-narrow':'1.0-0' }}</strong> por día
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </mat-card-content>
   </mat-card>
 
-
+  <!-- Mensaje cuando no hay pautas -->
+  <mat-card class="empty-state" *ngIf="pautasGuardadas.length === 0">
+    <mat-card-content>
+      <div class="empty-container">
+        <mat-icon class="empty-icon">playlist_add</mat-icon>
+        <h3>No hay pautas creadas</h3>
+        <p>Comienza agregando tu primera pauta haciendo clic en el botón "Agregar Nueva Pauta"</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
 
   <!-- Botones de Acción -->
   <div class="action-buttons">
@@ -219,7 +145,7 @@
     <div class="right-buttons">
       <button mat-raised-button color="warn" type="button" (click)="onRegresar()">
         <mat-icon>arrow_back</mat-icon>
-        Regresar
+        Regresar al Resumen
       </button>
     </div>
   </div>

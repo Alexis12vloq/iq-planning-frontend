@@ -319,12 +319,35 @@ export class PlanMediosResumen implements OnInit {
       const medio = respuestaPauta.medio;
       const valorNeto = respuestaPauta.valorNeto || 0;
       const totalSpots = respuestaPauta.totalSpots || 1;
-      const semanas = respuestaPauta.semanas || [];
       
-      // Convertir semanas de códigos a array booleano
-      const semanasBoolean = ['L1', 'L7', 'L14', 'L21', 'L28'].map(codigo => 
-        semanas.includes(codigo)
-      );
+      // Calcular semanas basado en días seleccionados del calendario
+      let semanasBoolean = [false, false, false, false, false]; // L1, L7, L14, L21, L28
+      
+      if (respuestaPauta.diasSeleccionados && respuestaPauta.diasSeleccionados.length > 0) {
+        // Si tiene días específicos seleccionados, calcular las semanas correspondientes
+        const diasSeleccionados = respuestaPauta.diasSeleccionados;
+        const fechaInicioPlan = new Date(fechaInicio);
+        
+        diasSeleccionados.forEach((fechaStr: string) => {
+          const fechaDia = new Date(fechaStr);
+          const diferenciaDias = Math.floor((fechaDia.getTime() - fechaInicioPlan.getTime()) / (1000 * 60 * 60 * 24));
+          const semanaIndex = Math.floor(diferenciaDias / 7);
+          
+          // Mapear a las semanas disponibles (L1=0, L7=1, L14=2, L21=3, L28=4)
+          if (semanaIndex >= 0 && semanaIndex < 5) {
+            semanasBoolean[semanaIndex] = true;
+          } else if (semanaIndex >= 5) {
+            // Para semanas posteriores, marcar la última disponible
+            semanasBoolean[4] = true;
+          }
+        });
+      } else if (respuestaPauta.semanas) {
+        // Fallback al sistema anterior de semanas
+        const semanas = respuestaPauta.semanas || [];
+        semanasBoolean = ['L1', 'L7', 'L14', 'L21', 'L28'].map(codigo => 
+          semanas.includes(codigo)
+        );
+      }
       
       if (mediosMap.has(medio)) {
         // Si el medio ya existe, sumar los valores

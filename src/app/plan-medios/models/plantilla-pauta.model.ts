@@ -29,6 +29,12 @@ export interface PlantillaPauta {
   activa: boolean;
 }
 
+export interface DiaCalendario {
+  fecha: Date;
+  seleccionado: boolean;
+  habilitado: boolean;
+}
+
 export interface RespuestaPauta {
   id: string;
   planId: string;
@@ -42,6 +48,11 @@ export interface RespuestaPauta {
   valorNeto?: number;
   totalSpots?: number;
   semanas?: boolean[];
+  // Información de calendario
+  fechaInicio?: Date;
+  fechaFin?: Date;
+  diasSeleccionados?: string[]; // Array de fechas en formato 'YYYY-MM-DD'
+  totalDiasSeleccionados?: number;
 }
 
 export interface LookupData {
