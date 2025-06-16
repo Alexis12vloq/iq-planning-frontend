@@ -1,169 +1,214 @@
 <div class="nueva-pauta-container">
-  <mat-card>
+  <!-- Información del Plan -->
+  <mat-card class="info-card">
     <mat-card-header>
-      <mat-card-title>Nueva Pauta - Plan</mat-card-title>
+      <mat-card-title>Nueva Pauta - Plan {{ planData?.numeroPlan }}</mat-card-title>
     </mat-card-header>
-
     <mat-card-content>
-      <!-- Información del Plan -->
       <div class="info-plan">
         <div class="info-item">
           <span class="info-label">CLIENTE:</span>
-          <span class="info-value">DROGUERIAS CRUZ VERDE</span>
+          <span class="info-value">{{ planData?.cliente }}</span>
         </div>
         <div class="info-item">
           <span class="info-label">PRODUCTO:</span>
-          <span class="info-value">INSTITUCIONAL</span>
+          <span class="info-value">{{ planData?.producto }}</span>
         </div>
         <div class="info-item">
           <span class="info-label">CAMPAÑA:</span>
-          <span class="info-value">FDS DERMOCOSMÉTICA</span>
+          <span class="info-value">{{ planData?.campana }}</span>
         </div>
       </div>
+    </mat-card-content>
+  </mat-card>
 
-      <!-- Formulario de Pauta -->
+  <!-- Selección de Medio -->
+  <mat-card class="selection-card">
+    <mat-card-header>
+      <mat-card-title>Seleccionar Medio</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="seleccionForm">
+        <mat-form-field class="full-width">
+          <mat-label>Medio</mat-label>
+          <mat-select formControlName="medio">
+            <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
+              {{ medio }}
+            </mat-option>
+          </mat-select>
+          <mat-hint>Selecciona el medio para cargar la plantilla correspondiente</mat-hint>
+        </mat-form-field>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Formulario Dinámico de Pauta -->
+  <mat-card class="form-card" *ngIf="plantillaActual">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>dynamic_form</mat-icon>
+        {{ plantillaActual.nombre }}
+      </mat-card-title>
+      <mat-card-subtitle>{{ plantillaActual.descripcion }}</mat-card-subtitle>
+    </mat-card-header>
+    
+    <mat-card-content>
       <form [formGroup]="pautaForm" (ngSubmit)="onSubmit()">
+        
+        <!-- Selección de Semanas -->
+        <div class="semanas-section">
+          <h3>Semanas de Pauta</h3>
+          <div class="semanas-checkboxes">
+            <mat-checkbox 
+              *ngFor="let semana of semanasDisponibles" 
+              [value]="semana.codigo"
+              (change)="toggleSemana(semana.codigo, $event.checked)">
+              {{ semana.nombre }}
+            </mat-checkbox>
+          </div>
+        </div>
+
+        <!-- Campos Dinámicos -->
         <div class="form-grid">
-          <mat-form-field>
-            <mat-label>Tipo de Compra</mat-label>
-            <mat-select formControlName="tipoCompra">
-              <mat-option *ngFor="let tipo of tiposCompra" [value]="tipo">
-                {{ tipo }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
+          <ng-container *ngFor="let campo of plantillaActual.fields">
+            
+            <!-- Campo de Input Text/Number -->
+            <mat-form-field *ngIf="!campo.options && !campo.lookupTable">
+              <mat-label>{{ campo.label }} <span *ngIf="esRequerido(campo)" class="required">*</span></mat-label>
+              <input 
+                matInput 
+                [formControlName]="campo.name"
+                [type]="obtenerTipoCampo(campo)"
+                [step]="campo.type === 'decimal' || campo.type === 'money' ? '0.01' : null">
+              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['required']">
+                {{ campo.label }} es requerido
+              </mat-error>
+              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['min']">
+                Valor mínimo: {{ campo.min }}
+              </mat-error>
+              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['max']">
+                Valor máximo: {{ campo.max }}
+              </mat-error>
+            </mat-form-field>
 
-          <mat-form-field>
-            <mat-label>Proveedor</mat-label>
-            <mat-select formControlName="proveedor">
-              <mat-option *ngFor="let prov of proveedores" [value]="prov">
-                {{ prov }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
+            <!-- Campo Select con Opciones Fijas -->
+            <mat-form-field *ngIf="campo.options && !campo.lookupTable">
+              <mat-label>{{ campo.label }} <span *ngIf="esRequerido(campo)" class="required">*</span></mat-label>
+              <mat-select [formControlName]="campo.name">
+                <mat-option *ngFor="let opcion of campo.options" [value]="opcion">
+                  {{ opcion }}
+                </mat-option>
+              </mat-select>
+              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['required']">
+                {{ campo.label }} es requerido
+              </mat-error>
+            </mat-form-field>
 
-          <mat-form-field>
-            <mat-label>Vehículo</mat-label>
-            <mat-select formControlName="vehiculo">
-              <mat-option *ngFor="let veh of vehiculos" [value]="veh">
-                {{ veh }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
+            <!-- Campo Select con Lookup -->
+            <mat-form-field *ngIf="campo.lookupTable">
+              <mat-label>{{ campo.label }} <span *ngIf="esRequerido(campo)" class="required">*</span></mat-label>
+              <mat-select [formControlName]="campo.name">
+                <mat-option *ngFor="let item of obtenerOpcionesLookup(campo)" [value]="item.codigo">
+                  {{ item.valor }}
+                </mat-option>
+              </mat-select>
+              <mat-error *ngIf="pautaForm.get(campo.name)?.errors?.['required']">
+                {{ campo.label }} es requerido
+              </mat-error>
+            </mat-form-field>
 
-          <mat-form-field>
-            <mat-label>Programa</mat-label>
-            <mat-select formControlName="programa">
-              <mat-option *ngFor="let prog of programas" [value]="prog">
-                {{ prog }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Emisión</mat-label>
-            <mat-select formControlName="emision">
-              <mat-option *ngFor="let emi of emisiones" [value]="emi">
-                {{ emi }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Franja</mat-label>
-            <mat-select formControlName="franja">
-              <mat-option *ngFor="let fra of franjas" [value]="fra">
-                {{ fra }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Hora</mat-label>
-            <input matInput formControlName="hora" type="time">
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Formato</mat-label>
-            <mat-select formControlName="formato">
-              <mat-option *ngFor="let form of formatos" [value]="form">
-                {{ form }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>RAT Canal</mat-label>
-            <input matInput formControlName="ratCanal" type="number" step="0.01">
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>RAT UP PER</mat-label>
-            <input matInput formControlName="ratUpPer" type="number" step="0.01">
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Tarifa Bruta 30"</mat-label>
-            <input matInput formControlName="tarifaBruta30" type="number">
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Duración Real</mat-label>
-            <input matInput formControlName="duracionReal">
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Tarifa Bruta 30" Valor</mat-label>
-            <input matInput formControlName="tarifaBruta30Valor" type="number">
-          </mat-form-field>
-
-          <mat-form-field>
-            <mat-label>Valor Neto</mat-label>
-            <input matInput formControlName="valorNeto" type="number">
-          </mat-form-field>
+          </ng-container>
         </div>
 
         <!-- Botón de agregar pauta -->
         <div class="form-actions">
-          <button mat-raised-button color="primary" type="submit" [disabled]="!pautaForm.valid">
+          <button 
+            mat-raised-button 
+            color="primary" 
+            type="submit" 
+            [disabled]="!pautaForm.valid">
             <mat-icon>add</mat-icon>
             Agregar Pauta
           </button>
         </div>
-
-        <!-- Tabla de pautas -->
-        <div class="table-container" *ngIf="pautas.length > 0">
-          <table mat-table [dataSource]="pautas" class="mat-elevation-z8">
-            <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
-              <th mat-header-cell *matHeaderCellDef>{{ getColumnLabel(column) }}</th>
-              <td mat-cell *matCellDef="let element">{{ element[column] }}</td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-          </table>
-        </div>
-
-        <!-- Botones de acción -->
-        <div class="action-buttons">
-          <div class="left-buttons">
-            <button mat-raised-button color="accent" type="button" (click)="onCargaExcel()">
-              <mat-icon>upload</mat-icon>
-              Carga Excel
-            </button>
-            <button mat-raised-button color="accent" type="button" (click)="onDescargaExcel()">
-              <mat-icon>download</mat-icon>
-              Descarga Excel
-            </button>
-          </div>
-          <div class="right-buttons">
-            <button mat-raised-button color="warn" type="button" (click)="onRegresar()">
-              <mat-icon>arrow_back</mat-icon>
-              Regresar
-            </button>
-          </div>
-        </div>
       </form>
     </mat-card-content>
   </mat-card>
+
+  <!-- Lista de Pautas Guardadas -->
+  <mat-card class="pautas-card" *ngIf="pautasGuardadas.length > 0">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>list</mat-icon>
+        Pautas Guardadas ({{ pautasGuardadas.length }})
+      </mat-card-title>
+    </mat-card-header>
+    
+    <mat-card-content>
+      <div class="pautas-list">
+        <div *ngFor="let pauta of pautasGuardadas; let i = index" class="pauta-item">
+          <div class="pauta-header">
+            <h4>{{ pauta.medio }} - Pauta #{{ i + 1 }}</h4>
+            <div class="pauta-meta">
+              <span class="meta-item">
+                <mat-icon>attach_money</mat-icon>
+                {{ pauta.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}
+              </span>
+              <span class="meta-item">
+                <mat-icon>confirmation_number</mat-icon>
+                {{ pauta.totalSpots }} spots
+              </span>
+              <span class="meta-item">
+                <mat-icon>schedule</mat-icon>
+                {{ pauta.semanas?.length || 0 }} semanas
+              </span>
+            </div>
+          </div>
+          
+          <div class="pauta-details">
+            <div class="details-grid">
+              <ng-container *ngFor="let key of getMainFields(pauta.datos)">
+                <div class="detail-item">
+                  <span class="detail-label">{{ getFieldLabel(key) }}:</span>
+                  <span class="detail-value">{{ formatFieldValue(pauta.datos[key], key) }}</span>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Mensaje cuando no hay plantilla -->
+  <mat-card class="empty-card" *ngIf="!plantillaActual && seleccionForm.get('medio')?.value">
+    <mat-card-content>
+      <div class="empty-message">
+        <mat-icon>info</mat-icon>
+        <h3>Plantilla no encontrada</h3>
+        <p>No se encontró una plantilla para el medio "{{ seleccionForm.get('medio')?.value }}" en el país de facturación del plan.</p>
+        <p>Contacta al administrador para agregar esta configuración.</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Botones de Acción -->
+  <div class="action-buttons">
+    <div class="left-buttons">
+      <button mat-raised-button color="accent" type="button" (click)="onCargaExcel()">
+        <mat-icon>upload</mat-icon>
+        Carga Excel
+      </button>
+      <button mat-raised-button color="accent" type="button" (click)="onDescargaExcel()">
+        <mat-icon>download</mat-icon>
+        Descarga Excel
+      </button>
+    </div>
+    <div class="right-buttons">
+      <button mat-raised-button color="warn" type="button" (click)="onRegresar()">
+        <mat-icon>arrow_back</mat-icon>
+        Regresar
+      </button>
+    </div>
+  </div>
 </div> 
