@@ -133,19 +133,20 @@
                 class="data-cell date-col"
                 [class.weekend]="esFinDeSemana(fecha)"
                 [class.today]="esHoy(fecha)"
-                [class.programmed]="estaProgramado(item.id, fecha)"
-                (click)="toggleProgramacion(item.id, fecha)">
+                [class.programmed]="tieneProgramacion(item.id, fecha)">
                 
                 <div class="date-cell-content">
-                  <mat-icon 
-                    *ngIf="estaProgramado(item.id, fecha)"
-                    class="programmed-icon">
-                    check_circle
-                  </mat-icon>
-                  <div 
-                    *ngIf="!estaProgramado(item.id, fecha)"
-                    class="empty-cell">
-                  </div>
+                  <input 
+                    type="text"
+                    class="spots-input"
+                    [value]="obtenerSpotsPorFecha(item.id, fecha) || ''"
+                    (input)="actualizarSpotsPorFecha(item.id, fecha, $event)"
+                    (keypress)="validarSoloNumeros($event)"
+                    (paste)="validarPegado($event)"
+                    (focus)="seleccionarTextoInput($event)"
+                    placeholder="0"
+                    maxlength="4"
+                    title="Cantidad de spots para este día (solo números enteros)">
                 </div>
               </div>
             </div>
@@ -170,12 +171,16 @@
                         <span class="stat-value">{{ contarDiasProgramados(item.id) }}</span>
                       </div>
                       <div class="stat-item">
-                        <span class="stat-label">Costo por día:</span>
-                        <span class="stat-value">{{ calcularCostoPorDia(item) | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
+                        <span class="stat-label">Total spots programados:</span>
+                        <span class="stat-value">{{ contarTotalSpotsProgramados(item.id) }}</span>
                       </div>
                       <div class="stat-item">
-                        <span class="stat-label">Spots por día:</span>
-                        <span class="stat-value">{{ calcularSpotsPorDia(item) }}</span>
+                        <span class="stat-label">Costo por spot:</span>
+                        <span class="stat-value">{{ calcularCostoPorSpot(item) | currency:'USD':'symbol-narrow':'1.2-2' }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Promedio spots/día:</span>
+                        <span class="stat-value">{{ calcularPromedioSpotsPorDia(item) | number:'1.1-1' }}</span>
                       </div>
                     </div>
                   </div>
@@ -231,8 +236,8 @@
           <span class="summary-value">{{ contarDiasConProgramacion() }}</span>
         </div>
         <div class="summary-item">
-          <span class="summary-label">Total Spots:</span>
-          <span class="summary-value">{{ calcularTotalSpots() }}</span>
+          <span class="summary-label">Spots Programados:</span>
+          <span class="summary-value">{{ calcularTotalSpots() }} / {{ calcularTotalSpotsOriginales() }}</span>
         </div>
       </div>
     </div>

@@ -374,20 +374,31 @@ $border-color: #e0e0e0;
                 }
 
                 &.programmed {
-                  background: $success-color;
-                  color: white;
+                  background: lighten($success-color, 35%);
+                  border: 1px solid $success-color;
+
+                  .spots-input {
+                    color: darken($success-color, 20%);
+                    font-weight: 700;
+                    background: rgba(255, 255, 255, 0.8);
+                    border-radius: 4px;
+                  }
 
                   &:hover {
-                    background: darken($success-color, 10%);
+                    background: lighten($success-color, 30%);
+                    
+                    .spots-input {
+                      background: rgba(255, 255, 255, 0.9);
+                    }
                   }
 
                   &.weekend {
-                    background: darken($success-color, 5%);
+                    background: mix(lighten($success-color, 35%), #ffe0e0, 50%);
                   }
 
                   &.today {
-                    background: darken($success-color, 5%);
-                    border: 2px solid darken($success-color, 20%);
+                    background: mix(lighten($success-color, 35%), #e3f2fd, 50%);
+                    border: 2px solid $primary-color;
                   }
                 }
 
@@ -405,39 +416,56 @@ $border-color: #e0e0e0;
                   width: 100%;
                   height: 100%;
                   position: relative;
+                  padding: 4px;
+                  box-sizing: border-box;
 
-                  .programmed-icon {
-                    font-size: 20px;
-                    color: white;
-                    font-weight: bold;
-                  }
-
-                  .empty-cell {
+                  .spots-input {
                     width: 100%;
                     height: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    position: relative;
+                    border: none;
+                    background: transparent;
+                    text-align: center;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: $text-primary;
+                    outline: none;
+                    padding: 0;
+                    margin: 0;
+                    box-sizing: border-box;
                     
-                    &::after {
-                      content: '';
-                      position: absolute;
-                      top: 50%;
-                      left: 50%;
-                      transform: translate(-50%, -50%);
-                      width: 0;
-                      height: 0;
-                      transition: all 0.2s ease;
+                    &::placeholder {
+                      color: #ccc;
+                      font-weight: 400;
                     }
 
-                    &:hover::after {
-                      content: '+';
-                      font-size: 20px;
-                      font-weight: bold;
+                    &:focus {
+                      background: rgba(255, 255, 255, 0.9);
+                      border: 2px solid $primary-color;
+                      border-radius: 4px;
                       color: $primary-color;
-                      width: auto;
-                      height: auto;
+                      font-weight: 700;
+                    }
+
+                    &:hover:not(:focus) {
+                      background: rgba(255, 255, 255, 0.5);
+                      border-radius: 4px;
+                    }
+
+                    // Validación visual para inputs inválidos
+                    &:invalid {
+                      border-color: $error-color;
+                      background: rgba($error-color, 0.1);
+                    }
+
+                    // Estilo cuando está vacío
+                    &:placeholder-shown {
+                      font-style: italic;
+                    }
+
+                    // Mejorar la selección de texto
+                    &::selection {
+                      background: $primary-color;
+                      color: white;
                     }
                   }
                 }
@@ -708,6 +736,15 @@ $border-color: #e0e0e0;
             .scrollable-columns .data-cell {
               width: 60px;
               min-width: 60px;
+              max-width: 60px;
+            }
+
+            .scrollable-columns .data-cell .date-cell-content {
+              padding: 2px;
+
+              .spots-input {
+                font-size: 12px;
+              }
             }
           }
         }

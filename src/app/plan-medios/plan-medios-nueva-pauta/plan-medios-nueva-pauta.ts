@@ -100,8 +100,8 @@ export class PlanMediosNuevaPauta implements OnInit {
   // Fechas del plan para las columnas
   fechasDelPlan: Date[] = [];
   
-  // Programación de items por fecha
-  programacionItems: { [itemId: string]: { [fecha: string]: boolean } } = {};
+  // Programación de items por fecha (ahora con cantidad de spots)
+  programacionItems: { [itemId: string]: { [fecha: string]: number } } = {};
   
   // Control de expandir/contraer items
   itemsExpandidos: { [key: string]: boolean } = {};
@@ -838,25 +838,107 @@ export class PlanMediosNuevaPauta implements OnInit {
     return fecha.toDateString() === hoy.toDateString();
   }
 
-  // Funciones de programación
-  estaProgramado(itemId: string, fecha: Date): boolean {
+  // Funciones de programación con spots numéricos
+  tieneProgramacion(itemId: string, fecha: Date): boolean {
     const fechaStr = fecha.toISOString().split('T')[0];
-    return this.programacionItems[itemId]?.[fechaStr] || false;
+    const spots = this.programacionItems[itemId]?.[fechaStr] || 0;
+    return spots > 0;
   }
 
-  toggleProgramacion(itemId: string, fecha: Date): void {
+  obtenerSpotsPorFecha(itemId: string, fecha: Date): number | null {
     const fechaStr = fecha.toISOString().split('T')[0];
+    const spots = this.programacionItems[itemId]?.[fechaStr];
+    return spots ? spots : null; // Retorna null si no hay valor, para mostrar input vacío
+  }
+
+  actualizarSpotsPorFecha(itemId: string, fecha: Date, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fechaStr = fecha.toISOString().split('T')[0];
+    
+    // Limpiar el valor de cualquier carácter no numérico
+    let valorLimpio = input.value.replace(/[^0-9]/g, '');
+    
+    // Limitar a 4 dígitos máximo
+    if (valorLimpio.length > 4) {
+      valorLimpio = valorLimpio.substring(0, 4);
+    }
+    
+    // Actualizar el input con el valor limpio
+    if (input.value !== valorLimpio) {
+      input.value = valorLimpio;
+    }
+    
+    const spots = parseInt(valorLimpio) || 0;
     
     if (!this.programacionItems[itemId]) {
       this.programacionItems[itemId] = {};
     }
     
-    this.programacionItems[itemId][fechaStr] = !this.programacionItems[itemId][fechaStr];
+    // Si es 0 o vacío, eliminar la entrada, si no, guardar el valor
+    if (spots === 0) {
+      delete this.programacionItems[itemId][fechaStr];
+      // Si el input está vacío, mantenerlo vacío en lugar de mostrar 0
+      if (valorLimpio === '') {
+        input.value = '';
+      }
+    } else {
+      this.programacionItems[itemId][fechaStr] = spots;
+    }
     
     // Guardar en localStorage
     this.guardarProgramacion();
     
-    console.log(`📅 Programación ${this.programacionItems[itemId][fechaStr] ? 'activada' : 'desactivada'} para item ${itemId} en fecha ${fechaStr}`);
+    console.log(`📅 Spots actualizados para item ${itemId} en fecha ${fechaStr}: ${spots}`);
+  }
+
+  seleccionarTextoInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      input.select();
+    }
+  }
+
+  validarSoloNumeros(event: KeyboardEvent): boolean {
+    const charCode = event.which || event.keyCode;
+    
+    // Permitir: backspace, delete, tab, escape, enter
+    if ([8, 9, 27, 13, 46].indexOf(charCode) !== -1 ||
+        // Permitir: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        (charCode === 65 && event.ctrlKey === true) ||
+        (charCode === 67 && event.ctrlKey === true) ||
+        (charCode === 86 && event.ctrlKey === true) ||
+        (charCode === 88 && event.ctrlKey === true)) {
+      return true;
+    }
+    
+    // Solo permitir números (0-9)
+    if (charCode < 48 || charCode > 57) {
+      event.preventDefault();
+      return false;
+    }
+    
+    return true;
+  }
+
+  validarPegado(event: ClipboardEvent): void {
+    event.preventDefault();
+    
+    const clipboardData = event.clipboardData?.getData('text') || '';
+    
+    // Verificar que solo contenga números
+    if (/^\d+$/.test(clipboardData)) {
+      const input = event.target as HTMLInputElement;
+      const numero = parseInt(clipboardData);
+      
+      // Verificar que no exceda el máximo (9999)
+      if (numero <= 9999) {
+        input.value = numero.toString();
+        
+        // Disparar evento de input manualmente
+        const inputEvent = new Event('input', { bubbles: true });
+        input.dispatchEvent(inputEvent);
+      }
+    }
   }
 
   private guardarProgramacion(): void {
@@ -923,7 +1005,14 @@ export class PlanMediosNuevaPauta implements OnInit {
     const programacion = this.programacionItems[itemId];
     if (!programacion) return 0;
     
-    return Object.values(programacion).filter(Boolean).length;
+    return Object.values(programacion).filter(spots => spots > 0).length;
+  }
+
+  contarTotalSpotsProgramados(itemId: string): number {
+    const programacion = this.programacionItems[itemId];
+    if (!programacion) return 0;
+    
+    return Object.values(programacion).reduce((total, spots) => total + spots, 0);
   }
 
   calcularCostoPorDia(item: RespuestaPauta): number {
@@ -940,6 +1029,21 @@ export class PlanMediosNuevaPauta implements OnInit {
     return Math.ceil((item.totalSpots || 0) / diasProgramados);
   }
 
+  calcularCostoPorSpot(item: RespuestaPauta): number {
+    const totalSpotsProgramados = this.contarTotalSpotsProgramados(item.id);
+    if (totalSpotsProgramados === 0) return 0;
+    
+    return (item.valorTotal || 0) / totalSpotsProgramados;
+  }
+
+  calcularPromedioSpotsPorDia(item: RespuestaPauta): number {
+    const diasProgramados = this.contarDiasProgramados(item.id);
+    if (diasProgramados === 0) return 0;
+    
+    const totalSpotsProgramados = this.contarTotalSpotsProgramados(item.id);
+    return totalSpotsProgramados / diasProgramados;
+  }
+
   calcularPresupuestoTotal(): number {
     return this.itemsPauta.reduce((total, item) => total + (item.valorTotal || 0), 0);
   }
@@ -949,7 +1053,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     
     Object.values(this.programacionItems).forEach(programacion => {
       Object.keys(programacion).forEach(fecha => {
-        if (programacion[fecha]) {
+        if (programacion[fecha] > 0) {
           todasLasFechas.add(fecha);
         }
       });
@@ -959,6 +1063,13 @@ export class PlanMediosNuevaPauta implements OnInit {
   }
 
   calcularTotalSpots(): number {
+    return this.itemsPauta.reduce((total, item) => {
+      const spotsProgramados = this.contarTotalSpotsProgramados(item.id);
+      return total + spotsProgramados;
+    }, 0);
+  }
+
+  calcularTotalSpotsOriginales(): number {
     return this.itemsPauta.reduce((total, item) => total + (item.totalSpots || 0), 0);
   }
 
