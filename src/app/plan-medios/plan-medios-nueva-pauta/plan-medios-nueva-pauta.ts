@@ -804,9 +804,16 @@ export class PlanMediosNuevaPauta implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result && result.pauta) {
+      if (result && result.shouldRefresh) {
         console.log('✅ Nuevo item guardado, recargando lista');
         this.cargarPautasExistentes();
+        
+        // Forzar detección de cambios múltiple
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.cdr.detectChanges();
+          console.log('🔄 Lista actualizada automáticamente');
+        }, 100);
       }
     });
   }
@@ -971,9 +978,16 @@ export class PlanMediosNuevaPauta implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result && result.pauta) {
+      if (result && result.shouldRefresh) {
         console.log('✅ Item editado, recargando lista');
         this.cargarPautasExistentes();
+        
+        // Forzar detección de cambios múltiple
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.cdr.detectChanges();
+          console.log('🔄 Lista actualizada automáticamente después de edición');
+        }, 100);
       }
     });
   }
@@ -1449,7 +1463,12 @@ export class ModalNuevaPautaComponent implements OnInit {
     console.log('✅ Verificación: pautas en localStorage después del guardado:', verificacion);
     console.log('✅ Última pauta guardada:', verificacion[verificacion.length - 1]);
     
-    this.dialogRef.close(true);
+    this.snackBar.open('Item guardado correctamente', '', { 
+      duration: 2000,
+      panelClass: ['success-snackbar']
+    });
+    
+    this.dialogRef.close({ pauta: pauta, shouldRefresh: true });
   }
 
   private guardarPautaEnStorage(pauta: RespuestaPauta): void {

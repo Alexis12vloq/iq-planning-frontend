@@ -181,6 +181,7 @@ $border-color: #e0e0e0;
             .header-cell {
               width: 80px;
               min-width: 80px;
+              max-width: 80px;
               padding: 8px 4px;
               border-right: 1px solid $border-color;
               background: #fafafa;
@@ -188,6 +189,7 @@ $border-color: #e0e0e0;
               flex-direction: column;
               align-items: center;
               justify-content: center;
+              box-sizing: border-box;
               
               &.weekend {
                 background: #ffe0e0;
@@ -196,30 +198,35 @@ $border-color: #e0e0e0;
               &.today {
                 background: #e3f2fd;
                 font-weight: 700;
+                border: 2px solid #2196f3;
               }
 
               .date-header {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                gap: 2px;
+                gap: 1px;
+                text-align: center;
 
                 .date-day {
-                  font-size: 16px;
+                  font-size: 14px;
                   font-weight: 700;
                   color: $text-primary;
+                  line-height: 1;
                 }
 
                 .date-month {
-                  font-size: 10px;
+                  font-size: 9px;
                   color: $text-secondary;
                   text-transform: uppercase;
+                  line-height: 1;
                 }
 
                 .date-weekday {
-                  font-size: 10px;
+                  font-size: 9px;
                   color: $text-secondary;
                   text-transform: uppercase;
+                  line-height: 1;
                 }
               }
             }
@@ -237,10 +244,20 @@ $border-color: #e0e0e0;
 
             &:nth-child(odd) {
               background: #fafafa;
+              
+              .fixed-columns .data-cell,
+              .scrollable-columns .data-cell:not(.programmed) {
+                background: inherit;
+              }
             }
 
             &:hover {
               background: #f0f8ff;
+              
+              .fixed-columns .data-cell,
+              .scrollable-columns .data-cell:not(.programmed) {
+                background: inherit;
+              }
             }
 
             &.expanded {
@@ -335,20 +352,25 @@ $border-color: #e0e0e0;
               .data-cell {
                 width: 80px;
                 min-width: 80px;
+                max-width: 80px;
                 height: 60px;
                 border-right: 1px solid $border-color;
+                border-bottom: 1px solid $border-color;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
                 transition: all 0.2s ease;
+                position: relative;
+                box-sizing: border-box;
 
                 &.weekend {
-                  background: rgba(255, 224, 224, 0.3);
+                  background: rgba(255, 224, 224, 0.5);
                 }
 
                 &.today {
-                  background: rgba(227, 242, 253, 0.5);
+                  background: rgba(227, 242, 253, 0.7);
+                  border: 2px solid #2196f3;
                 }
 
                 &.programmed {
@@ -358,10 +380,22 @@ $border-color: #e0e0e0;
                   &:hover {
                     background: darken($success-color, 10%);
                   }
+
+                  &.weekend {
+                    background: darken($success-color, 5%);
+                  }
+
+                  &.today {
+                    background: darken($success-color, 5%);
+                    border: 2px solid darken($success-color, 20%);
+                  }
                 }
 
-                &:hover {
+                &:hover:not(.programmed) {
                   background: rgba($primary-color, 0.1);
+                  border-color: $primary-color;
+                  transform: scale(1.02);
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 }
 
                 .date-cell-content {
@@ -370,10 +404,12 @@ $border-color: #e0e0e0;
                   justify-content: center;
                   width: 100%;
                   height: 100%;
+                  position: relative;
 
                   .programmed-icon {
                     font-size: 20px;
                     color: white;
+                    font-weight: bold;
                   }
 
                   .empty-cell {
@@ -382,12 +418,26 @@ $border-color: #e0e0e0;
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    position: relative;
                     
+                    &::after {
+                      content: '';
+                      position: absolute;
+                      top: 50%;
+                      left: 50%;
+                      transform: translate(-50%, -50%);
+                      width: 0;
+                      height: 0;
+                      transition: all 0.2s ease;
+                    }
+
                     &:hover::after {
                       content: '+';
-                      font-size: 18px;
+                      font-size: 20px;
                       font-weight: bold;
                       color: $primary-color;
+                      width: auto;
+                      height: auto;
                     }
                   }
                 }
