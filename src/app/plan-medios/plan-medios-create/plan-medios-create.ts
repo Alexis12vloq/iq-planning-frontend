@@ -13,6 +13,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-plan-medios-create',
@@ -145,7 +146,8 @@ export class PlanMediosCreate implements AfterViewInit {
   minFechaFin: Date | null = null;
 
   constructor(
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private router: Router
   ) {
     // 1. Autocomplete: País Facturación
     this.filteredPaisesFacturacion = this.planMediosForm.get('paisFacturacion')!.valueChanges.pipe(
@@ -299,6 +301,7 @@ export class PlanMediosCreate implements AfterViewInit {
       setTimeout(() => {
         this.snackBar.open('Plan de medios creado correctamente', '', { duration: 2000 });
         // Opcional: limpiar el formulario o redirigir
+        this.router.navigate(['/plan-medios-consulta']);
       }, 1200);
     } else {
       console.log('Formulario inválido:', this.planMediosForm.errors, this.planMediosForm.status, this.planMediosForm.value);
