@@ -94,17 +94,20 @@ export class PlanMediosNuevaPauta implements OnInit {
   cargandoPlantilla: boolean = false;
   errorPlantilla: string | null = null;
   
-  // Pautas guardadas
+  // Items de la pauta (nueva estructura)
+  itemsPauta: RespuestaPauta[] = [];
+  
+  // Fechas del plan para las columnas
+  fechasDelPlan: Date[] = [];
+  
+  // Programación de items por fecha
+  programacionItems: { [itemId: string]: { [fecha: string]: boolean } } = {};
+  
+  // Control de expandir/contraer items
+  itemsExpandidos: { [key: string]: boolean } = {};
+  
+  // Pautas guardadas (mantenemos para compatibilidad)
   pautasGuardadas: RespuestaPauta[] = [];
-  
-  // Pautas agrupadas por medio para la nueva UI
-  pautasAgrupadasPorMedio: GrupoMedio[] = [];
-  
-  // Control de expandir/contraer detalles
-  mostrarDetalles: { [key: string]: boolean } = {};
-  
-  // Pauta seleccionada para highlight
-  pautaSeleccionada: string | null = null;
   
   // Medios disponibles
   mediosDisponibles: string[] = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
@@ -140,6 +143,9 @@ export class PlanMediosNuevaPauta implements OnInit {
       this.planData.id = `${this.planData.numeroPlan}-v${this.planData.version}`;
       console.log('🆔 ID generado para el plan:', this.planData.id);
     }
+    
+    // Inicializar fechas del plan
+    this.inicializarFechasDelPlan();
     
     console.log('🆔 Plan Data final con ID:', this.planData);
 
@@ -386,7 +392,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     if (!this.planData?.id) {
       console.log('❌ No hay ID de plan, no se pueden cargar pautas');
       this.pautasGuardadas = [];
-      this.pautasAgrupadasPorMedio = [];
+      this.itemsPauta = [];
       return;
     }
     
@@ -397,7 +403,7 @@ export class PlanMediosNuevaPauta implements OnInit {
       if (!pautasStorage) {
         console.log('❗ No hay pautas en localStorage');
         this.pautasGuardadas = [];
-        this.pautasAgrupadasPorMedio = [];
+        this.itemsPauta = [];
         return;
       }
       
@@ -427,11 +433,10 @@ export class PlanMediosNuevaPauta implements OnInit {
         console.log('🔍 IDs de pautas disponibles:', todasLasPautas.map((p: any) => ({ planId: p.planId, tipo: typeof p.planId })));
       }
       
-      // Agrupar pautas por medio
-      this.agruparPautasPorMedio();
+      // Cargar items como lista simple
+      this.cargarItemsPauta();
       
-      console.log('🎯 Pautas agrupadas por medio:', this.pautasAgrupadasPorMedio);
-      console.log('🎯 Cantidad de grupos de medios:', this.pautasAgrupadasPorMedio.length);
+      console.log('🎯 Items de pauta cargados:', this.itemsPauta.length);
       
       // Forzar detección de cambios múltiple
       this.cdr.detectChanges();
@@ -442,7 +447,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     } catch (error) {
       console.error('💥 Error al cargar pautas existentes:', error);
       this.pautasGuardadas = [];
-      this.pautasAgrupadasPorMedio = [];
+      this.itemsPauta = [];
     }
   }
 
@@ -689,49 +694,40 @@ export class PlanMediosNuevaPauta implements OnInit {
     });
   }
 
-  // Métodos para la nueva UI de grilla
-  private agruparPautasPorMedio(): void {
-    console.log('🎯 === AGRUPANDO PAUTAS POR MEDIO ===');
-    console.log('🎯 Pautas a agrupar:', this.pautasGuardadas);
-    console.log('🎯 Cantidad de pautas a agrupar:', this.pautasGuardadas.length);
+  // Métodos para la nueva estructura de calendario
+  private inicializarFechasDelPlan(): void {
+    if (!this.planData?.fechaInicio || !this.planData?.fechaFin) {
+      // Si no hay fechas, usar un rango por defecto
+      const hoy = new Date();
+      const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+      this.generarFechas(inicio, fin);
+    } else {
+      const inicio = new Date(this.planData.fechaInicio);
+      const fin = new Date(this.planData.fechaFin);
+      this.generarFechas(inicio, fin);
+    }
+  }
+
+  private generarFechas(inicio: Date, fin: Date): void {
+    this.fechasDelPlan = [];
+    const fechaActual = new Date(inicio);
     
-    const grupos = new Map<string, RespuestaPauta[]>();
+    while (fechaActual <= fin) {
+      this.fechasDelPlan.push(new Date(fechaActual));
+      fechaActual.setDate(fechaActual.getDate() + 1);
+    }
     
-    // Agrupar pautas por medio
-    this.pautasGuardadas.forEach((pauta, index) => {
-      console.log(`🎯 Procesando pauta ${index}:`, pauta);
-      console.log(`🎯 Medio de la pauta: "${pauta.medio}"`);
-      
-      if (!grupos.has(pauta.medio)) {
-        grupos.set(pauta.medio, []);
-        console.log(`🎯 Creando nuevo grupo para medio: "${pauta.medio}"`);
-      }
-      grupos.get(pauta.medio)!.push(pauta);
-      console.log(`🎯 Pauta agregada al grupo "${pauta.medio}"`);
-    });
+    console.log('📅 Fechas del plan generadas:', this.fechasDelPlan.length, 'días');
+  }
+
+  private cargarItemsPauta(): void {
+    // Cargar los items como lista simple (sin agrupar)
+    this.itemsPauta = [...this.pautasGuardadas];
+    console.log('📋 Items de pauta cargados:', this.itemsPauta.length);
     
-    console.log('🎯 Grupos creados:', grupos);
-    console.log('🎯 Cantidad de grupos:', grupos.size);
-    
-    // Convertir a array de grupos
-    this.pautasAgrupadasPorMedio = Array.from(grupos.entries()).map(([medio, pautas]) => {
-      const grupo = {
-        medio,
-        pautas,
-        totalPautas: pautas.length,
-        valorTotal: pautas.reduce((sum, p) => sum + (p.valorTotal || 0), 0),
-        totalSpots: pautas.reduce((sum, p) => sum + (p.totalSpots || 0), 0),
-        expandido: true // Por defecto expandido
-      };
-      console.log(`🎯 Grupo creado para "${medio}":`, grupo);
-      return grupo;
-    });
-    
-    // Ordenar por medio
-    this.pautasAgrupadasPorMedio.sort((a, b) => a.medio.localeCompare(b.medio));
-    
-    console.log('🎯 Grupos finales ordenados:', this.pautasAgrupadasPorMedio);
-    console.log('🎯 Cantidad final de grupos:', this.pautasAgrupadasPorMedio.length);
+    // Cargar programación guardada
+    this.cargarProgramacion();
   }
 
   obtenerIconoMedio(medio: string): string {
@@ -746,16 +742,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     return iconos[medio] || iconos['default'];
   }
 
-  toggleGrupoMedio(grupoIndex: number): void {
-    this.pautasAgrupadasPorMedio[grupoIndex].expandido = !this.pautasAgrupadasPorMedio[grupoIndex].expandido;
-    this.cdr.detectChanges();
-  }
-
-  toggleDetallesPauta(pautaId: string): void {
-    this.mostrarDetalles[pautaId] = !this.mostrarDetalles[pautaId];
-    this.pautaSeleccionada = this.pautaSeleccionada === pautaId ? null : pautaId;
-    this.cdr.detectChanges();
-  }
+  // Métodos obsoletos removidos - ahora usamos la estructura de items
 
   duplicarPauta(pautaOriginal: RespuestaPauta): void {
     const nuevaPauta: RespuestaPauta = {
@@ -778,19 +765,6 @@ export class PlanMediosNuevaPauta implements OnInit {
     });
   }
 
-  obtenerIndicePautaGlobal(medio: string, indicePautaEnGrupo: number): number {
-    let indiceGlobal = 0;
-    
-    for (const grupo of this.pautasAgrupadasPorMedio) {
-      if (grupo.medio === medio) {
-        return indiceGlobal + indicePautaEnGrupo;
-      }
-      indiceGlobal += grupo.totalPautas;
-    }
-    
-    return indicePautaEnGrupo;
-  }
-
   getAllFields(datos: any): string[] {
     if (!datos) return [];
     
@@ -799,21 +773,13 @@ export class PlanMediosNuevaPauta implements OnInit {
     );
   }
 
-  expandirTodosLosGrupos(): void {
-    this.pautasAgrupadasPorMedio.forEach(grupo => grupo.expandido = true);
-    this.cdr.detectChanges();
-  }
-
-  contraerTodosLosGrupos(): void {
-    this.pautasAgrupadasPorMedio.forEach(grupo => grupo.expandido = false);
-    this.cdr.detectChanges();
-  }
-
   limpiarDatosPrueba(): void {
     if (confirm('¿Estás seguro de que deseas limpiar todas las pautas de prueba? Esta acción no se puede deshacer.')) {
       localStorage.removeItem('respuestasPautas');
+      localStorage.removeItem('programacionItems');
       this.pautasGuardadas = [];
-      this.pautasAgrupadasPorMedio = [];
+      this.itemsPauta = [];
+      this.programacionItems = {};
       this.cdr.detectChanges();
       this.snackBar.open('Datos de prueba limpiados correctamente', '', {
         duration: 3000,
@@ -821,6 +787,238 @@ export class PlanMediosNuevaPauta implements OnInit {
       });
       console.log('🧹 Datos de prueba limpiados del localStorage');
     }
+  }
+
+  // Métodos para el manejo de la grilla de calendario
+  abrirModalNuevoItem(): void {
+    const dialogRef = this.dialog.open(ModalNuevaPautaComponent, {
+      width: '90%',
+      maxWidth: '1200px',
+      height: '90%',
+      data: { 
+        planData: this.planData,
+        action: 'create',
+        mediosDisponibles: this.mediosDisponibles
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.pauta) {
+        console.log('✅ Nuevo item guardado, recargando lista');
+        this.cargarPautasExistentes();
+      }
+    });
+  }
+
+  // Track functions para Angular
+  trackByFecha(index: number, fecha: Date): string {
+    return fecha.toISOString().split('T')[0];
+  }
+
+  trackByItem(index: number, item: RespuestaPauta): string {
+    return item.id || index.toString();
+  }
+
+  // Funciones de fechas
+  esFinDeSemana(fecha: Date): boolean {
+    const dia = fecha.getDay();
+    return dia === 0 || dia === 6; // Domingo = 0, Sábado = 6
+  }
+
+  esHoy(fecha: Date): boolean {
+    const hoy = new Date();
+    return fecha.toDateString() === hoy.toDateString();
+  }
+
+  // Funciones de programación
+  estaProgramado(itemId: string, fecha: Date): boolean {
+    const fechaStr = fecha.toISOString().split('T')[0];
+    return this.programacionItems[itemId]?.[fechaStr] || false;
+  }
+
+  toggleProgramacion(itemId: string, fecha: Date): void {
+    const fechaStr = fecha.toISOString().split('T')[0];
+    
+    if (!this.programacionItems[itemId]) {
+      this.programacionItems[itemId] = {};
+    }
+    
+    this.programacionItems[itemId][fechaStr] = !this.programacionItems[itemId][fechaStr];
+    
+    // Guardar en localStorage
+    this.guardarProgramacion();
+    
+    console.log(`📅 Programación ${this.programacionItems[itemId][fechaStr] ? 'activada' : 'desactivada'} para item ${itemId} en fecha ${fechaStr}`);
+  }
+
+  private guardarProgramacion(): void {
+    localStorage.setItem('programacionItems', JSON.stringify(this.programacionItems));
+  }
+
+  private cargarProgramacion(): void {
+    const programacionStorage = localStorage.getItem('programacionItems');
+    if (programacionStorage) {
+      this.programacionItems = JSON.parse(programacionStorage);
+    }
+  }
+
+  // Funciones de expansión
+  toggleExpandirItem(itemId: string): void {
+    this.itemsExpandidos[itemId] = !this.itemsExpandidos[itemId];
+  }
+
+  expandirTodosLosItems(): void {
+    this.itemsPauta.forEach(item => {
+      this.itemsExpandidos[item.id] = true;
+    });
+  }
+
+  contraerTodosLosItems(): void {
+    this.itemsPauta.forEach(item => {
+      this.itemsExpandidos[item.id] = false;
+    });
+  }
+
+  // Funciones de datos de items
+  obtenerVehiculo(item: RespuestaPauta): string {
+    if (!item.datos) return '-';
+    
+    // Buscar campos relacionados con vehículo
+    const vehiculoFields = ['IdVehiculo', 'vehiculo', 'canal', 'estacion'];
+    for (const field of vehiculoFields) {
+      const key = Object.keys(item.datos).find(k => k.toLowerCase().includes(field.toLowerCase()));
+      if (key && item.datos[key]) {
+        return item.datos[key].toString();
+      }
+    }
+    
+    return '-';
+  }
+
+  obtenerPrograma(item: RespuestaPauta): string {
+    if (!item.datos) return '-';
+    
+    // Buscar campos relacionados con programa
+    const programaFields = ['programa', 'show', 'espacio', 'franja'];
+    for (const field of programaFields) {
+      const key = Object.keys(item.datos).find(k => k.toLowerCase().includes(field.toLowerCase()));
+      if (key && item.datos[key]) {
+        return item.datos[key].toString();
+      }
+    }
+    
+    return '';
+  }
+
+  // Funciones de estadísticas
+  contarDiasProgramados(itemId: string): number {
+    const programacion = this.programacionItems[itemId];
+    if (!programacion) return 0;
+    
+    return Object.values(programacion).filter(Boolean).length;
+  }
+
+  calcularCostoPorDia(item: RespuestaPauta): number {
+    const diasProgramados = this.contarDiasProgramados(item.id);
+    if (diasProgramados === 0) return 0;
+    
+    return (item.valorTotal || 0) / diasProgramados;
+  }
+
+  calcularSpotsPorDia(item: RespuestaPauta): number {
+    const diasProgramados = this.contarDiasProgramados(item.id);
+    if (diasProgramados === 0) return 0;
+    
+    return Math.ceil((item.totalSpots || 0) / diasProgramados);
+  }
+
+  calcularPresupuestoTotal(): number {
+    return this.itemsPauta.reduce((total, item) => total + (item.valorTotal || 0), 0);
+  }
+
+  contarDiasConProgramacion(): number {
+    const todasLasFechas = new Set<string>();
+    
+    Object.values(this.programacionItems).forEach(programacion => {
+      Object.keys(programacion).forEach(fecha => {
+        if (programacion[fecha]) {
+          todasLasFechas.add(fecha);
+        }
+      });
+    });
+    
+    return todasLasFechas.size;
+  }
+
+  calcularTotalSpots(): number {
+    return this.itemsPauta.reduce((total, item) => total + (item.totalSpots || 0), 0);
+  }
+
+  // Funciones de acciones
+  editarItem(item: RespuestaPauta): void {
+    const dialogRef = this.dialog.open(ModalNuevaPautaComponent, {
+      width: '90%',
+      maxWidth: '1200px',
+      height: '90%',
+      data: { 
+        planData: this.planData,
+        action: 'edit',
+        pautaData: item,
+        mediosDisponibles: this.mediosDisponibles
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.pauta) {
+        console.log('✅ Item editado, recargando lista');
+        this.cargarPautasExistentes();
+      }
+    });
+  }
+
+  duplicarItem(item: RespuestaPauta): void {
+    const itemDuplicado = {
+      ...item,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString()
+    };
+    
+    this.guardarPautaEnStorage(itemDuplicado);
+    this.cargarPautasExistentes();
+    
+    this.snackBar.open('Item duplicado exitosamente', '', { duration: 2000 });
+  }
+
+  eliminarItem(itemId: string, index: number): void {
+    if (confirm('¿Estás seguro de que quieres eliminar este item?')) {
+      this.eliminarPautaDeStorage(itemId);
+      this.cargarPautasExistentes();
+      
+      // Limpiar programación del item eliminado
+      delete this.programacionItems[itemId];
+      this.guardarProgramacion();
+      
+      this.snackBar.open('Item eliminado exitosamente', '', { duration: 2000 });
+    }
+  }
+
+  // Funciones de utilidad
+  exportarProgramacion(): void {
+    this.snackBar.open('Funcionalidad de exportación próximamente', '', { duration: 2000 });
+  }
+
+  importarDatos(): void {
+    this.snackBar.open('Funcionalidad de importación próximamente', '', { duration: 2000 });
+  }
+
+  exportarPlan(): void {
+    this.snackBar.open('Funcionalidad de exportación próximamente', '', { duration: 2000 });
+  }
+
+  programacionMasiva(): void {
+    this.snackBar.open('Funcionalidad de programación masiva próximamente', '', { duration: 2000 });
   }
 }
 

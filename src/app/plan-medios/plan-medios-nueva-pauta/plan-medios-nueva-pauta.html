@@ -2,7 +2,7 @@
   <!-- Información del Plan -->
   <mat-card class="info-card">
     <mat-card-header>
-      <mat-card-title>Gestión de Pautas - Plan {{ planData?.numeroPlan }}</mat-card-title>
+      <mat-card-title>Plan de Medios - {{ planData?.numeroPlan }}</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <div class="info-plan">
@@ -18,182 +18,240 @@
           <span class="info-label">CAMPAÑA:</span>
           <span class="info-value">{{ planData?.campana }}</span>
         </div>
+        <div class="info-item">
+          <span class="info-label">VIGENCIA:</span>
+          <span class="info-value">{{ planData?.fechaInicio | date:'dd/MM/yyyy' }} - {{ planData?.fechaFin | date:'dd/MM/yyyy' }}</span>
+        </div>
       </div>
     </mat-card-content>
   </mat-card>
 
-  <!-- Botón para Agregar Nueva Pauta -->
-  <div class="add-pauta-section">
+  <!-- Botón para Agregar Nuevo Item -->
+  <div class="add-item-section">
     <button 
       mat-raised-button 
       color="primary" 
-      class="add-pauta-btn"
-      (click)="abrirModalNuevaPauta()">
+      class="add-item-btn"
+      (click)="abrirModalNuevoItem()">
       <mat-icon>add_circle</mat-icon>
-      Agregar Nueva Pauta
+      Agregar Nuevo Item de Medio
     </button>
-    <p class="add-pauta-hint">Crea una nueva pauta que será mostrada como una grilla organizada por medio</p>
+    <p class="add-item-hint">Agrega un nuevo medio/vehículo a tu plan de medios</p>
   </div>
 
-  <!-- Grilla de Pautas Agrupadas por Medio -->
-  <div class="pautas-grid-container" *ngIf="pautasGuardadas.length > 0 && pautasAgrupadasPorMedio.length > 0">
-    <h2 class="grid-title">
-      <mat-icon>grid_view</mat-icon>
-      Pautas Organizadas ({{ pautasGuardadas.length }} total en {{ pautasAgrupadasPorMedio.length }} medios)
-    </h2>
-    
-    <div class="pautas-grid">
-      <div *ngFor="let grupo of pautasAgrupadasPorMedio; let grupoIndex = index" class="medio-group">
-        <!-- Cabecera del Medio -->
-        <div class="medio-header">
-          <div class="header-info">
-            <h3 class="medio-title">
-              <mat-icon>{{ obtenerIconoMedio(grupo.medio) }}</mat-icon>
-              {{ grupo.medio }}
-            </h3>
-            <div class="medio-stats">
-              <span class="stat-item">
-                <mat-icon>confirmation_number</mat-icon>
-                {{ grupo.totalPautas }} pautas
-              </span>
-              <span class="stat-item">
-                <mat-icon>attach_money</mat-icon>
-                {{ grupo.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}
-              </span>
-              <span class="stat-item">
-                <mat-icon>play_circle</mat-icon>
-                {{ grupo.totalSpots }} spots
-              </span>
-            </div>
+  <!-- Grilla Principal de Programación -->
+  <div class="programming-grid-container" *ngIf="itemsPauta.length > 0">
+    <div class="grid-header">
+      <h2 class="grid-title">
+        <mat-icon>calendar_view_month</mat-icon>
+        Programación de Medios ({{ itemsPauta.length }} items)
+      </h2>
+      <div class="grid-controls">
+        <button mat-icon-button color="primary" (click)="expandirTodosLosItems()" matTooltip="Expandir todo">
+          <mat-icon>unfold_more</mat-icon>
+        </button>
+        <button mat-icon-button (click)="contraerTodosLosItems()" matTooltip="Contraer todo">
+          <mat-icon>unfold_less</mat-icon>
+        </button>
+        <button mat-icon-button color="accent" (click)="exportarProgramacion()" matTooltip="Exportar">
+          <mat-icon>download</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenedor con scroll horizontal -->
+    <div class="grid-scroll-container">
+      <!-- Tabla de programación -->
+      <div class="programming-table">
+        
+        <!-- Encabezado de la tabla -->
+        <div class="table-header">
+          <!-- Columnas fijas -->
+          <div class="fixed-columns">
+            <div class="header-cell medium-col">Medio</div>
+            <div class="header-cell vehicle-col">Vehículo/Programa</div>
+            <div class="header-cell budget-col">Presupuesto</div>
           </div>
-          <div class="header-actions">
-            <button 
-              mat-icon-button 
-              color="primary"
-              (click)="toggleGrupoMedio(grupoIndex)"
-              [matTooltip]="grupo.expandido ? 'Contraer' : 'Expandir'">
-              <mat-icon>{{ grupo.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
-            </button>
+          
+          <!-- Columnas de fechas (scrollables) -->
+          <div class="scrollable-columns">
+            <div 
+              *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
+              class="header-cell date-col"
+              [class.weekend]="esFinDeSemana(fecha)"
+              [class.today]="esHoy(fecha)">
+              <div class="date-header">
+                <div class="date-day">{{ fecha | date:'dd' }}</div>
+                <div class="date-month">{{ fecha | date:'MMM' }}</div>
+                <div class="date-weekday">{{ fecha | date:'EEE' }}</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Items del Medio (Expandible) -->
-        <div class="medio-items" *ngIf="grupo.expandido" [@slideAnimation]>
-          <div class="items-grid">
-            <div *ngFor="let pauta of grupo.pautas; let pautaIndex = index" 
-                 class="pauta-card"
-                 [class.highlight]="pautaSeleccionada === pauta.id">
-              
-              <!-- Encabezado de la Pauta -->
-              <div class="pauta-card-header">
-                <div class="pauta-number">
-                  <span class="number-badge">{{ pautaIndex + 1 }}</span>
-                </div>
-                <div class="pauta-main-info">
-                  <h4 class="pauta-title">Pauta #{{ pautaIndex + 1 }}</h4>
-                  <div class="pauta-quick-stats">
-                    <span class="quick-stat valor">{{ pauta.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
-                    <span class="quick-stat spots">{{ pauta.totalSpots }} spots</span>
-                    <span class="quick-stat dias" *ngIf="pauta.totalDiasSeleccionados">
-                      {{ pauta.totalDiasSeleccionados }} días
-                    </span>
+        <!-- Filas de items -->
+        <div class="table-body">
+          <div 
+            *ngFor="let item of itemsPauta; let itemIndex = index; trackBy: trackByItem"
+            class="table-row"
+            [class.expanded]="itemsExpandidos[item.id]">
+            
+            <!-- Columnas fijas -->
+            <div class="fixed-columns">
+              <!-- Medio -->
+              <div class="data-cell medium-col">
+                <div class="cell-content">
+                  <mat-icon class="medio-icon">{{ obtenerIconoMedio(item.medio) }}</mat-icon>
+                  <div class="medio-info">
+                    <div class="medio-name">{{ item.medio }}</div>
+                    <div class="medio-stats">{{ item.totalSpots }} spots</div>
                   </div>
-                </div>
-                <div class="pauta-actions">
-                  <button 
-                    mat-icon-button 
-                    color="primary" 
-                    (click)="abrirCalendarioPauta(pauta)"
-                    [matTooltip]="pauta.totalDiasSeleccionados ? 'Modificar calendario' : 'Configurar calendario'">
-                    <mat-icon>{{ pauta.totalDiasSeleccionados ? 'event' : 'event_busy' }}</mat-icon>
-                  </button>
-                  <button 
-                    mat-icon-button 
-                    color="accent" 
-                    (click)="duplicarPauta(pauta)"
-                    matTooltip="Duplicar pauta">
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                  <button 
-                    mat-icon-button 
-                    color="warn" 
-                    (click)="eliminarPauta(pauta.id, obtenerIndicePautaGlobal(grupo.medio, pautaIndex))"
-                    matTooltip="Eliminar pauta">
-                    <mat-icon>delete</mat-icon>
-                  </button>
                 </div>
               </div>
               
-              <!-- Detalles de la Pauta (Compactos) -->
-              <div class="pauta-card-content">
-                <div class="details-compact">
-                  <div class="detail-row" *ngFor="let key of getMainFields(pauta.datos).slice(0, 4)">
-                    <span class="detail-label">{{ getFieldLabel(key) }}</span>
-                    <span class="detail-value">{{ formatFieldValue(pauta.datos[key], key) }}</span>
-                  </div>
+              <!-- Vehículo/Programa -->
+              <div class="data-cell vehicle-col">
+                <div class="cell-content">
+                  <div class="vehicle-main">{{ obtenerVehiculo(item) }}</div>
+                  <div class="vehicle-sub">{{ obtenerPrograma(item) }}</div>
                 </div>
-                
-                <!-- Indicador de calendario -->
-                <div class="calendario-indicator" *ngIf="pauta.diasSeleccionados && pauta.diasSeleccionados.length > 0">
-                  <mat-icon class="calendario-icon">event_available</mat-icon>
-                  <span class="calendario-text">
-                    {{ pauta.totalDiasSeleccionados }} días programados • 
-                    {{ (pauta.valorTotal! / pauta.totalDiasSeleccionados!) | currency:'USD':'symbol-narrow':'1.0-0' }}/día
-                  </span>
+              </div>
+              
+              <!-- Presupuesto -->
+              <div class="data-cell budget-col">
+                <div class="cell-content">
+                  <div class="budget-total">{{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                  <div class="budget-sub">{{ item.totalSpots }} spots</div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Columnas de fechas (scrollables) -->
+            <div class="scrollable-columns">
+              <div 
+                *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
+                class="data-cell date-col"
+                [class.weekend]="esFinDeSemana(fecha)"
+                [class.today]="esHoy(fecha)"
+                [class.programmed]="estaProgramado(item.id, fecha)"
+                (click)="toggleProgramacion(item.id, fecha)">
                 
-                <!-- Botón para ver más detalles -->
-                <div class="expand-details">
-                  <button 
-                    mat-button 
-                    color="primary" 
-                    (click)="toggleDetallesPauta(pauta.id)"
-                    class="expand-btn">
-                    <mat-icon>{{ mostrarDetalles[pauta.id] ? 'expand_less' : 'expand_more' }}</mat-icon>
-                    {{ mostrarDetalles[pauta.id] ? 'Menos detalles' : 'Ver más detalles' }}
-                  </button>
-                </div>
-                
-                <!-- Detalles Expandidos -->
-                <div class="detalles-expandidos" *ngIf="mostrarDetalles[pauta.id]" [@slideAnimation]>
-                  <div class="all-details">
-                    <div class="detail-item" *ngFor="let key of getAllFields(pauta.datos)">
-                      <span class="detail-label">{{ getFieldLabel(key) }}</span>
-                      <span class="detail-value">{{ formatFieldValue(pauta.datos[key], key) }}</span>
-                    </div>
-                  </div>
-                  
-                  <!-- Información adicional -->
-                  <div class="additional-info">
-                    <div class="info-section">
-                      <h5><mat-icon>schedule</mat-icon> Información Temporal</h5>
-                      <p><strong>Fecha de creación:</strong> {{ pauta.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}</p>
-                      <p><strong>ID:</strong> {{ pauta.id }}</p>
-                    </div>
+                <div class="date-cell-content">
+                  <mat-icon 
+                    *ngIf="estaProgramado(item.id, fecha)"
+                    class="programmed-icon">
+                    check_circle
+                  </mat-icon>
+                  <div 
+                    *ngIf="!estaProgramado(item.id, fecha)"
+                    class="empty-cell">
                   </div>
                 </div>
               </div>
             </div>
+
+            <!-- Fila expandida con detalles -->
+            <div class="expanded-details" *ngIf="itemsExpandidos[item.id]">
+              <div class="details-content">
+                <div class="details-grid">
+                  <div class="detail-group">
+                    <h4>Información del Medio</h4>
+                    <div class="detail-item" *ngFor="let key of getMainFields(item.datos).slice(0, 6)">
+                      <span class="detail-label">{{ getFieldLabel(key) }}</span>
+                      <span class="detail-value">{{ formatFieldValue(item.datos[key], key) }}</span>
+                    </div>
+                  </div>
+                  
+                  <div class="detail-group">
+                    <h4>Programación</h4>
+                    <div class="programming-stats">
+                      <div class="stat-item">
+                        <span class="stat-label">Días programados:</span>
+                        <span class="stat-value">{{ contarDiasProgramados(item.id) }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Costo por día:</span>
+                        <span class="stat-value">{{ calcularCostoPorDia(item) | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-label">Spots por día:</span>
+                        <span class="stat-value">{{ calcularSpotsPorDia(item) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="actions-row">
+                  <button mat-button color="primary" (click)="editarItem(item)">
+                    <mat-icon>edit</mat-icon>
+                    Editar
+                  </button>
+                  <button mat-button color="accent" (click)="duplicarItem(item)">
+                    <mat-icon>content_copy</mat-icon>
+                    Duplicar
+                  </button>
+                  <button mat-button color="warn" (click)="eliminarItem(item.id, itemIndex)">
+                    <mat-icon>delete</mat-icon>
+                    Eliminar
+                  </button>
+                  <button mat-button (click)="toggleExpandirItem(item.id)">
+                    <mat-icon>expand_less</mat-icon>
+                    Contraer
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botón para expandir/contraer -->
+            <button 
+              mat-icon-button 
+              class="expand-button"
+              (click)="toggleExpandirItem(item.id)"
+              [matTooltip]="itemsExpandidos[item.id] ? 'Contraer detalles' : 'Ver detalles'">
+              <mat-icon>{{ itemsExpandidos[item.id] ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumen de programación -->
+    <div class="programming-summary">
+      <div class="summary-stats">
+        <div class="summary-item">
+          <span class="summary-label">Total Items:</span>
+          <span class="summary-value">{{ itemsPauta.length }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Presupuesto Total:</span>
+          <span class="summary-value">{{ calcularPresupuestoTotal() | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Días con Programación:</span>
+          <span class="summary-value">{{ contarDiasConProgramacion() }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Total Spots:</span>
+          <span class="summary-value">{{ calcularTotalSpots() }}</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Mensaje cuando no hay pautas -->
-  <mat-card class="empty-state" *ngIf="pautasGuardadas.length === 0">
+  <!-- Mensaje cuando no hay items -->
+  <mat-card class="empty-state" *ngIf="itemsPauta.length === 0">
     <mat-card-content>
       <div class="empty-container">
-        <mat-icon class="empty-icon">grid_off</mat-icon>
-        <h3>No hay pautas creadas</h3>
-        <p>Comienza creando tu primera pauta. Se organizará automáticamente en una grilla por medio de comunicación.</p>
+        <mat-icon class="empty-icon">calendar_month</mat-icon>
+        <h3>No hay items en el plan</h3>
+        <p>Comienza agregando tu primer medio/vehículo al plan de medios. Podrás programar cada item día por día.</p>
         <button 
           mat-raised-button 
           color="primary" 
-          (click)="abrirModalNuevaPauta()"
+          (click)="abrirModalNuevoItem()"
           class="empty-action-btn">
           <mat-icon>add_circle</mat-icon>
-          Crear Primera Pauta
+          Crear Primer Item
         </button>
       </div>
     </mat-card-content>
@@ -202,25 +260,21 @@
   <!-- Botones de Acción -->
   <div class="action-buttons">
     <div class="left-buttons">
-      <button mat-raised-button color="accent" type="button" (click)="onCargaExcel()">
+      <button mat-raised-button color="accent" type="button" (click)="importarDatos()">
         <mat-icon>upload</mat-icon>
-        Carga Excel
+        Importar Datos
       </button>
-      <button mat-raised-button color="accent" type="button" (click)="onDescargaExcel()">
+      <button mat-raised-button color="accent" type="button" (click)="exportarPlan()">
         <mat-icon>download</mat-icon>
-        Descarga Excel
+        Exportar Plan
       </button>
-      <button mat-raised-button color="primary" type="button" (click)="expandirTodosLosGrupos()">
-        <mat-icon>unfold_more</mat-icon>
-        Expandir Todo
-      </button>
-      <button mat-raised-button type="button" (click)="contraerTodosLosGrupos()">
-        <mat-icon>unfold_less</mat-icon>
-        Contraer Todo
+      <button mat-raised-button color="primary" type="button" (click)="programacionMasiva()">
+        <mat-icon>select_all</mat-icon>
+        Programación Masiva
       </button>
       <button mat-raised-button color="warn" type="button" (click)="limpiarDatosPrueba()">
         <mat-icon>delete_sweep</mat-icon>
-        Limpiar Datos Prueba
+        Limpiar Datos
       </button>
     </div>
     <div class="right-buttons">
