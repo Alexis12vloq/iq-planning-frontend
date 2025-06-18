@@ -19,6 +19,16 @@ import { Router } from '@angular/router';
 import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { PlantillaPauta, CampoPlantilla, RespuestaPauta, DiaCalendario } from '../models/plantilla-pauta.model';
 import { Inject } from '@angular/core';
+import { trigger, state, style, transition, animate } from '@angular/animations';
+
+interface GrupoMedio {
+  medio: string;
+  pautas: RespuestaPauta[];
+  totalPautas: number;
+  valorTotal: number;
+  totalSpots: number;
+  expandido: boolean;
+}
 
 interface PlanData {
   id?: string;
@@ -54,7 +64,18 @@ interface PlanData {
   ],
   templateUrl: './plan-medios-nueva-pauta.html',
   styleUrls: ['./plan-medios-nueva-pauta.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  animations: [
+    trigger('slideAnimation', [
+      transition(':enter', [
+        style({ opacity: 0, height: 0 }),
+        animate('300ms ease-in', style({ opacity: 1, height: '*' }))
+      ]),
+      transition(':leave', [
+        animate('300ms ease-out', style({ opacity: 0, height: 0 }))
+      ])
+    ])
+  ]
 })
 export class PlanMediosNuevaPauta implements OnInit {
   // Formulario principal para seleccionar medio
@@ -75,6 +96,15 @@ export class PlanMediosNuevaPauta implements OnInit {
   
   // Pautas guardadas
   pautasGuardadas: RespuestaPauta[] = [];
+  
+  // Pautas agrupadas por medio para la nueva UI
+  pautasAgrupadasPorMedio: GrupoMedio[] = [];
+  
+  // Control de expandir/contraer detalles
+  mostrarDetalles: { [key: string]: boolean } = {};
+  
+  // Pauta seleccionada para highlight
+  pautaSeleccionada: string | null = null;
   
   // Medios disponibles
   mediosDisponibles: string[] = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
@@ -104,6 +134,15 @@ export class PlanMediosNuevaPauta implements OnInit {
       return;
     }
 
+    // Asegurar que el plan tenga un ID único
+    if (!this.planData.id) {
+      // Generar ID basado en numeroPlan y version si no existe
+      this.planData.id = `${this.planData.numeroPlan}-v${this.planData.version}`;
+      console.log('🆔 ID generado para el plan:', this.planData.id);
+    }
+    
+    console.log('🆔 Plan Data final con ID:', this.planData);
+
     this.seleccionForm = this.fb.group({
       medio: ['', Validators.required]
     });
@@ -124,7 +163,50 @@ export class PlanMediosNuevaPauta implements OnInit {
     this.cargandoPlantilla = false;
     this.errorPlantilla = null;
     this.plantillaActual = null;
+    
+    // Migrar pautas existentes al nuevo sistema de IDs si es necesario
+    this.migrarPautasExistentes();
+    
     this.cargarPautasExistentes();
+  }
+
+  private migrarPautasExistentes(): void {
+    try {
+      const pautasStorage = localStorage.getItem('respuestasPautas');
+      if (!pautasStorage) return;
+
+      const todasLasPautas = JSON.parse(pautasStorage);
+      let necesitaMigracion = false;
+
+      console.log('🔄 Iniciando migración de pautas...');
+      console.log('🔄 Plan Data actual:', this.planData);
+
+      const pautasMigradas = todasLasPautas.map((pauta: any, index: number) => {
+        console.log(`🔄 Revisando pauta ${index}:`, pauta);
+        
+        // Si la pauta no tiene planId o es undefined
+        if (!pauta.planId || pauta.planId === 'undefined') {
+          // Intentar obtener planId del plan actual si coincide el medio y otros datos
+          if (this.planData) {
+            const nuevoPlanId = `${this.planData.numeroPlan}-v${this.planData.version}`;
+            console.log(`🔄 Asignando nuevo planId "${nuevoPlanId}" a pauta ${index}`);
+            pauta.planId = nuevoPlanId;
+            necesitaMigracion = true;
+          }
+        }
+        return pauta;
+      });
+
+      if (necesitaMigracion) {
+        localStorage.setItem('respuestasPautas', JSON.stringify(pautasMigradas));
+        console.log('🔄 Migración completada: pautas actualizadas con nuevos IDs');
+        console.log('🔄 Pautas migradas:', pautasMigradas);
+      } else {
+        console.log('🔄 No se necesita migración');
+      }
+    } catch (error) {
+      console.error('❌ Error en migración de pautas:', error);
+    }
   }
 
   // Cargar plantilla según el país del plan y el medio seleccionado
@@ -298,38 +380,69 @@ export class PlanMediosNuevaPauta implements OnInit {
   private cargarPautasExistentes(): void {
     console.log('=== CARGANDO PAUTAS EXISTENTES ===');
     console.log('Plan Data:', this.planData);
+    console.log('Plan Data ID:', this.planData?.id);
+    console.log('Plan Data ID type:', typeof this.planData?.id);
     
     if (!this.planData?.id) {
-      console.log('No hay ID de plan, no se pueden cargar pautas');
+      console.log('❌ No hay ID de plan, no se pueden cargar pautas');
       this.pautasGuardadas = [];
+      this.pautasAgrupadasPorMedio = [];
       return;
     }
     
     try {
       const pautasStorage = localStorage.getItem('respuestasPautas');
-      console.log('Contenido de localStorage respuestasPautas:', pautasStorage);
+      console.log('📦 Contenido de localStorage respuestasPautas:', pautasStorage);
       
       if (!pautasStorage) {
-        console.log('No hay pautas en localStorage');
+        console.log('❗ No hay pautas en localStorage');
         this.pautasGuardadas = [];
+        this.pautasAgrupadasPorMedio = [];
         return;
       }
       
       const todasLasPautas = JSON.parse(pautasStorage);
-      console.log('Todas las pautas parseadas:', todasLasPautas);
-      console.log('Buscando pautas para plan ID:', this.planData.id);
+      console.log('📋 Todas las pautas parseadas:', todasLasPautas);
+      console.log('📋 Cantidad total de pautas en storage:', todasLasPautas.length);
+      console.log('🔍 Buscando pautas para plan ID:', this.planData.id);
       
-      this.pautasGuardadas = todasLasPautas.filter((pauta: RespuestaPauta) => 
-        pauta.planId === this.planData?.id
-      );
+      // Debug: Mostrar los IDs de todas las pautas
+      todasLasPautas.forEach((pauta: any, index: number) => {
+        console.log(`🏷️  Pauta ${index}: planId = "${pauta.planId}" (tipo: ${typeof pauta.planId}), medio = "${pauta.medio}"`);
+      });
       
-      console.log('Pautas filtradas para este plan:', this.pautasGuardadas);
-      console.log('Cantidad de pautas encontradas:', this.pautasGuardadas.length);
+      this.pautasGuardadas = todasLasPautas.filter((pauta: RespuestaPauta) => {
+        const match = pauta.planId === this.planData?.id;
+        console.log(`🔍 Comparando: "${pauta.planId}" === "${this.planData?.id}" => ${match}`);
+        return match;
+      });
       
+      console.log('✅ Pautas filtradas para este plan:', this.pautasGuardadas);
+      console.log('📊 Cantidad de pautas encontradas:', this.pautasGuardadas.length);
+      
+      if (this.pautasGuardadas.length === 0) {
+        console.log('❌ NO SE ENCONTRARON PAUTAS PARA ESTE PLAN');
+        console.log('🔍 Plan ID buscado:', this.planData.id);
+        console.log('🔍 Tipo del Plan ID buscado:', typeof this.planData.id);
+        console.log('🔍 IDs de pautas disponibles:', todasLasPautas.map((p: any) => ({ planId: p.planId, tipo: typeof p.planId })));
+      }
+      
+      // Agrupar pautas por medio
+      this.agruparPautasPorMedio();
+      
+      console.log('🎯 Pautas agrupadas por medio:', this.pautasAgrupadasPorMedio);
+      console.log('🎯 Cantidad de grupos de medios:', this.pautasAgrupadasPorMedio.length);
+      
+      // Forzar detección de cambios múltiple
       this.cdr.detectChanges();
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        console.log('🔄 Detección de cambios forzada');
+      }, 0);
     } catch (error) {
-      console.error('Error al cargar pautas existentes:', error);
+      console.error('💥 Error al cargar pautas existentes:', error);
       this.pautasGuardadas = [];
+      this.pautasAgrupadasPorMedio = [];
     }
   }
 
@@ -542,11 +655,14 @@ export class PlanMediosNuevaPauta implements OnInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.cargarPautasExistentes();
-        this.snackBar.open('Pauta agregada exitosamente', '', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
+        // Forzar recarga de pautas
+        setTimeout(() => {
+          this.cargarPautasExistentes();
+          this.snackBar.open('Pauta agregada exitosamente', '', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+        }, 100);
       }
     });
   }
@@ -571,6 +687,140 @@ export class PlanMediosNuevaPauta implements OnInit {
         });
       }
     });
+  }
+
+  // Métodos para la nueva UI de grilla
+  private agruparPautasPorMedio(): void {
+    console.log('🎯 === AGRUPANDO PAUTAS POR MEDIO ===');
+    console.log('🎯 Pautas a agrupar:', this.pautasGuardadas);
+    console.log('🎯 Cantidad de pautas a agrupar:', this.pautasGuardadas.length);
+    
+    const grupos = new Map<string, RespuestaPauta[]>();
+    
+    // Agrupar pautas por medio
+    this.pautasGuardadas.forEach((pauta, index) => {
+      console.log(`🎯 Procesando pauta ${index}:`, pauta);
+      console.log(`🎯 Medio de la pauta: "${pauta.medio}"`);
+      
+      if (!grupos.has(pauta.medio)) {
+        grupos.set(pauta.medio, []);
+        console.log(`🎯 Creando nuevo grupo para medio: "${pauta.medio}"`);
+      }
+      grupos.get(pauta.medio)!.push(pauta);
+      console.log(`🎯 Pauta agregada al grupo "${pauta.medio}"`);
+    });
+    
+    console.log('🎯 Grupos creados:', grupos);
+    console.log('🎯 Cantidad de grupos:', grupos.size);
+    
+    // Convertir a array de grupos
+    this.pautasAgrupadasPorMedio = Array.from(grupos.entries()).map(([medio, pautas]) => {
+      const grupo = {
+        medio,
+        pautas,
+        totalPautas: pautas.length,
+        valorTotal: pautas.reduce((sum, p) => sum + (p.valorTotal || 0), 0),
+        totalSpots: pautas.reduce((sum, p) => sum + (p.totalSpots || 0), 0),
+        expandido: true // Por defecto expandido
+      };
+      console.log(`🎯 Grupo creado para "${medio}":`, grupo);
+      return grupo;
+    });
+    
+    // Ordenar por medio
+    this.pautasAgrupadasPorMedio.sort((a, b) => a.medio.localeCompare(b.medio));
+    
+    console.log('🎯 Grupos finales ordenados:', this.pautasAgrupadasPorMedio);
+    console.log('🎯 Cantidad final de grupos:', this.pautasAgrupadasPorMedio.length);
+  }
+
+  obtenerIconoMedio(medio: string): string {
+    const iconos: { [key: string]: string } = {
+      'TV NAL': 'tv',
+      'Radio': 'radio',
+      'Digital': 'computer',
+      'Prensa': 'newspaper',
+      'OOH': 'visibility',
+      'default': 'campaign'
+    };
+    return iconos[medio] || iconos['default'];
+  }
+
+  toggleGrupoMedio(grupoIndex: number): void {
+    this.pautasAgrupadasPorMedio[grupoIndex].expandido = !this.pautasAgrupadasPorMedio[grupoIndex].expandido;
+    this.cdr.detectChanges();
+  }
+
+  toggleDetallesPauta(pautaId: string): void {
+    this.mostrarDetalles[pautaId] = !this.mostrarDetalles[pautaId];
+    this.pautaSeleccionada = this.pautaSeleccionada === pautaId ? null : pautaId;
+    this.cdr.detectChanges();
+  }
+
+  duplicarPauta(pautaOriginal: RespuestaPauta): void {
+    const nuevaPauta: RespuestaPauta = {
+      ...pautaOriginal,
+      id: Date.now().toString(),
+      fechaCreacion: new Date().toISOString(),
+      diasSeleccionados: [],
+      totalDiasSeleccionados: 0
+    };
+    
+    // Guardar en localStorage
+    this.guardarPautaEnStorage(nuevaPauta);
+    
+    // Recargar pautas
+    this.cargarPautasExistentes();
+    
+    this.snackBar.open('Pauta duplicada correctamente', '', { 
+      duration: 2000,
+      panelClass: ['success-snackbar']
+    });
+  }
+
+  obtenerIndicePautaGlobal(medio: string, indicePautaEnGrupo: number): number {
+    let indiceGlobal = 0;
+    
+    for (const grupo of this.pautasAgrupadasPorMedio) {
+      if (grupo.medio === medio) {
+        return indiceGlobal + indicePautaEnGrupo;
+      }
+      indiceGlobal += grupo.totalPautas;
+    }
+    
+    return indicePautaEnGrupo;
+  }
+
+  getAllFields(datos: any): string[] {
+    if (!datos) return [];
+    
+    return Object.keys(datos).filter(key => 
+      key !== 'semanas' && datos[key] !== null && datos[key] !== undefined && datos[key] !== ''
+    );
+  }
+
+  expandirTodosLosGrupos(): void {
+    this.pautasAgrupadasPorMedio.forEach(grupo => grupo.expandido = true);
+    this.cdr.detectChanges();
+  }
+
+  contraerTodosLosGrupos(): void {
+    this.pautasAgrupadasPorMedio.forEach(grupo => grupo.expandido = false);
+    this.cdr.detectChanges();
+  }
+
+  limpiarDatosPrueba(): void {
+    if (confirm('¿Estás seguro de que deseas limpiar todas las pautas de prueba? Esta acción no se puede deshacer.')) {
+      localStorage.removeItem('respuestasPautas');
+      this.pautasGuardadas = [];
+      this.pautasAgrupadasPorMedio = [];
+      this.cdr.detectChanges();
+      this.snackBar.open('Datos de prueba limpiados correctamente', '', {
+        duration: 3000,
+        panelClass: ['success-snackbar']
+      });
+      console.log('🧹 Datos de prueba limpiados del localStorage');
+    }
   }
 }
 
@@ -960,12 +1210,24 @@ export class ModalNuevaPautaComponent implements OnInit {
     }
 
     const valores = this.pautaForm.value;
-    console.log('Guardando pauta con valores:', valores);
-    console.log('Plan ID:', this.data.planData.id);
+    console.log('💾 === GUARDANDO PAUTA ===');
+    console.log('💾 Valores del formulario:', valores);
+    console.log('💾 Plan Data completo:', this.data.planData);
+    
+    // Asegurar que el plan tenga un ID
+    let planId = this.data.planData.id;
+    if (!planId) {
+      planId = `${this.data.planData.numeroPlan}-v${this.data.planData.version}`;
+      console.log('💾 ID generado para el plan:', planId);
+    }
+    
+    console.log('💾 Plan ID final:', planId);
+    console.log('💾 Plan ID tipo:', typeof planId);
+    console.log('💾 Plantilla actual:', this.plantillaActual);
     
     const pauta: RespuestaPauta = {
       id: Date.now().toString(),
-      planId: this.data.planData.id,
+      planId: planId,
       plantillaId: this.plantillaActual.id,
       paisFacturacion: this.plantillaActual.paisFacturacion,
       medio: this.plantillaActual.medio,
@@ -978,18 +1240,43 @@ export class ModalNuevaPautaComponent implements OnInit {
       totalDiasSeleccionados: 0
     };
 
-    console.log('Pauta a guardar:', pauta);
+    console.log('💾 Pauta construida para guardar:', pauta);
+    console.log('💾 Pauta planId (lo que se guardará):', pauta.planId);
+    console.log('💾 Pauta planId tipo:', typeof pauta.planId);
+    
     this.guardarPautaEnStorage(pauta);
+    
+    // Verificar que se guardó correctamente
+    const verificacion = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    console.log('✅ Verificación: pautas en localStorage después del guardado:', verificacion);
+    console.log('✅ Última pauta guardada:', verificacion[verificacion.length - 1]);
+    
     this.dialogRef.close(true);
   }
 
   private guardarPautaEnStorage(pauta: RespuestaPauta): void {
-    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    console.log('Pautas existentes antes de guardar:', pautas);
-    pautas.push(pauta);
-    localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-    console.log('Pautas después de guardar:', pautas);
-    console.log('LocalStorage actualizado');
+    try {
+      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      console.log('💾 Pautas existentes antes de guardar:', pautas);
+      console.log('💾 Cantidad de pautas antes:', pautas.length);
+      
+      pautas.push(pauta);
+      
+      console.log('💾 Pautas después de agregar la nueva:', pautas);
+      console.log('💾 Cantidad de pautas después:', pautas.length);
+      console.log('💾 Nueva pauta agregada:', pauta);
+      
+      localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+      
+      // Verificación doble
+      const verificacion = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      console.log('✅ Verificación final: localStorage actualizado con', verificacion.length, 'pautas');
+      console.log('✅ LocalStorage actualizado correctamente');
+      
+    } catch (error) {
+      console.error('💥 Error al guardar pauta en localStorage:', error);
+      throw error;
+    }
   }
 }
 

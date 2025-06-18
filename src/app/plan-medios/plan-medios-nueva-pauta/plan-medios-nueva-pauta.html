@@ -32,100 +32,169 @@
       <mat-icon>add_circle</mat-icon>
       Agregar Nueva Pauta
     </button>
-    <p class="add-pauta-hint">Haz clic para abrir el formulario de nueva pauta en una ventana modal</p>
+    <p class="add-pauta-hint">Crea una nueva pauta que será mostrada como una grilla organizada por medio</p>
   </div>
 
-  <!-- Lista de Pautas Guardadas -->
-  <mat-card class="pautas-card" *ngIf="pautasGuardadas.length > 0">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>list</mat-icon>
-        Pautas Creadas ({{ pautasGuardadas.length }})
-      </mat-card-title>
-      <mat-card-subtitle>Gestiona tus pautas: eliminar, configurar calendario o ver detalles</mat-card-subtitle>
-    </mat-card-header>
+  <!-- Grilla de Pautas Agrupadas por Medio -->
+  <div class="pautas-grid-container" *ngIf="pautasGuardadas.length > 0 && pautasAgrupadasPorMedio.length > 0">
+    <h2 class="grid-title">
+      <mat-icon>grid_view</mat-icon>
+      Pautas Organizadas ({{ pautasGuardadas.length }} total en {{ pautasAgrupadasPorMedio.length }} medios)
+    </h2>
     
-    <mat-card-content>
-      <div class="pautas-list">
-        <div *ngFor="let pauta of pautasGuardadas; let i = index; trackBy: trackByPauta" class="pauta-item">
-          <div class="pauta-header">
-            <div class="pauta-title">
-              <h4>{{ pauta.medio }} - Pauta #{{ i + 1 }}</h4>
-              <div class="pauta-meta">
-                <span class="meta-item">
-                  <mat-icon>attach_money</mat-icon>
-                  {{ pauta.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}
-                </span>
-                <span class="meta-item">
-                  <mat-icon>confirmation_number</mat-icon>
-                  {{ pauta.totalSpots }} spots
-                </span>
-                <span class="meta-item" *ngIf="pauta.totalDiasSeleccionados">
-                  <mat-icon>event</mat-icon>
-                  {{ pauta.totalDiasSeleccionados }} días
-                </span>
-                <span class="meta-item" *ngIf="!pauta.totalDiasSeleccionados">
-                  <mat-icon>event_busy</mat-icon>
-                  Sin calendario
-                </span>
-              </div>
-            </div>
-            <div class="pauta-actions">
-              <button 
-                mat-icon-button 
-                color="primary" 
-                (click)="abrirCalendarioPauta(pauta)"
-                matTooltip="Configurar calendario">
-                <mat-icon>event</mat-icon>
-              </button>
-              <button 
-                mat-icon-button 
-                color="warn" 
-                (click)="eliminarPauta(pauta.id, i)"
-                matTooltip="Eliminar pauta">
-                <mat-icon>delete</mat-icon>
-              </button>
+    <div class="pautas-grid">
+      <div *ngFor="let grupo of pautasAgrupadasPorMedio; let grupoIndex = index" class="medio-group">
+        <!-- Cabecera del Medio -->
+        <div class="medio-header">
+          <div class="header-info">
+            <h3 class="medio-title">
+              <mat-icon>{{ obtenerIconoMedio(grupo.medio) }}</mat-icon>
+              {{ grupo.medio }}
+            </h3>
+            <div class="medio-stats">
+              <span class="stat-item">
+                <mat-icon>confirmation_number</mat-icon>
+                {{ grupo.totalPautas }} pautas
+              </span>
+              <span class="stat-item">
+                <mat-icon>attach_money</mat-icon>
+                {{ grupo.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}
+              </span>
+              <span class="stat-item">
+                <mat-icon>play_circle</mat-icon>
+                {{ grupo.totalSpots }} spots
+              </span>
             </div>
           </div>
-          
-          <div class="pauta-details">
-            <div class="details-grid">
-              <ng-container *ngFor="let key of getMainFields(pauta.datos)">
-                <div class="detail-item">
-                  <span class="detail-label">{{ getFieldLabel(key) }}:</span>
-                  <span class="detail-value">{{ formatFieldValue(pauta.datos[key], key) }}</span>
+          <div class="header-actions">
+            <button 
+              mat-icon-button 
+              color="primary"
+              (click)="toggleGrupoMedio(grupoIndex)"
+              [matTooltip]="grupo.expandido ? 'Contraer' : 'Expandir'">
+              <mat-icon>{{ grupo.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Items del Medio (Expandible) -->
+        <div class="medio-items" *ngIf="grupo.expandido" [@slideAnimation]>
+          <div class="items-grid">
+            <div *ngFor="let pauta of grupo.pautas; let pautaIndex = index" 
+                 class="pauta-card"
+                 [class.highlight]="pautaSeleccionada === pauta.id">
+              
+              <!-- Encabezado de la Pauta -->
+              <div class="pauta-card-header">
+                <div class="pauta-number">
+                  <span class="number-badge">{{ pautaIndex + 1 }}</span>
                 </div>
-              </ng-container>
-            </div>
-            
-            <!-- Información del Calendario -->
-            <div class="calendario-info" *ngIf="pauta.diasSeleccionados && pauta.diasSeleccionados.length > 0">
-              <h5>
-                <mat-icon>event</mat-icon>
-                Calendario Configurado
-              </h5>
-              <div class="calendario-resumen">
-                <span class="calendario-stat">
-                  <strong>{{ pauta.totalDiasSeleccionados }}</strong> días seleccionados
-                </span>
-                <span class="calendario-stat">
-                  <strong>{{ (pauta.valorTotal! / pauta.totalDiasSeleccionados!) | currency:'USD':'symbol-narrow':'1.0-0' }}</strong> por día
-                </span>
+                <div class="pauta-main-info">
+                  <h4 class="pauta-title">Pauta #{{ pautaIndex + 1 }}</h4>
+                  <div class="pauta-quick-stats">
+                    <span class="quick-stat valor">{{ pauta.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
+                    <span class="quick-stat spots">{{ pauta.totalSpots }} spots</span>
+                    <span class="quick-stat dias" *ngIf="pauta.totalDiasSeleccionados">
+                      {{ pauta.totalDiasSeleccionados }} días
+                    </span>
+                  </div>
+                </div>
+                <div class="pauta-actions">
+                  <button 
+                    mat-icon-button 
+                    color="primary" 
+                    (click)="abrirCalendarioPauta(pauta)"
+                    [matTooltip]="pauta.totalDiasSeleccionados ? 'Modificar calendario' : 'Configurar calendario'">
+                    <mat-icon>{{ pauta.totalDiasSeleccionados ? 'event' : 'event_busy' }}</mat-icon>
+                  </button>
+                  <button 
+                    mat-icon-button 
+                    color="accent" 
+                    (click)="duplicarPauta(pauta)"
+                    matTooltip="Duplicar pauta">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                  <button 
+                    mat-icon-button 
+                    color="warn" 
+                    (click)="eliminarPauta(pauta.id, obtenerIndicePautaGlobal(grupo.medio, pautaIndex))"
+                    matTooltip="Eliminar pauta">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Detalles de la Pauta (Compactos) -->
+              <div class="pauta-card-content">
+                <div class="details-compact">
+                  <div class="detail-row" *ngFor="let key of getMainFields(pauta.datos).slice(0, 4)">
+                    <span class="detail-label">{{ getFieldLabel(key) }}</span>
+                    <span class="detail-value">{{ formatFieldValue(pauta.datos[key], key) }}</span>
+                  </div>
+                </div>
+                
+                <!-- Indicador de calendario -->
+                <div class="calendario-indicator" *ngIf="pauta.diasSeleccionados && pauta.diasSeleccionados.length > 0">
+                  <mat-icon class="calendario-icon">event_available</mat-icon>
+                  <span class="calendario-text">
+                    {{ pauta.totalDiasSeleccionados }} días programados • 
+                    {{ (pauta.valorTotal! / pauta.totalDiasSeleccionados!) | currency:'USD':'symbol-narrow':'1.0-0' }}/día
+                  </span>
+                </div>
+                
+                <!-- Botón para ver más detalles -->
+                <div class="expand-details">
+                  <button 
+                    mat-button 
+                    color="primary" 
+                    (click)="toggleDetallesPauta(pauta.id)"
+                    class="expand-btn">
+                    <mat-icon>{{ mostrarDetalles[pauta.id] ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    {{ mostrarDetalles[pauta.id] ? 'Menos detalles' : 'Ver más detalles' }}
+                  </button>
+                </div>
+                
+                <!-- Detalles Expandidos -->
+                <div class="detalles-expandidos" *ngIf="mostrarDetalles[pauta.id]" [@slideAnimation]>
+                  <div class="all-details">
+                    <div class="detail-item" *ngFor="let key of getAllFields(pauta.datos)">
+                      <span class="detail-label">{{ getFieldLabel(key) }}</span>
+                      <span class="detail-value">{{ formatFieldValue(pauta.datos[key], key) }}</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Información adicional -->
+                  <div class="additional-info">
+                    <div class="info-section">
+                      <h5><mat-icon>schedule</mat-icon> Información Temporal</h5>
+                      <p><strong>Fecha de creación:</strong> {{ pauta.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}</p>
+                      <p><strong>ID:</strong> {{ pauta.id }}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </mat-card-content>
-  </mat-card>
+    </div>
+  </div>
 
   <!-- Mensaje cuando no hay pautas -->
   <mat-card class="empty-state" *ngIf="pautasGuardadas.length === 0">
     <mat-card-content>
       <div class="empty-container">
-        <mat-icon class="empty-icon">playlist_add</mat-icon>
+        <mat-icon class="empty-icon">grid_off</mat-icon>
         <h3>No hay pautas creadas</h3>
-        <p>Comienza agregando tu primera pauta haciendo clic en el botón "Agregar Nueva Pauta"</p>
+        <p>Comienza creando tu primera pauta. Se organizará automáticamente en una grilla por medio de comunicación.</p>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="abrirModalNuevaPauta()"
+          class="empty-action-btn">
+          <mat-icon>add_circle</mat-icon>
+          Crear Primera Pauta
+        </button>
       </div>
     </mat-card-content>
   </mat-card>
@@ -140,6 +209,18 @@
       <button mat-raised-button color="accent" type="button" (click)="onDescargaExcel()">
         <mat-icon>download</mat-icon>
         Descarga Excel
+      </button>
+      <button mat-raised-button color="primary" type="button" (click)="expandirTodosLosGrupos()">
+        <mat-icon>unfold_more</mat-icon>
+        Expandir Todo
+      </button>
+      <button mat-raised-button type="button" (click)="contraerTodosLosGrupos()">
+        <mat-icon>unfold_less</mat-icon>
+        Contraer Todo
+      </button>
+      <button mat-raised-button color="warn" type="button" (click)="limpiarDatosPrueba()">
+        <mat-icon>delete_sweep</mat-icon>
+        Limpiar Datos Prueba
       </button>
     </div>
     <div class="right-buttons">
