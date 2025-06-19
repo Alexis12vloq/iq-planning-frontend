@@ -21,6 +21,10 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
+import { MatDialog, MatDialogActions, MatDialogContent, MatDialogTitle } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 type Resultado = {
   id: string;
@@ -54,7 +58,8 @@ type Resultado = {
     MatPaginatorModule,
     MatSortModule,
     MatIconModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './plan-medios-consulta.html',
   styleUrls: ['./plan-medios-consulta.scss']
@@ -196,7 +201,9 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     campania: 'Campaña'
   };
 
-  constructor(private router: Router) {
+  isLoading = false;
+
+  constructor(private router: Router, private dialog: MatDialog, private snackBar: MatSnackBar) {
     // Autocomplete: Anunciante
     this.filteredAnunciantes = this.filtroForm.get('anunciante')!.valueChanges.pipe(
       startWith(''),
@@ -290,36 +297,40 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   buscar() {
-    // Filtra la data según los valores del formulario
-    const filtros = this.filtroForm.value;
-    let filtrados = this.allResultados;
+    this.isLoading = true;
+    setTimeout(() => {
+      // Filtra la data según los valores del formulario
+      const filtros = this.filtroForm.value;
+      let filtrados = this.allResultados;
 
-    if (filtros.numeroPlan) {
-      filtrados = filtrados.filter(r => r.numeroPlan.includes(filtros.numeroPlan as string));
-    }
-    if (filtros.version) {
-      filtrados = filtrados.filter(r => r.version.includes(filtros.version as string));
-    }
-    if (filtros.anunciante) {
-      filtrados = filtrados.filter(r => r.anunciante.toLowerCase().includes((filtros.anunciante as string).toLowerCase()));
-    }
-    if (filtros.cliente) {
-      filtrados = filtrados.filter(r => r.cliente.toLowerCase().includes((filtros.cliente as string).toLowerCase()));
-    }
-    if (filtros.marca) {
-      filtrados = filtrados.filter(r => r.marca.toLowerCase().includes((filtros.marca as string).toLowerCase()));
-    }
-    if (filtros.producto) {
-      filtrados = filtrados.filter(r => r.producto.toLowerCase().includes((filtros.producto as string).toLowerCase()));
-    }
-    if (filtros.fechaInicio) {
-      filtrados = filtrados.filter(r => r.fechaInicio === this.formatDate(filtros.fechaInicio));
-    }
-    if (filtros.fechaFin) {
-      filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
-    }
+      if (filtros.numeroPlan) {
+        filtrados = filtrados.filter(r => r.numeroPlan.includes(filtros.numeroPlan as string));
+      }
+      if (filtros.version) {
+        filtrados = filtrados.filter(r => r.version.includes(filtros.version as string));
+      }
+      if (filtros.anunciante) {
+        filtrados = filtrados.filter(r => r.anunciante.toLowerCase().includes((filtros.anunciante as string).toLowerCase()));
+      }
+      if (filtros.cliente) {
+        filtrados = filtrados.filter(r => r.cliente.toLowerCase().includes((filtros.cliente as string).toLowerCase()));
+      }
+      if (filtros.marca) {
+        filtrados = filtrados.filter(r => r.marca.toLowerCase().includes((filtros.marca as string).toLowerCase()));
+      }
+      if (filtros.producto) {
+        filtrados = filtrados.filter(r => r.producto.toLowerCase().includes((filtros.producto as string).toLowerCase()));
+      }
+      if (filtros.fechaInicio) {
+        filtrados = filtrados.filter(r => r.fechaInicio === this.formatDate(filtros.fechaInicio));
+      }
+      if (filtros.fechaFin) {
+        filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
+      }
 
-    this.dataSource.data = filtrados;
+      this.dataSource.data = filtrados;
+      this.isLoading = false;
+    }, 400); // Simula carga visual
   }
 
   private formatDate(date: any): string {
@@ -343,28 +354,38 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
-    // Cargar planes guardados en localStorage
-    const planesLocal: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-    const planesLocalAsResultados = planesLocal.map(plan => ({
-      id: plan.id, // Agregar el ID para poder recuperar el plan completo
-      numeroPlan: plan.numeroPlan,
-      version: plan.version,
-      pais: plan.paisFacturacion,
-      anunciante: plan.clienteAnunciante,
-      cliente: plan.clienteFueActuacion,
-      marca: plan.marca,
-      producto: plan.producto,
-      fechaInicio: plan.fechaInicio,
-      fechaFin: plan.fechaFin,
-      campania: plan.campana
-    }));
-    this.allResultados = planesLocalAsResultados;
-    this.dataSource = new MatTableDataSource<Resultado>(this.allResultados);
+    this.isLoading = true;
+    setTimeout(() => {
+      // Cargar planes guardados en localStorage
+      const planesLocal: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+      const planesLocalAsResultados = planesLocal.map(plan => ({
+        id: plan.id, // Agregar el ID para poder recuperar el plan completo
+        numeroPlan: plan.numeroPlan,
+        version: plan.version,
+        pais: plan.paisFacturacion,
+        anunciante: plan.clienteAnunciante,
+        cliente: plan.clienteFueActuacion,
+        marca: plan.marca,
+        producto: plan.producto,
+        fechaInicio: plan.fechaInicio,
+        fechaFin: plan.fechaFin,
+        campania: plan.campana
+      }));
+      this.allResultados = planesLocalAsResultados;
+      this.dataSource = new MatTableDataSource<Resultado>(this.allResultados);
+      this.isLoading = false;
+    }, 400); // Simula carga
   }
 
   ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sortMat;
+    this.isLoading = true;
+    setTimeout(() => {
+      // Ordena los registros por id (timestamp) descendente: más reciente primero
+      this.dataSource.data = [...this.dataSource.data].sort((a, b) => Number(b.id) - Number(a.id));
+      this.dataSource.paginator = this.paginator;
+      this.dataSource.sort = this.sortMat;
+      this.isLoading = false;
+    }, 400); // Simula carga
   }
 
   sortData(sort: Sort) {
@@ -429,4 +450,143 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   getColumnLabel(column: string): string {
     return this.columnLabels[column] || column;
   }
+
+  // --- NUEVO: Copiar plan ---
+  copiarPlan() {
+    if (!this.selectedRow) return;
+    this.openConfirmDialog('¿Deseas copiar este plan?').afterClosed().subscribe(result => {
+      if (result) {
+        const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        // Buscar el plan original por id
+        const original = planesGuardados.find(p => p.id === this.selectedRow!.id);
+        if (!original) return;
+        // Generar nuevo id y número de plan consecutivo
+        let lastNumeroPlan = 1000;
+        if (planesGuardados.length > 0) {
+          const max = Math.max(
+            ...planesGuardados
+              .map(p => parseInt(p.numeroPlan, 10))
+              .filter(n => !isNaN(n))
+          );
+          if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
+        }
+        const nuevoPlan = {
+          ...original,
+          id: Date.now().toString(),
+          numeroPlan: lastNumeroPlan.toString()
+        };
+        planesGuardados.push(nuevoPlan);
+        localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
+        this.snackBar.open('Plan copiado correctamente', '', { duration: 2000 });
+        this.recargarTabla();
+      }
+    });
+  }
+
+  // --- NUEVO: Nueva versión ---
+  nuevaVersion() {
+    if (!this.selectedRow) return;
+    this.openConfirmDialog('¿Deseas crear una nueva versión de este plan?').afterClosed().subscribe(result => {
+      if (result) {
+        const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        // Buscar el plan original por id
+        const original = planesGuardados.find(p => p.id === this.selectedRow!.id);
+        if (!original) return;
+        // Calcular nueva versión (consecutivo)
+        let nuevaVersion = 1;
+        const versiones = planesGuardados
+          .filter(p => p.numeroPlan === original.numeroPlan)
+          .map(p => parseInt(p.version, 10))
+          .filter(n => !isNaN(n));
+        if (versiones.length > 0) {
+          nuevaVersion = Math.max(...versiones) + 1;
+        }
+        // Calcular nuevo número de plan consecutivo
+        let lastNumeroPlan = 1000;
+        if (planesGuardados.length > 0) {
+          const max = Math.max(
+            ...planesGuardados
+              .map(p => parseInt(p.numeroPlan, 10))
+              .filter(n => !isNaN(n))
+          );
+          if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
+        }
+        const nuevoPlan = {
+          ...original,
+          id: Date.now().toString(),
+          numeroPlan: lastNumeroPlan.toString(),
+          version: nuevaVersion.toString()
+        };
+        planesGuardados.push(nuevoPlan);
+        localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
+        this.snackBar.open('Nueva versión creada correctamente', '', { duration: 2000 });
+        this.recargarTabla();
+      }
+    });
+  }
+
+  // --- NUEVO: Diálogo de confirmación ---
+  openConfirmDialog(msg: string) {
+    return this.dialog.open(ConfirmDialogComponent, {
+      data: { message: msg }
+    });
+  }
+
+  // --- NUEVO: Recargar tabla después de cambios ---
+  recargarTabla() {
+    this.isLoading = true;
+    setTimeout(() => {
+      const planesLocal: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+      const planesLocalAsResultados = planesLocal.map(plan => ({
+        id: plan.id,
+        numeroPlan: plan.numeroPlan,
+        version: plan.version,
+        pais: plan.paisFacturacion,
+        anunciante: plan.clienteAnunciante,
+        cliente: plan.clienteFueActuacion,
+        marca: plan.marca,
+        producto: plan.producto,
+        fechaInicio: plan.fechaInicio,
+        fechaFin: plan.fechaFin,
+        campania: plan.campana
+      }));
+      // Ordena por id descendente (más reciente primero)
+      this.allResultados = planesLocalAsResultados.sort((a, b) => Number(b.id) - Number(a.id));
+      this.dataSource.data = this.allResultados;
+      this.isLoading = false;
+    }, 400); // Simula carga
+  }
+}
+
+import { Component as NgComponent, Inject } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+
+@NgComponent({
+  selector: 'confirm-dialog',
+  standalone: true,
+  imports: [MatDialogModule, MatButtonModule, MatDialogActions, MatDialogContent, MatDialogTitle], 
+  template: `
+    <h2 mat-dialog-title style="font-family: 'Montserrat', 'Roboto', Arial, sans-serif; font-size:1.5rem; font-weight:700; color:#3c5977; letter-spacing:1px; text-transform:uppercase; margin-bottom:0;">
+      Confirmar
+    </h2>
+    <mat-dialog-content style="font-family: 'Montserrat', 'Roboto', Arial, sans-serif; font-size:1.15rem; color:#222; margin-bottom:24px;">
+      {{ data.message }}
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-raised-button color="accent"
+        style="font-size:1.15rem;padding:14px 36px;min-width:160px;font-weight:300;letter-spacing:1px;margin-right:10px;background:#26c6da;color:#252525;font-family:'Montserrat','Roboto',Arial,sans-serif;"
+        (click)="onNo()">Cancelar</button>
+      <button mat-raised-button color="primary" type="button"
+        style="font-size:1.15rem;padding:14px 36px;min-width:160px;font-weight:300;letter-spacing:1px;background:#3c5977;color:#fff;font-family:'Montserrat','Roboto',Arial,sans-serif;"
+        (click)="onYes()">Aceptar</button>
+    </mat-dialog-actions>
+  `
+})
+export class ConfirmDialogComponent {
+  constructor(
+    public dialogRef: MatDialogRef<ConfirmDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: { message: string }
+  ) {}
+  onNo() { this.dialogRef.close(false); }
+  onYes() { this.dialogRef.close(true); }
 }

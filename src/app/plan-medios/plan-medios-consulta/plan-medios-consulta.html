@@ -66,10 +66,10 @@
       </div>
       <div class="form-row" style="justify-content: space-between; align-items: center;">
         <div>
-          <button mat-raised-button color="accent" type="button" id="copiarPlanBtn" [disabled]="!selection.hasValue()">
+          <button mat-raised-button color="accent" type="button" id="copiarPlanBtn" [disabled]="!selectedRow" (click)="copiarPlan()">
             <mat-icon>content_copy</mat-icon> Copiar Plan
           </button>
-          <button mat-raised-button color="primary" type="button" id="nuevaVersionBtn" [disabled]="!selection.hasValue()">
+          <button mat-raised-button color="primary" type="button" id="nuevaVersionBtn" [disabled]="!selectedRow" (click)="nuevaVersion()">
             <mat-icon>note_add</mat-icon> Nueva Versión
           </button>
           <button mat-raised-button color="primary" type="button" id="calendarioBtn" style="background:#26c6da;color:#252525;">
@@ -89,7 +89,11 @@
 
     <!-- Tabla de resultados -->
     <div style="overflow-x:auto; margin-bottom:50px;">
-      <div class="mat-elevation-z8">
+      <div *ngIf="isLoading" style="display:flex;justify-content:center;align-items:center;height:120px;">
+        <mat-spinner diameter="48" color="primary"></mat-spinner>
+        <span style="margin-left:24px;font-size:1.25rem;color:#3c5977;font-family:'Montserrat','Roboto',Arial,sans-serif;">Actualizando lista...</span>
+      </div>
+      <div class="mat-elevation-z8" *ngIf="!isLoading">
         <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
           <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
             <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn(column)">
