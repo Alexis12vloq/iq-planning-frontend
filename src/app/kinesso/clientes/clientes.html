@@ -1,0 +1,107 @@
+<mat-card>
+  <mat-card-header id="title">
+    <mat-card-title>Clientes Kinesso</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <form [formGroup]="clienteForm" (ngSubmit)="onSubmit()" class="form-container">
+      <div class="form-row">
+        <mat-form-field appearance="fill"  class="form-field double">
+          <mat-label>Advertiser</mat-label>
+          <input matInput formControlName="ADVERTISER" required />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Directo</mat-label>
+          <mat-select formControlName="DIRECTO" required>
+            <mat-option *ngFor="let opt of booleanOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+         <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Orion</mat-label>
+          <mat-select formControlName="ORION" required>
+            <mat-option *ngFor="let opt of booleanOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      
+      </div>
+      <div class="form-row">
+       
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Kinesso</mat-label>
+          <mat-select formControlName="KINESSO" required>
+            <mat-option *ngFor="let opt of booleanOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+          <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Kinesso Type</mat-label>
+          <mat-select formControlName="KINESSO_TYPE" required>
+            <mat-option *ngFor="let opt of tipoKinessoOptions" [value]="opt">{{ opt }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Duo</mat-label>
+          <mat-select formControlName="DUO" required>
+            <mat-option *ngFor="let opt of booleanOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Available DSP Equative</mat-label>
+          <input matInput formControlName="AVAILABLE_DSP_EQUATIVE" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Notas 1</mat-label>
+          <input matInput formControlName="NOTAS_1" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Available Deals Curados</mat-label>
+          <input matInput formControlName="AVALIABLE_DEALS_CURADOS" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Notas 2</mat-label>
+          <input matInput formControlName="NOTAS_2" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="ESTADO" required>
+            <mat-option *ngFor="let opt of estadoOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="form-row" style="justify-content: flex-end;">
+        <button mat-raised-button color="primary" type="submit" [disabled]="!isFormValid()" *ngIf="!editMode">
+          <mat-icon>add</mat-icon> Guardar
+        </button>
+        <button mat-raised-button color="accent" type="submit" [disabled]="!isFormValid()" *ngIf="editMode">
+          <mat-icon>edit</mat-icon> Guardar edición
+        </button>
+        <button mat-raised-button color="warn" type="button" (click)="cancelarEdicion()" *ngIf="editMode">
+          <mat-icon>cancel</mat-icon> Cancelar
+        </button>
+      </div>
+    </form>
+
+    <div class="form-row" style="margin-top: 24px;">
+      <mat-form-field appearance="fill" class="form-field">
+        <mat-label>Buscar por Advertiser</mat-label>
+        <input matInput [value]="filterAdvertiser" (input)="onAdvertiserInput($event)" />
+      </mat-form-field>
+    </div>
+
+    <div style="overflow-x:auto; margin-bottom:50px;">
+      <div class="mat-elevation-z8">
+        <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8 ">
+          <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>
+            {{ getColumnLabel(column) }}
+            </th>
+            <td mat-cell *matCellDef="let row" (dblclick)="onRowDblClick(row)">
+              {{ getDisplayValue(row, column) }}
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+        <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page"></mat-paginator>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

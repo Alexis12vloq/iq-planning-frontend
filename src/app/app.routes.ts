@@ -30,6 +30,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'kinesso/clientes',
+    loadComponent: () => import('./kinesso/clientes/clientes').then((m) => m.Clientes),
+  },
+  {
+    path: 'kinesso/provedores',
+    loadComponent: () => import('./kinesso/provedores/provedores').then((m) => m.Provedores),
+  },
+  {
     path: 'reglas',
     loadComponent: () => import('./reglas/reglas').then((m) => m.Reglas),
   },

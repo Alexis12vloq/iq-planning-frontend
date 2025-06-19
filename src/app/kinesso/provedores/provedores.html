@@ -1,0 +1,110 @@
+<mat-card>
+  <mat-card-header id="title">
+    <mat-card-title>Proveedores Kinesso</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <form [formGroup]="proveedorForm" (ngSubmit)="onSubmit()">
+      <div class="form-row">
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Vendor Medium</mat-label>
+          <input matInput formControlName="vendor_medium" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Vendor Group</mat-label>
+          <input matInput formControlName="vendor_group" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Mediums</mat-label>
+          <input matInput formControlName="mediums" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Vendor</mat-label>
+          <input matInput formControlName="vendor" />
+        </mat-form-field>
+      </div>
+      <div class="form-row">
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Tipo Vendor</mat-label>
+          <mat-select formControlName="tipo_vendor">
+            <mat-option *ngFor="let tipo of tipoVendorOptions" [value]="tipo">{{ tipo }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Orion Beneficio Real Vendor</mat-label>
+          <input matInput type="number" formControlName="orion_beneficio_real_vendor" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Directo Tradicional MVSs</mat-label>
+          <input matInput type="number" formControlName="directo_tradicional_mvss" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Kinesso Power</mat-label>
+          <input matInput type="number" formControlName="kinesso_power" />
+        </mat-form-field>
+      </div>
+      <div class="form-row">
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Kinesso Glass</mat-label>
+          <input matInput type="number" formControlName="kinesso_glass" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Notas KSO</mat-label>
+          <input matInput formControlName="notas_kso" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Duo Glass</mat-label>
+          <input matInput type="number" formControlName="duo_glass" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Duo Power</mat-label>
+          <input matInput type="number" formControlName="duo_power" />
+        </mat-form-field>
+        <mat-form-field appearance="fill" class="form-field">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="estado">
+            <mat-option *ngFor="let opt of estadoOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="button-row">
+        <button mat-raised-button color="primary" type="submit" [disabled]="proveedorForm.invalid">
+          <ng-container *ngIf="editMode; else guardarNuevo">
+            <mat-icon>edit</mat-icon> Guardar edición
+          </ng-container>
+          <ng-template #guardarNuevo>
+            Guardar
+          </ng-template>
+        </button>
+        <button mat-raised-button color="warn" type="button" (click)="cancelarEdicion()" *ngIf="editMode">
+          Cancelar
+        </button>
+      </div>
+    </form>
+
+    <div class="form-row" style="margin-top: 24px;">
+      <mat-form-field appearance="fill" class="form-field">
+        <mat-label>Buscar por Vendor</mat-label>
+        <input matInput [value]="filterVendor" (input)="onVendorInput($event)" />
+      </mat-form-field>
+    </div>
+
+    <div style="overflow-x:auto; margin-bottom:50px;">
+      <div class="mat-elevation-z8">
+        <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
+          <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>
+              {{ getColumnLabel(column) }}
+            </th>
+            <td mat-cell *matCellDef="let row"
+                (dblclick)="onRowDblClick(row)">
+              {{ getDisplayValue(row, column) }}
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+        <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page"></mat-paginator>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

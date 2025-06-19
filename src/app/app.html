@@ -15,7 +15,11 @@
     <button mat-menu-item routerLink="/plan-medios-consulta">Consulta Plan de Medios</button>
     <button mat-menu-item routerLink="/plan-medios-resumen">Resumen Plan de Medios</button>
   </mat-menu>
-
+   <button mat-button [matMenuTriggerFor]="kinesso">Kinesso</button>
+  <mat-menu #kinesso="matMenu">
+   <button mat-menu-item routerLink="/kinesso/clientes">Clientes</button>
+   <button mat-menu-item routerLink="/kinesso/provedores">Provedores</button>
+  </mat-menu>
   <button mat-button routerLink="/reglas">Reglas</button>
   <button mat-button routerLink="/configuracion">Configuración</button>
 
