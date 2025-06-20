@@ -125,7 +125,7 @@ export class PlanMediosCreate implements AfterViewInit {
     numeroPlan: new FormControl({ value: 'Auto', disabled: true }, Validators.required),
     version: new FormControl({ value: '1', disabled: true }, [Validators.required]),
     paisFacturacion: new FormControl('', Validators.required),
-    paisesPauta: new FormControl<string[]>([], [Validators.required, Validators.minLength(1)]), // <-- especifica tipo string[]
+    paisesPauta: new FormControl<string[]>([], [Validators.required, Validators.minLength(1)]),
     clienteAnunciante: new FormControl('', Validators.required),
     clienteFueActuacion: new FormControl('', Validators.required),
     marca: new FormControl('', Validators.required),
@@ -217,6 +217,8 @@ export class PlanMediosCreate implements AfterViewInit {
     // 9. Restricción de fechas
     this.planMediosForm.get('fechaInicio')!.valueChanges.subscribe((fechaInicioRaw: any) => {
       let fechaInicio: Date | null = null;
+
+      // Verifica si la fecha de inicio es válida
       if (fechaInicioRaw && typeof fechaInicioRaw === 'object' && typeof (fechaInicioRaw as Date).getTime === 'function') {
         fechaInicio = fechaInicioRaw as Date;
       } else if (typeof fechaInicioRaw === 'string' && fechaInicioRaw) {
@@ -225,10 +227,13 @@ export class PlanMediosCreate implements AfterViewInit {
           fechaInicio = parsed;
         }
       }
+
       if (fechaInicio) {
-        this.minFechaFin = fechaInicio;
+        this.minFechaFin = fechaInicio; // Establece la fecha mínima para fechaFin
         const fechaFinRaw = this.planMediosForm.get('fechaFin')!.value;
         let fechaFin: Date | null = null;
+
+        // Verifica si la fecha de fin es válida
         if (fechaFinRaw && typeof fechaFinRaw === 'object' && typeof (fechaFinRaw as Date).getTime === 'function') {
           fechaFin = fechaFinRaw as Date;
         } else if (typeof fechaFinRaw === 'string' && fechaFinRaw) {
@@ -237,13 +242,19 @@ export class PlanMediosCreate implements AfterViewInit {
             fechaFin = parsedFin;
           }
         }
+
+        // Si la fecha de fin es anterior a la fecha de inicio, resetea el campo
         if (!fechaFin || (fechaFin instanceof Date && fechaFin < fechaInicio)) {
-          this.planMediosForm.get('fechaFin')!.setValue('');
+          this.planMediosForm.get('fechaFin')!.setValue(''); // Resetea el valor pero no deshabilita
         }
       } else {
-        this.minFechaFin = null;
-        this.planMediosForm.get('fechaFin')!.setValue('');
+        this.minFechaFin = null; // Resetea la fecha mínima si no hay fecha de inicio válida
+        this.planMediosForm.get('fechaFin')!.setValue(''); // Resetea el valor pero no deshabilita
       }
+
+      // Asegúrate de que el control esté habilitado
+      this.planMediosForm.get('fechaFin')!.enable();
+      this.planMediosForm.get('fechaFin')!.updateValueAndValidity(); // Actualiza el estado del control
     });
 
     // --- Lógica de edición ---
