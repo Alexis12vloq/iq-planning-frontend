@@ -43,6 +43,7 @@ export interface RespuestaPauta {
   medio: string;
   datos: { [key: string]: any }; // Respuestas dinámicas del formulario
   fechaCreacion: string;
+  fechaModificacion?: string;
   // Campos calculados/agregados
   valorTotal?: number;
   valorNeto?: number;

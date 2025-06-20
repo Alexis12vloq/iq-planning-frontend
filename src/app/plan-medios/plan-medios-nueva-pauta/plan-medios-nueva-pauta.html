@@ -90,6 +90,7 @@
         <div class="table-header">
           <!-- Columnas fijas -->
           <div class="fixed-columns">
+            <div class="header-cell action-col"></div>
             <div class="header-cell medium-col">Medio</div>
             <div class="header-cell vehicle-col">Vehículo/Programa</div>
             <div class="header-cell budget-col">Presupuesto</div>
@@ -120,6 +121,17 @@
             
             <!-- Columnas fijas -->
             <div class="fixed-columns">
+              <!-- Acción -->
+              <div class="data-cell action-col">
+                <button 
+                  mat-icon-button 
+                  class="action-edit-button"
+                  (click)="editarItem(item)"
+                  matTooltip="Editar">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </div>
+              
               <!-- Medio -->
               <div class="data-cell medium-col">
                 <div class="cell-content">
@@ -233,6 +245,7 @@
             <button 
               mat-icon-button 
               class="expand-button"
+              [class.expanded]="itemsExpandidos[item.id]"
               (click)="toggleExpandirItem(item.id)"
               [matTooltip]="itemsExpandidos[item.id] ? 'Contraer detalles' : 'Ver detalles'">
               <mat-icon>{{ itemsExpandidos[item.id] ? 'expand_less' : 'expand_more' }}</mat-icon>

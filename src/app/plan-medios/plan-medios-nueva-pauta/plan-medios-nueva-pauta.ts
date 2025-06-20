@@ -1083,9 +1083,9 @@ export class PlanMediosNuevaPauta implements OnInit {
   // Funciones de acciones
   editarItem(item: RespuestaPauta): void {
     const dialogRef = this.dialog.open(ModalNuevaPautaComponent, {
-      width: '90%',
-      maxWidth: '1200px',
-      height: '90%',
+      width: '95%',
+      maxWidth: '1400px',
+      height: '95%',
       data: { 
         planData: this.planData,
         action: 'edit',
@@ -1174,8 +1174,8 @@ export class PlanMediosNuevaPauta implements OnInit {
   template: `
     <div class="modal-header">
       <h3 mat-dialog-title>
-        <mat-icon>add_circle</mat-icon>
-        Nueva Pauta - Plan {{ data.planData?.numeroPlan }}
+        <mat-icon>{{ data.action === 'edit' ? 'edit' : 'add_circle' }}</mat-icon>
+        {{ data.action === 'edit' ? 'Editar' : 'Nueva' }} Pauta - Plan {{ data.planData?.numeroPlan }}
       </h3>
       <button mat-icon-button mat-dialog-close>
         <mat-icon>close</mat-icon>
@@ -1289,7 +1289,7 @@ export class PlanMediosNuevaPauta implements OnInit {
         [disabled]="!plantillaActual || cargandoPlantilla"
         (click)="guardarPauta()">
         <mat-icon>save</mat-icon>
-        Guardar Pauta
+        {{ data.action === 'edit' ? 'Actualizar' : 'Guardar' }} Pauta
       </button>
     </mat-dialog-actions>
   `,
@@ -1491,6 +1491,14 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.cargandoPlantilla = false;
     this.errorPlantilla = null;
     this.plantillaActual = null;
+    
+    // Si es modo edición, cargar los datos existentes
+    if (this.data.action === 'edit' && this.data.pautaData) {
+      console.log('🔄 Modo edición detectado, cargando datos:', this.data.pautaData);
+      this.seleccionForm.patchValue({
+        medio: this.data.pautaData.medio
+      });
+    }
   }
 
   cargarPlantillaPorMedio(medio: string): void {
@@ -1534,10 +1542,19 @@ export class ModalNuevaPautaComponent implements OnInit {
     const formConfig: { [key: string]: any } = {};
 
     for (const campo of this.plantillaActual.fields) {
-      formConfig[campo.name] = [campo.defaultValue || ''];
+      let valorInicial = campo.defaultValue || '';
+      
+      // Si es modo edición, usar los datos existentes
+      if (this.data.action === 'edit' && this.data.pautaData?.datos) {
+        valorInicial = this.data.pautaData.datos[campo.name] || campo.defaultValue || '';
+      }
+      
+      formConfig[campo.name] = [valorInicial];
     }
 
     this.pautaForm = this.fb.group(formConfig);
+    
+    console.log('📝 Formulario generado:', this.pautaForm.value);
   }
 
   configurarCalculosAutomaticos(): void {
@@ -1622,9 +1639,12 @@ export class ModalNuevaPautaComponent implements OnInit {
     }
 
     const valores = this.pautaForm.value;
-    console.log('💾 === GUARDANDO PAUTA ===');
+    const isEdit = this.data.action === 'edit';
+    
+    console.log(`💾 === ${isEdit ? 'EDITANDO' : 'GUARDANDO'} PAUTA ===`);
     console.log('💾 Valores del formulario:', valores);
     console.log('💾 Plan Data completo:', this.data.planData);
+    console.log('💾 Datos existentes (si edición):', this.data.pautaData);
     
     // Asegurar que el plan tenga un ID
     let planId = this.data.planData.id;
@@ -1633,37 +1653,35 @@ export class ModalNuevaPautaComponent implements OnInit {
       console.log('💾 ID generado para el plan:', planId);
     }
     
-    console.log('💾 Plan ID final:', planId);
-    console.log('💾 Plan ID tipo:', typeof planId);
-    console.log('💾 Plantilla actual:', this.plantillaActual);
-    
     const pauta: RespuestaPauta = {
-      id: Date.now().toString(),
+      id: isEdit ? this.data.pautaData.id : Date.now().toString(),
       planId: planId,
       plantillaId: this.plantillaActual.id,
       paisFacturacion: this.plantillaActual.paisFacturacion,
       medio: this.plantillaActual.medio,
       datos: valores,
-      fechaCreacion: new Date().toISOString(),
+      fechaCreacion: isEdit ? this.data.pautaData.fechaCreacion : new Date().toISOString(),
+      fechaModificacion: isEdit ? new Date().toISOString() : undefined,
       valorTotal: valores.valor_total || 0,
       valorNeto: valores.valor_neto || 0,
       totalSpots: valores.total_spots || 1,
-      diasSeleccionados: [],
-      totalDiasSeleccionados: 0
+      diasSeleccionados: isEdit ? (this.data.pautaData.diasSeleccionados || []) : [],
+      totalDiasSeleccionados: isEdit ? (this.data.pautaData.totalDiasSeleccionados || 0) : 0
     };
 
-    console.log('💾 Pauta construida para guardar:', pauta);
-    console.log('💾 Pauta planId (lo que se guardará):', pauta.planId);
-    console.log('💾 Pauta planId tipo:', typeof pauta.planId);
+    console.log(`💾 Pauta construida para ${isEdit ? 'actualizar' : 'guardar'}:`, pauta);
     
-    this.guardarPautaEnStorage(pauta);
+    if (isEdit) {
+      this.actualizarPautaEnStorage(pauta);
+    } else {
+      this.guardarPautaEnStorage(pauta);
+    }
     
     // Verificar que se guardó correctamente
     const verificacion = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
     console.log('✅ Verificación: pautas en localStorage después del guardado:', verificacion);
-    console.log('✅ Última pauta guardada:', verificacion[verificacion.length - 1]);
     
-    this.snackBar.open('Item guardado correctamente', '', { 
+    this.snackBar.open(`Item ${isEdit ? 'actualizado' : 'guardado'} correctamente`, '', { 
       duration: 2000,
       panelClass: ['success-snackbar']
     });
@@ -1692,6 +1710,35 @@ export class ModalNuevaPautaComponent implements OnInit {
       
     } catch (error) {
       console.error('💥 Error al guardar pauta en localStorage:', error);
+      throw error;
+    }
+  }
+
+  private actualizarPautaEnStorage(pautaActualizada: RespuestaPauta): void {
+    try {
+      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      console.log('🔄 Pautas existentes antes de actualizar:', pautas);
+      
+      const index = pautas.findIndex((p: RespuestaPauta) => p.id === pautaActualizada.id);
+      
+      if (index !== -1) {
+        pautas[index] = pautaActualizada;
+        console.log('🔄 Pauta actualizada en índice:', index);
+        console.log('🔄 Datos actualizados:', pautaActualizada);
+        
+        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+        
+        // Verificación
+        const verificacion = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+        console.log('✅ Verificación final: pauta actualizada correctamente');
+        console.log('✅ Pauta actualizada:', verificacion[index]);
+      } else {
+        console.error('❌ No se encontró la pauta con ID:', pautaActualizada.id);
+        throw new Error('Pauta no encontrada para actualizar');
+      }
+      
+    } catch (error) {
+      console.error('💥 Error al actualizar pauta en localStorage:', error);
       throw error;
     }
   }
