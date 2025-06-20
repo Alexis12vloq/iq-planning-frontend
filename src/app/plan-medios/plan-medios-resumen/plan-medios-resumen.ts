@@ -48,41 +48,73 @@ export class PlanMediosResumen implements OnInit {
   displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
   semanasColumnas: string[] = ['L1', 'L7', 'L14', 'L21', 'L28'];
   dataSource: FilaMedio[] = [];
+  planId: string | undefined; // Almacenar el ID del plan
 
   constructor(
     private snackBar: MatSnackBar,
     private router: Router
   ) {
     const navigation = this.router.getCurrentNavigation();
-    const planData = navigation?.extras?.state?.['planData'] as PlanConsultaData;
+    const planData = navigation?.extras?.state?.['planData'] as any;
+
+    console.log('📋 === CONSTRUCTOR RESUMEN ===');
+    console.log('📋 Plan Data recibido:', planData);
 
     if (planData && planData.id) {
-      // Cargar el plan completo desde localStorage usando el ID
-      const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-      const planCompleto = planesLocal.find((plan: any) => plan.id === planData.id);
+      // Guardar el ID del plan
+      this.planId = planData.id;
       
-      if (planCompleto) {
-        // Cargar pautas asociadas al plan desde localStorage
-        const periodosReales = this.cargarPeriodosConPautas(planCompleto.id);
+      // Priorizar datos que vienen del estado de navegación (más actualizados)
+      if (planData.pautas && planData.pautas.length > 0) {
+        console.log('✅ Usando pautas del estado de navegación (más actualizadas)');
+        const periodosConPautas = this.crearPeriodosConPautasDelEstado(planData);
         
-        // Inicializar el resumen del plan con los datos reales del localStorage
         this.resumenPlan = {
-          numeroPlan: planCompleto.numeroPlan,
-          version: Number(planCompleto.version),
-          cliente: planCompleto.clienteFueActuacion,
-          producto: planCompleto.producto,
-          campana: planCompleto.campana,
-          fechaInicio: planCompleto.fechaInicio,
-          fechaFin: planCompleto.fechaFin,
-          periodos: periodosReales
+          numeroPlan: planData.numeroPlan,
+          version: Number(planData.version),
+          cliente: planData.cliente,
+          producto: planData.producto,
+          campana: planData.campana,
+          fechaInicio: planData.fechaInicio,
+          fechaFin: planData.fechaFin,
+          periodos: periodosConPautas
         };
-        this.periodos = periodosReales;
+        this.periodos = periodosConPautas;
       } else {
-        // Fallback si no se encuentra el plan
-        this.inicializarPlanEjemplo();
+        console.log('🔄 No hay pautas en el estado, buscando en localStorage');
+        // Fallback: Cargar desde localStorage
+        const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        const planCompleto = planesLocal.find((plan: any) => plan.id === planData.id);
+        
+        if (planCompleto) {
+          const periodosReales = this.cargarPeriodosConPautas(planCompleto.id);
+          
+          this.resumenPlan = {
+            numeroPlan: planCompleto.numeroPlan,
+            version: Number(planCompleto.version),
+            cliente: planCompleto.clienteFueActuacion || planData.cliente,
+            producto: planCompleto.producto,
+            campana: planCompleto.campana,
+            fechaInicio: planCompleto.fechaInicio,
+            fechaFin: planCompleto.fechaFin,
+            periodos: periodosReales
+          };
+          this.periodos = periodosReales;
+        } else {
+          this.inicializarPlanEjemplo();
+        }
       }
     } else if (planData) {
       // Compatibilidad con navegación anterior (sin ID)
+      console.log('🔄 Usando datos de navegación sin ID');
+      let periodosCompatibles = [];
+      
+      if (planData.pautas && planData.pautas.length > 0) {
+        periodosCompatibles = this.crearPeriodosConPautasDelEstado(planData);
+      } else {
+        periodosCompatibles = [this.crearPeriodoVacio(planData.fechaInicio, planData.fechaFin)];
+      }
+      
       this.resumenPlan = {
         numeroPlan: planData.numeroPlan,
         version: Number(planData.version),
@@ -91,15 +123,20 @@ export class PlanMediosResumen implements OnInit {
         campana: planData.campana,
         fechaInicio: planData.fechaInicio,
         fechaFin: planData.fechaFin,
-        periodos: this.periodos
+        periodos: periodosCompatibles
       };
+      this.periodos = periodosCompatibles;
     } else {
       // Si no hay datos de consulta, usar datos de ejemplo
+      console.log('❌ No hay datos de navegación, usando ejemplo');
       this.inicializarPlanEjemplo();
     }
 
     this.periodoSeleccionado = this.resumenPlan.periodos[0];
     this.prepararDataSource();
+    
+    console.log('📋 Resumen final configurado:', this.resumenPlan);
+    console.log('📋 Período seleccionado:', this.periodoSeleccionado);
   }
 
   ngOnInit(): void {}
@@ -149,6 +186,7 @@ export class PlanMediosResumen implements OnInit {
 
   onNuevaPauta(): void {
     const planData = {
+      id: this.planId, // Usar el ID almacenado
       numeroPlan: this.resumenPlan.numeroPlan,
       version: this.resumenPlan.version,
       cliente: this.resumenPlan.cliente,
@@ -157,6 +195,8 @@ export class PlanMediosResumen implements OnInit {
       fechaInicio: this.resumenPlan.fechaInicio,
       fechaFin: this.resumenPlan.fechaFin
     };
+    
+    console.log('🔄 Navegando a nueva pauta con plan data:', planData);
     
     this.router.navigate(['/plan-medios-nueva-pauta'], { 
       state: { planData } 
@@ -393,6 +433,82 @@ export class PlanMediosResumen implements OnInit {
       iva: iva,
       totalInversion: totalInversion
     }];
+  }
+
+  private crearPeriodosConPautasDelEstado(planData: any): PeriodoPlan[] {
+    console.log('🔄 Creando períodos con pautas del estado:', planData.pautas);
+    
+    const fechaInicio = planData.fechaInicio;
+    const fechaFin = planData.fechaFin;
+    const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
+
+    // Agrupar pautas por medio
+    const mediosMap = new Map<string, MedioPlan>();
+    
+    planData.pautas.forEach((pautaResumen: any) => {
+      const medio = pautaResumen.medio;
+      const valorNeto = pautaResumen.valorNeto || 0;
+      const totalSpots = pautaResumen.totalSpots || 1;
+      
+      // Para pautas del estado, usar semanas por defecto (se pueden mejorar después)
+      const semanasBoolean = [true, true, true, true, true]; // Todas las semanas activas por defecto
+      
+      if (mediosMap.has(medio)) {
+        // Si el medio ya existe, sumar los valores
+        const medioExistente = mediosMap.get(medio)!;
+        medioExistente.salidas += totalSpots;
+        medioExistente.valorNeto += valorNeto;
+        medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
+      } else {
+        // Crear nuevo medio
+        mediosMap.set(medio, {
+          nombre: medio,
+          salidas: totalSpots,
+          valorNeto: valorNeto,
+          soi: Math.round((valorNeto / totalSpots) || 0),
+          semanas: semanasBoolean
+        });
+      }
+    });
+
+    // Convertir map a array
+    const medios = Array.from(mediosMap.values());
+    
+    // Usar totales que ya vienen calculados del estado
+    const totalInversionNeta = planData.presupuestoTotal || medios.reduce((total, medio) => total + medio.valorNeto, 0);
+    const iva = Math.round(totalInversionNeta * 0.18);
+    const totalInversion = totalInversionNeta + iva;
+
+    console.log('✅ Medios creados del estado:', medios);
+    console.log('✅ Total inversión neta:', totalInversionNeta);
+
+    return [{
+      id: '1',
+      nombre: periodoInfo.nombre,
+      anio: periodoInfo.anio,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      medios: medios,
+      totalInversionNeta: totalInversionNeta,
+      iva: iva,
+      totalInversion: totalInversion
+    }];
+  }
+
+  private crearPeriodoVacio(fechaInicio: string, fechaFin: string): PeriodoPlan {
+    const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
+    
+    return {
+      id: '1',
+      nombre: periodoInfo.nombre,
+      anio: periodoInfo.anio,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      medios: [],
+      totalInversionNeta: 0,
+      iva: 0,
+      totalInversion: 0
+    };
   }
 
   private calcularPeriodo(fechaInicio: string, fechaFin: string): { nombre: string, anio: number } {

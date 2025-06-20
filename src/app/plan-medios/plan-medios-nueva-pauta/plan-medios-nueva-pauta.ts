@@ -482,17 +482,38 @@ export class PlanMediosNuevaPauta implements OnInit {
   }
 
   onRegresar(): void {
-    const planDataConId = {
+    // Preparar resumen de pautas para el plan
+    const resumenPautas = this.itemsPauta.map(item => ({
+      id: item.id,
+      medio: item.medio,
+      valorTotal: item.valorTotal,
+      valorNeto: item.valorNeto,
+      totalSpots: item.totalSpots,
+      fechaCreacion: item.fechaCreacion,
+      fechaModificacion: item.fechaModificacion
+    }));
+
+    const planDataCompleto = {
       id: this.planData?.id,
       numeroPlan: this.planData?.numeroPlan,
       version: this.planData?.version,
       cliente: this.planData?.cliente,
       producto: this.planData?.producto,
-      campana: this.planData?.campana
+      campana: this.planData?.campana,
+      fechaInicio: this.planData?.fechaInicio,
+      fechaFin: this.planData?.fechaFin,
+      // Agregar información de las pautas creadas
+      pautas: resumenPautas,
+      totalPautas: this.itemsPauta.length,
+      presupuestoTotal: this.calcularPresupuestoTotal(),
+      totalSpots: this.calcularTotalSpots(),
+      mediosUtilizados: [...new Set(this.itemsPauta.map(item => item.medio))]
     };
     
+    console.log('📋 Regresando al resumen con datos completos:', planDataCompleto);
+    
     this.router.navigate(['/plan-medios-resumen'], {
-      state: { planData: planDataConId }
+      state: { planData: planDataCompleto }
     });
   }
 
