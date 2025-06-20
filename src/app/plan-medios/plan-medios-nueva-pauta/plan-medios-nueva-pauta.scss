@@ -202,30 +202,30 @@ $border-color: #e0e0e0;
             box-shadow: 2px 0 4px rgba(0,0,0,0.1);
 
             .header-cell {
-              padding: 12px 16px;
+              padding: 6px 8px;
               font-weight: 600;
-              font-size: 14px;
+              font-size: 12px;
               color: $text-primary;
               border-right: 1px solid $border-color;
               display: flex;
               align-items: center;
               justify-content: center;
               text-align: center;
-              min-height: 60px;
+              min-height: 40px;
 
               &.medium-col {
-                width: 150px;
-                min-width: 150px;
+                width: 100px;
+                min-width: 100px;
               }
 
               &.vehicle-col {
-                width: 200px;
-                min-width: 200px;
+                width: 140px;
+                min-width: 140px;
               }
 
               &.budget-col {
-                width: 120px;
-                min-width: 120px;
+                width: 90px;
+                min-width: 90px;
               }
             }
           }
@@ -235,10 +235,10 @@ $border-color: #e0e0e0;
             display: flex;
 
             .header-cell {
-              width: 80px;
-              min-width: 80px;
-              max-width: 80px;
-              padding: 8px 4px;
+              width: 55px;
+              min-width: 55px;
+              max-width: 55px;
+              padding: 4px 2px;
               border-right: 1px solid $border-color;
               background: #fafafa;
               display: flex;
@@ -257,34 +257,34 @@ $border-color: #e0e0e0;
                 border: 2px solid #2196f3;
               }
 
-              .date-header {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 1px;
-                text-align: center;
+                              .date-header {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  gap: 0px;
+                  text-align: center;
 
-                .date-day {
-                  font-size: 14px;
-                  font-weight: 700;
-                  color: $text-primary;
-                  line-height: 1;
-                }
+                  .date-day {
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: $text-primary;
+                    line-height: 1;
+                  }
 
-                .date-month {
-                  font-size: 9px;
-                  color: $text-secondary;
-                  text-transform: uppercase;
-                  line-height: 1;
-                }
+                  .date-month {
+                    font-size: 8px;
+                    color: $text-secondary;
+                    text-transform: uppercase;
+                    line-height: 1;
+                  }
 
-                .date-weekday {
-                  font-size: 9px;
-                  color: $text-secondary;
-                  text-transform: uppercase;
-                  line-height: 1;
+                  .date-weekday {
+                    font-size: 7px;
+                    color: $text-secondary;
+                    text-transform: uppercase;
+                    line-height: 1;
+                  }
                 }
-              }
             }
           }
         }
@@ -296,7 +296,7 @@ $border-color: #e0e0e0;
             border-bottom: 1px solid $border-color;
             position: relative;
             background: white;
-            min-height: 60px;
+            min-height: 40px;
 
             &:nth-child(odd) {
               background: #fafafa;
@@ -332,25 +332,25 @@ $border-color: #e0e0e0;
               box-shadow: 2px 0 4px rgba(0,0,0,0.05);
 
               .data-cell {
-                padding: 12px 16px;
+                padding: 6px 8px;
                 border-right: 1px solid $border-color;
                 display: flex;
                 align-items: center;
-                min-height: 60px;
+                min-height: 40px;
 
                 &.medium-col {
-                  width: 150px;
-                  min-width: 150px;
+                  width: 100px;
+                  min-width: 100px;
                 }
 
                 &.vehicle-col {
-                  width: 200px;
-                  min-width: 200px;
+                  width: 140px;
+                  min-width: 140px;
                 }
 
                 &.budget-col {
-                  width: 120px;
-                  min-width: 120px;
+                  width: 90px;
+                  min-width: 90px;
                 }
 
                 .cell-content {
@@ -358,44 +358,48 @@ $border-color: #e0e0e0;
 
                   .medio-icon {
                     color: $primary-color;
-                    margin-right: 8px;
+                    margin-right: 4px;
+                    font-size: 16px;
                   }
 
                   .medio-info {
                     .medio-name {
                       font-weight: 600;
-                      font-size: 14px;
+                      font-size: 11px;
                       color: $text-primary;
+                      line-height: 1.2;
                     }
 
                     .medio-stats {
-                      font-size: 12px;
+                      font-size: 9px;
                       color: $text-secondary;
                     }
                   }
 
                   .vehicle-main {
                     font-weight: 500;
-                    font-size: 14px;
+                    font-size: 11px;
                     color: $text-primary;
+                    line-height: 1.2;
                   }
 
                   .vehicle-sub {
-                    font-size: 12px;
+                    font-size: 9px;
                     color: $text-secondary;
-                    margin-top: 2px;
+                    margin-top: 1px;
                   }
 
                   .budget-total {
                     font-weight: 600;
-                    font-size: 14px;
+                    font-size: 12px;
                     color: $success-color;
+                    line-height: 1.2;
                   }
 
                   .budget-sub {
-                    font-size: 11px;
+                    font-size: 9px;
                     color: $text-secondary;
-                    margin-top: 2px;
+                    margin-top: 1px;
                   }
                 }
               }
@@ -406,10 +410,10 @@ $border-color: #e0e0e0;
               display: flex;
 
               .data-cell {
-                width: 80px;
-                min-width: 80px;
-                max-width: 80px;
-                height: 60px;
+                width: 55px;
+                min-width: 55px;
+                max-width: 55px;
+                height: 40px;
                 border-right: 1px solid $border-color;
                 border-bottom: 1px solid $border-color;
                 display: flex;
@@ -465,29 +469,29 @@ $border-color: #e0e0e0;
                   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 }
 
-                .date-cell-content {
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  width: 100%;
-                  height: 100%;
-                  position: relative;
-                  padding: 4px;
-                  box-sizing: border-box;
-
-                  .spots-input {
+                                  .date-cell-content {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                     width: 100%;
                     height: 100%;
-                    border: none;
-                    background: transparent;
-                    text-align: center;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: $text-primary;
-                    outline: none;
-                    padding: 0;
-                    margin: 0;
+                    position: relative;
+                    padding: 2px;
                     box-sizing: border-box;
+
+                    .spots-input {
+                      width: 100%;
+                      height: 100%;
+                      border: none;
+                      background: transparent;
+                      text-align: center;
+                      font-size: 11px;
+                      font-weight: 600;
+                      color: $text-primary;
+                      outline: none;
+                      padding: 0;
+                      margin: 0;
+                      box-sizing: border-box;
                     
                     &::placeholder {
                       color: #ccc;
@@ -635,32 +639,33 @@ $border-color: #e0e0e0;
 
     // Resumen de programación
     .programming-summary {
-      padding: 16px 20px;
+      padding: 8px 12px;
       background: #f8f9fa;
       border-top: 1px solid $border-color;
 
       .summary-stats {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 8px;
 
         .summary-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 12px 16px;
+          padding: 6px 10px;
           background: white;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          border-radius: 4px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 
           .summary-label {
             font-weight: 500;
+            font-size: 11px;
             color: $text-secondary;
           }
 
           .summary-value {
             font-weight: 700;
-            font-size: 16px;
+            font-size: 13px;
             color: $primary-color;
           }
         }
@@ -737,8 +742,8 @@ $border-color: #e0e0e0;
               .header-cell,
               .data-cell {
                 &.vehicle-col {
-                  width: 150px;
-                  min-width: 150px;
+                  width: 120px;
+                  min-width: 120px;
                 }
               }
             }
@@ -765,37 +770,37 @@ $border-color: #e0e0e0;
             .fixed-columns {
               .header-cell,
               .data-cell {
-                padding: 8px 12px;
+                padding: 4px 6px;
 
                 &.medium-col {
-                  width: 120px;
-                  min-width: 120px;
+                  width: 80px;
+                  min-width: 80px;
                 }
 
                 &.vehicle-col {
-                  width: 130px;
-                  min-width: 130px;
+                  width: 100px;
+                  min-width: 100px;
                 }
 
                 &.budget-col {
-                  width: 100px;
-                  min-width: 100px;
+                  width: 70px;
+                  min-width: 70px;
                 }
               }
             }
 
             .scrollable-columns .header-cell,
             .scrollable-columns .data-cell {
-              width: 60px;
-              min-width: 60px;
-              max-width: 60px;
+              width: 45px;
+              min-width: 45px;
+              max-width: 45px;
             }
 
             .scrollable-columns .data-cell .date-cell-content {
-              padding: 2px;
+              padding: 1px;
 
               .spots-input {
-                font-size: 12px;
+                font-size: 10px;
               }
             }
           }

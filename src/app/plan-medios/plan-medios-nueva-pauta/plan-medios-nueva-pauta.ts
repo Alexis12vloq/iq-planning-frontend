@@ -799,9 +799,9 @@ export class PlanMediosNuevaPauta implements OnInit {
   // Métodos para el manejo de la grilla de calendario
   abrirModalNuevoItem(): void {
     const dialogRef = this.dialog.open(ModalNuevaPautaComponent, {
-      width: '90%',
-      maxWidth: '1200px',
-      height: '90%',
+      width: '95%',
+      maxWidth: '1400px',
+      height: '95%',
       data: { 
         planData: this.planData,
         action: 'create',
@@ -1173,10 +1173,10 @@ export class PlanMediosNuevaPauta implements OnInit {
   ],
   template: `
     <div class="modal-header">
-      <h2 mat-dialog-title>
+      <h3 mat-dialog-title>
         <mat-icon>add_circle</mat-icon>
         Nueva Pauta - Plan {{ data.planData?.numeroPlan }}
-      </h2>
+      </h3>
       <button mat-icon-button mat-dialog-close>
         <mat-icon>close</mat-icon>
       </button>
@@ -1201,10 +1201,10 @@ export class PlanMediosNuevaPauta implements OnInit {
 
       <!-- Selección de Medio -->
       <mat-card class="selection-card">
-        <mat-card-header>
-          <mat-card-title>Seleccionar Medio</mat-card-title>
+        <mat-card-header class="compact-header">
+          <mat-card-title class="compact-title">Seleccionar Medio</mat-card-title>
         </mat-card-header>
-        <mat-card-content>
+        <mat-card-content class="compact-content">
           <form [formGroup]="seleccionForm">
             <mat-form-field class="full-width">
               <mat-label>Medio</mat-label>
@@ -1233,19 +1233,19 @@ export class PlanMediosNuevaPauta implements OnInit {
 
       <!-- Formulario Dinámico -->
       <mat-card class="form-card" *ngIf="plantillaActual && !cargandoPlantilla && !errorPlantilla">
-        <mat-card-header>
-          <mat-card-title>{{ plantillaActual.nombre }}</mat-card-title>
-          <mat-card-subtitle>{{ plantillaActual.descripcion }}</mat-card-subtitle>
+        <mat-card-header class="compact-header">
+          <mat-card-title class="compact-title">{{ plantillaActual.nombre }}</mat-card-title>
+          <mat-card-subtitle class="compact-subtitle">{{ plantillaActual.descripcion }}</mat-card-subtitle>
         </mat-card-header>
         
-        <mat-card-content>
+        <mat-card-content class="compact-content">
           <form [formGroup]="pautaForm">
             <!-- Campos Dinámicos -->
             <div class="form-grid">
               <ng-container *ngFor="let campo of plantillaActual.fields">
                 
                 <!-- Campo de Input -->
-                <mat-form-field *ngIf="esInputField(campo)">
+                <mat-form-field *ngIf="esInputField(campo)" class="compact-field">
                   <mat-label>{{ campo.label }}</mat-label>
                   <input 
                     matInput 
@@ -1255,7 +1255,7 @@ export class PlanMediosNuevaPauta implements OnInit {
                 </mat-form-field>
 
                 <!-- Campo Select con Opciones Fijas -->
-                <mat-form-field *ngIf="esSelectField(campo)">
+                <mat-form-field *ngIf="esSelectField(campo)" class="compact-field">
                   <mat-label>{{ campo.label }}</mat-label>
                   <mat-select [formControlName]="campo.name">
                     <mat-option *ngFor="let opcion of campo.options" [value]="opcion">
@@ -1265,7 +1265,7 @@ export class PlanMediosNuevaPauta implements OnInit {
                 </mat-form-field>
 
                 <!-- Campo Select con Lookup -->
-                <mat-form-field *ngIf="esLookupField(campo)">
+                <mat-form-field *ngIf="esLookupField(campo)" class="compact-field">
                   <mat-label>{{ campo.label }}</mat-label>
                   <mat-select [formControlName]="campo.name">
                     <mat-option *ngFor="let item of obtenerOpcionesLookup(campo)" [value]="item.codigo">
@@ -1298,47 +1298,123 @@ export class PlanMediosNuevaPauta implements OnInit {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 24px;
+      padding: 8px 16px;
       border-bottom: 1px solid #e0e0e0;
     }
 
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 500;
+      margin: 0;
+    }
+
     .modal-content {
-      padding: 20px;
-      max-height: 70vh;
+      padding: 10px;
+      max-height: 85vh;
       overflow-y: auto;
     }
 
     .plan-info {
       display: flex;
-      gap: 20px;
-      margin-bottom: 20px;
-      padding: 16px;
-      background: #f5f5f5;
-      border-radius: 8px;
+      gap: 12px;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 4px;
     }
 
     .info-item {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
 
     .label {
-      font-size: 12px;
+      font-size: 10px;
       color: #666;
       font-weight: 500;
     }
 
     .value {
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 600;
+    }
+
+    .selection-card, .form-card {
+      margin-bottom: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08) !important;
+    }
+
+    .compact-header {
+      padding: 6px 12px !important;
+      min-height: auto !important;
+    }
+
+    .compact-title {
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      margin: 0 !important;
+      line-height: 1.3 !important;
+    }
+
+    .compact-subtitle {
+      font-size: 11px !important;
+      margin: 0 !important;
+      margin-top: 1px !important;
+      line-height: 1.2 !important;
+    }
+
+    .compact-content {
+      padding: 8px 12px !important;
+      padding-top: 4px !important;
     }
 
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .compact-field {
+      margin-bottom: 4px !important;
+    }
+
+    .compact-field .mat-mdc-form-field-infix {
+      padding: 8px 0 6px 0 !important;
+      min-height: auto !important;
+    }
+
+    .compact-field .mat-mdc-form-field-label {
+      font-size: 12px !important;
+    }
+
+    .compact-field .mat-mdc-form-field-input-control input,
+    .compact-field .mat-mdc-form-field-input-control .mat-mdc-select-value {
+      font-size: 13px !important;
+      line-height: 1.3 !important;
+    }
+
+    .compact-field .mat-mdc-form-field-underline {
+      bottom: 6px !important;
+    }
+
+    .compact-field .mat-mdc-select-arrow-wrapper {
+      transform: translateY(-50%) scale(0.8) !important;
+    }
+
+    .compact-field .mat-mdc-select-trigger {
+      min-height: auto !important;
+      height: 20px !important;
+    }
+
+    .compact-field .mat-mdc-form-field-wrapper {
+      padding-bottom: 0 !important;
+    }
+
+    .compact-field .mat-mdc-form-field-flex {
+      align-items: center !important;
+      min-height: 36px !important;
     }
 
     .full-width {
@@ -1347,7 +1423,7 @@ export class PlanMediosNuevaPauta implements OnInit {
 
     .loading-container, .error-container {
       text-align: center;
-      padding: 40px;
+      padding: 20px;
     }
 
     .loading-spinner {
@@ -1367,10 +1443,16 @@ export class PlanMediosNuevaPauta implements OnInit {
     }
 
     .modal-actions {
-      padding: 16px 24px;
+      padding: 8px 16px;
       border-top: 1px solid #e0e0e0;
       justify-content: flex-end;
-      gap: 12px;
+      gap: 8px;
+    }
+
+    .modal-actions button {
+      font-size: 13px !important;
+      padding: 6px 16px !important;
+      min-height: 32px !important;
     }
   `]
 })
