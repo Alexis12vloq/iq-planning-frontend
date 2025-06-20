@@ -100,6 +100,13 @@
                   <td class="valor-total">{{ medio.salidas }}</td>
                   <td class="valor-soi">{{ medio.soi | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 </tr>
+                <!-- Fila de valor neto -->
+                <tr class="fila-valor">
+                  <td>Valor neto</td>
+                  <td colspan="5"></td>
+                  <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+                  <td></td>
+                </tr>
               </ng-container>
             </ng-container>
             

@@ -180,10 +180,19 @@ export class PlanMediosResumen implements OnInit {
   }
 
   calcularPorcentaje(valorMedio: number): number {
-    if (this.periodoSeleccionado.totalInversionNeta === 0) {
+    // Calcular la suma total de todos los medios
+    const totalMedios = this.periodoSeleccionado.medios.reduce((total, medio) => total + medio.valorNeto, 0);
+    
+    if (totalMedios === 0) {
       return 0;
     }
-    return (valorMedio / this.periodoSeleccionado.totalInversionNeta) * 100;
+    
+    // Calcular el porcentaje basado en la suma de los medios
+    const porcentaje = (valorMedio / totalMedios) * 100;
+    
+    console.log(`📊 Calculando porcentaje: ${valorMedio} / ${totalMedios} = ${porcentaje.toFixed(1)}%`);
+    
+    return porcentaje;
   }
 
   onPeriodoChange(periodo: PeriodoPlan): void {
@@ -366,8 +375,8 @@ export class PlanMediosResumen implements OnInit {
     
     pautasDelPlan.forEach((respuestaPauta: any) => {
       const medio = respuestaPauta.medio;
-      const valorTotal = respuestaPauta.valorTotal || 0; // CAMBIO: Usar valorTotal
-      const totalSpots = respuestaPauta.totalSpots || 1;
+      const valorTotal = Number(respuestaPauta.valorTotal) || 0; // FORZAR conversión a número
+      const totalSpots = Number(respuestaPauta.totalSpots) || 1;
       
       // Calcular semanas basado en días seleccionados del calendario
       let semanasBoolean = [false, false, false, false, false]; // L1, L7, L14, L21, L28
@@ -401,8 +410,8 @@ export class PlanMediosResumen implements OnInit {
       if (mediosMap.has(medio)) {
         // Si el medio ya existe, sumar los valores
         const medioExistente = mediosMap.get(medio)!;
-        medioExistente.salidas += totalSpots;
-        medioExistente.valorNeto += valorTotal; // CAMBIO: Usar valorTotal
+        medioExistente.salidas = Number(medioExistente.salidas) + Number(totalSpots);
+        medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
         // Para semanas, hacer OR lógico (si cualquier pauta tiene true, el resultado es true)
         medioExistente.semanas = medioExistente.semanas.map((valor, index) => 
           valor || semanasBoolean[index]
@@ -413,9 +422,9 @@ export class PlanMediosResumen implements OnInit {
         // Crear nuevo medio
         mediosMap.set(medio, {
           nombre: medio,
-          salidas: totalSpots,
-          valorNeto: valorTotal, // CAMBIO: Usar valorTotal
-          soi: Math.round((valorTotal / totalSpots) || 0), // CAMBIO: Usar valorTotal
+          salidas: Number(totalSpots),
+          valorNeto: Number(valorTotal),
+          soi: Math.round((Number(valorTotal) / Number(totalSpots)) || 0),
           semanas: semanasBoolean
         });
       }
@@ -454,25 +463,25 @@ export class PlanMediosResumen implements OnInit {
     
     planData.pautas.forEach((pautaResumen: any) => {
       const medio = pautaResumen.medio;
-      const valorTotal = pautaResumen.valorTotal || 0; // CAMBIO: Usar valorTotal
-      const totalSpots = pautaResumen.totalSpots || 1;
+      const valorTotal = Number(pautaResumen.valorTotal) || 0; // FORZAR conversión a número
+      const totalSpots = Number(pautaResumen.totalSpots) || 1;
       
       // Para pautas del estado, usar semanas por defecto (se pueden mejorar después)
       const semanasBoolean = [true, true, true, true, true]; // Todas las semanas activas por defecto
       
-      if (mediosMap.has(medio)) {
+              if (mediosMap.has(medio)) {
         // Si el medio ya existe, sumar los valores
         const medioExistente = mediosMap.get(medio)!;
-        medioExistente.salidas += totalSpots;
-        medioExistente.valorNeto += valorTotal; // CAMBIO: Usar valorTotal
+        medioExistente.salidas = Number(medioExistente.salidas) + Number(totalSpots);
+        medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
         medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
       } else {
         // Crear nuevo medio
         mediosMap.set(medio, {
           nombre: medio,
-          salidas: totalSpots,
-          valorNeto: valorTotal, // CAMBIO: Usar valorTotal
-          soi: Math.round((valorTotal / totalSpots) || 0), // CAMBIO: Usar valorTotal
+          salidas: Number(totalSpots),
+          valorNeto: Number(valorTotal),
+          soi: Math.round((Number(valorTotal) / Number(totalSpots)) || 0),
           semanas: semanasBoolean
         });
       }
@@ -481,13 +490,20 @@ export class PlanMediosResumen implements OnInit {
     // Convertir map a array
     const medios = Array.from(mediosMap.values());
     
-    // Usar totales que ya vienen calculados del estado
-    const totalInversionNeta = planData.presupuestoTotal || medios.reduce((total, medio) => total + medio.valorNeto, 0);
-    const iva = Math.round(totalInversionNeta * 0.19); // CAMBIO: Usar 19% como especificado
-    const totalInversion = totalInversionNeta + iva;
+    // CORRECCIÓN: Calcular totales SIEMPRE desde la suma de medios (no usar presupuestoTotal)
+    const totalInversionNeta = medios.reduce((total, medio) => {
+      const valorNumerico = Number(medio.valorNeto);
+      console.log(`💰 Sumando medio ${medio.nombre}: ${valorNumerico} (tipo: ${typeof valorNumerico})`);
+      return Number(total) + valorNumerico;
+    }, 0);
+    
+    const iva = Math.round(Number(totalInversionNeta) * 0.19);
+    const totalInversion = Number(totalInversionNeta) + Number(iva);
 
     console.log('✅ Medios creados del estado:', medios);
-    console.log('✅ Total inversión neta:', totalInversionNeta);
+    console.log('✅ Total inversión neta calculado:', totalInversionNeta, '(tipo:', typeof totalInversionNeta, ')');
+    console.log('✅ IVA 19%:', iva, '(tipo:', typeof iva, ')');
+    console.log('✅ Total inversión final:', totalInversion, '(tipo:', typeof totalInversion, ')');
 
     return [{
       id: '1',
