@@ -214,26 +214,20 @@ $border-color: #e0e0e0;
               min-height: 40px;
 
               &.action-col {
-                width: 40px;
-                min-width: 40px;
-                padding: 1px;
+                width: 50px;
+                min-width: 50px;
+                padding: 2px;
               }
 
               &.medium-col {
-                width: 100px;
-                min-width: 100px;
-                padding: 4px 6px;
-              }
-
-              &.vehicle-col {
-                width: 140px;
-                min-width: 140px;
+                width: 120px;
+                min-width: 120px;
                 padding: 4px 6px;
               }
 
               &.budget-col {
-                width: 90px;
-                min-width: 90px;
+                width: 100px;
+                min-width: 100px;
                 padding: 4px 6px;
               }
             }
@@ -348,27 +342,21 @@ $border-color: #e0e0e0;
                 min-height: 40px;
 
                 &.action-col {
-                  width: 40px;
-                  min-width: 40px;
-                  padding: 1px;
+                  width: 50px;
+                  min-width: 50px;
+                  padding: 2px;
                   justify-content: center;
                 }
 
                 &.medium-col {
-                  width: 100px;
-                  min-width: 100px;
-                  padding: 4px 6px;
-                }
-
-                &.vehicle-col {
-                  width: 140px;
-                  min-width: 140px;
+                  width: 120px;
+                  min-width: 120px;
                   padding: 4px 6px;
                 }
 
                 &.budget-col {
-                  width: 90px;
-                  min-width: 90px;
+                  width: 100px;
+                  min-width: 100px;
                   padding: 4px 6px;
                 }
 
@@ -395,18 +383,7 @@ $border-color: #e0e0e0;
                     }
                   }
 
-                  .vehicle-main {
-                    font-weight: 500;
-                    font-size: 11px;
-                    color: $text-primary;
-                    line-height: 1.2;
-                  }
 
-                  .vehicle-sub {
-                    font-size: 9px;
-                    color: $text-secondary;
-                    margin-top: 1px;
-                  }
 
                   .budget-total {
                     font-weight: 600;
@@ -783,13 +760,8 @@ $border-color: #e0e0e0;
               .header-cell,
               .data-cell {
                 &.action-col {
-                  width: 35px;
-                  min-width: 35px;
-                }
-
-                &.vehicle-col {
-                  width: 120px;
-                  min-width: 120px;
+                  width: 45px;
+                  min-width: 45px;
                 }
               }
             }
@@ -819,24 +791,35 @@ $border-color: #e0e0e0;
                 padding: 4px 6px;
 
                 &.action-col {
-                  width: 30px;
-                  min-width: 30px;
-                  padding: 2px;
+                  width: 40px;
+                  min-width: 40px;
+                  padding: 1px;
+                  
+                  .action-buttons {
+                    gap: 1px;
+                    
+                    .action-edit-button,
+                    .action-delete-button {
+                      width: 16px !important;
+                      height: 16px !important;
+                      
+                      mat-icon {
+                        font-size: 12px !important;
+                        width: 12px !important;
+                        height: 12px !important;
+                      }
+                    }
+                  }
                 }
 
                 &.medium-col {
-                  width: 80px;
-                  min-width: 80px;
-                }
-
-                &.vehicle-col {
                   width: 100px;
                   min-width: 100px;
                 }
 
                 &.budget-col {
-                  width: 70px;
-                  min-width: 70px;
+                  width: 80px;
+                  min-width: 80px;
                 }
               }
             }
@@ -869,6 +852,50 @@ $border-color: #e0e0e0;
         width: 100%;
         justify-content: space-between;
       }
+    }
+  }
+}
+
+// Estilos para botones de acción en la tabla
+.action-buttons {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+
+  .action-edit-button,
+  .action-delete-button {
+    width: 20px !important;
+    height: 20px !important;
+    line-height: 20px !important;
+    min-width: 20px !important;
+    padding: 0 !important;
+    
+    mat-icon {
+      font-size: 14px !important;
+      width: 14px !important;
+      height: 14px !important;
+      line-height: 14px !important;
+    }
+  }
+
+  .action-edit-button {
+    color: #666;
+    
+    &:hover {
+      color: #2196f3;
+      background-color: rgba(33, 150, 243, 0.1);
+    }
+  }
+
+  .action-delete-button {
+    color: #666;
+    
+    &:hover {
+      color: #f44336;
+      background-color: rgba(244, 67, 54, 0.1);
     }
   }
 }

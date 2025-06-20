@@ -436,19 +436,41 @@ export class PlanMediosNuevaPauta implements OnInit {
       // Cargar items como lista simple
       this.cargarItemsPauta();
       
-      console.log('🎯 Items de pauta cargados:', this.itemsPauta.length);
+      console.log('🎯 Items de pauta cargados FINAL:', this.itemsPauta.length);
+      console.log('🎯 Array itemsPauta actualizado:', this.itemsPauta);
       
       // Forzar detección de cambios múltiple
       this.cdr.detectChanges();
       setTimeout(() => {
         this.cdr.detectChanges();
-        console.log('🔄 Detección de cambios forzada');
+        console.log('🔄 Detección de cambios forzada - Items en vista:', this.itemsPauta.length);
       }, 0);
     } catch (error) {
       console.error('💥 Error al cargar pautas existentes:', error);
       this.pautasGuardadas = [];
       this.itemsPauta = [];
     }
+  }
+
+  // Método para refrescar la lista de forma forzada
+  private refrescarListaItems(): void {
+    console.log('🔄 === REFRESCANDO LISTA DE ITEMS ===');
+    
+    // Cargar pautas desde storage
+    this.cargarPautasExistentes();
+    
+    // Forzar múltiples detecciones de cambios
+    this.cdr.detectChanges();
+    
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('✅ Lista refrescada - Items visibles:', this.itemsPauta.length);
+    }, 50);
+    
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('✅ Segunda actualización - Items visibles:', this.itemsPauta.length);
+    }, 150);
   }
 
   onCargaExcel(): void {
@@ -654,20 +676,20 @@ export class PlanMediosNuevaPauta implements OnInit {
       height: '90%',
       data: {
         planData: this.planData,
+        action: 'create',
         mediosDisponibles: this.mediosDisponibles
       }
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        // Forzar recarga de pautas
-        setTimeout(() => {
-          this.cargarPautasExistentes();
-          this.snackBar.open('Pauta agregada exitosamente', '', {
-            duration: 3000,
-            panelClass: ['success-snackbar']
-          });
-        }, 100);
+      if (result && result.shouldRefresh) {
+        console.log('✅ Nueva pauta guardada, recargando lista');
+        this.refrescarListaItems();
+        
+        this.snackBar.open('Pauta agregada exitosamente', '', {
+          duration: 3000,
+          panelClass: ['success-snackbar']
+        });
       }
     });
   }
@@ -732,9 +754,13 @@ export class PlanMediosNuevaPauta implements OnInit {
     // Cargar los items como lista simple (sin agrupar)
     this.itemsPauta = [...this.pautasGuardadas];
     console.log('📋 Items de pauta cargados:', this.itemsPauta.length);
+    console.log('📋 Items cargados:', this.itemsPauta.map(item => ({ id: item.id, medio: item.medio })));
     
     // Cargar programación guardada
     this.cargarProgramacion();
+    
+    // Forzar detección de cambios
+    this.cdr.detectChanges();
   }
 
   obtenerIconoMedio(medio: string): string {
@@ -813,14 +839,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result && result.shouldRefresh) {
         console.log('✅ Nuevo item guardado, recargando lista');
-        this.cargarPautasExistentes();
-        
-        // Forzar detección de cambios múltiple
-        this.cdr.detectChanges();
-        setTimeout(() => {
-          this.cdr.detectChanges();
-          console.log('🔄 Lista actualizada automáticamente');
-        }, 100);
+        this.refrescarListaItems();
       }
     });
   }
@@ -1098,14 +1117,12 @@ export class PlanMediosNuevaPauta implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result && result.shouldRefresh) {
         console.log('✅ Item editado, recargando lista');
-        this.cargarPautasExistentes();
+        this.refrescarListaItems();
         
-        // Forzar detección de cambios múltiple
-        this.cdr.detectChanges();
-        setTimeout(() => {
-          this.cdr.detectChanges();
-          console.log('🔄 Lista actualizada automáticamente después de edición');
-        }, 100);
+        this.snackBar.open('Item actualizado exitosamente', '', {
+          duration: 3000,
+          panelClass: ['success-snackbar']
+        });
       }
     });
   }
@@ -1118,21 +1135,28 @@ export class PlanMediosNuevaPauta implements OnInit {
     };
     
     this.guardarPautaEnStorage(itemDuplicado);
-    this.cargarPautasExistentes();
+    this.refrescarListaItems();
     
-    this.snackBar.open('Item duplicado exitosamente', '', { duration: 2000 });
+    this.snackBar.open('Item duplicado exitosamente', '', { 
+      duration: 2000,
+      panelClass: ['success-snackbar']
+    });
   }
 
   eliminarItem(itemId: string, index: number): void {
     if (confirm('¿Estás seguro de que quieres eliminar este item?')) {
       this.eliminarPautaDeStorage(itemId);
-      this.cargarPautasExistentes();
       
       // Limpiar programación del item eliminado
       delete this.programacionItems[itemId];
       this.guardarProgramacion();
       
-      this.snackBar.open('Item eliminado exitosamente', '', { duration: 2000 });
+      this.refrescarListaItems();
+      
+      this.snackBar.open('Item eliminado exitosamente', '', { 
+        duration: 2000,
+        panelClass: ['success-snackbar']
+      });
     }
   }
 

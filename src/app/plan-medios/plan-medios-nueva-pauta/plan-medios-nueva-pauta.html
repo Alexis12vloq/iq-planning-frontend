@@ -92,7 +92,6 @@
           <div class="fixed-columns">
             <div class="header-cell action-col"></div>
             <div class="header-cell medium-col">Medio</div>
-            <div class="header-cell vehicle-col">Vehículo/Programa</div>
             <div class="header-cell budget-col">Presupuesto</div>
           </div>
           
@@ -123,13 +122,22 @@
             <div class="fixed-columns">
               <!-- Acción -->
               <div class="data-cell action-col">
-                <button 
-                  mat-icon-button 
-                  class="action-edit-button"
-                  (click)="editarItem(item)"
-                  matTooltip="Editar">
-                  <mat-icon>edit</mat-icon>
-                </button>
+                <div class="action-buttons">
+                  <button 
+                    mat-icon-button 
+                    class="action-edit-button"
+                    (click)="editarItem(item)"
+                    matTooltip="Editar">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button 
+                    mat-icon-button 
+                    class="action-delete-button"
+                    (click)="eliminarItem(item.id, itemIndex)"
+                    matTooltip="Eliminar">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
               </div>
               
               <!-- Medio -->
@@ -140,14 +148,6 @@
                     <div class="medio-name">{{ item.medio }}</div>
                     <div class="medio-stats">{{ item.totalSpots }} spots</div>
                   </div>
-                </div>
-              </div>
-              
-              <!-- Vehículo/Programa -->
-              <div class="data-cell vehicle-col">
-                <div class="cell-content">
-                  <div class="vehicle-main">{{ obtenerVehiculo(item) }}</div>
-                  <div class="vehicle-sub">{{ obtenerPrograma(item) }}</div>
                 </div>
               </div>
               
