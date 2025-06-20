@@ -13,7 +13,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-plan-medios-create',
@@ -125,7 +125,7 @@ export class PlanMediosCreate implements AfterViewInit {
     numeroPlan: new FormControl({ value: 'Auto', disabled: true }, Validators.required),
     version: new FormControl({ value: '1', disabled: true }, [Validators.required]),
     paisFacturacion: new FormControl('', Validators.required),
-    paisesPauta: new FormControl([], [Validators.required, Validators.minLength(1)]),
+    paisesPauta: new FormControl<string[]>([], [Validators.required, Validators.minLength(1)]), // <-- especifica tipo string[]
     clienteAnunciante: new FormControl('', Validators.required),
     clienteFueActuacion: new FormControl('', Validators.required),
     marca: new FormControl('', Validators.required),
@@ -145,9 +145,14 @@ export class PlanMediosCreate implements AfterViewInit {
   minFechaInicio = new Date();
   minFechaFin: Date | null = null;
 
+  // Modo edición
+  editMode = false;
+  editId: string | null = null;
+
   constructor(
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     // 1. Autocomplete: País Facturación
     this.filteredPaisesFacturacion = this.planMediosForm.get('paisFacturacion')!.valueChanges.pipe(
@@ -240,6 +245,75 @@ export class PlanMediosCreate implements AfterViewInit {
         this.planMediosForm.get('fechaFin')!.setValue('');
       }
     });
+
+    // --- Lógica de edición ---
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (id) {
+        this.editMode = true;
+        this.editId = id;
+        const planesGuardados: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        const plan = planesGuardados.find(p => p.id === id);
+        if (plan) {
+          // --- Lógica para poblar selects dependientes en edición ---
+          // 1. Actualiza clientesFacturacionOptions según clienteAnunciante
+          const clienteObj = this.clientesBackend.find(c => c.nombre === plan.clienteAnunciante);
+          this.clientesFacturacionOptions = clienteObj ? clienteObj.clientesFacturacion.map(cf => cf.nombre) : [];
+
+          // 2. Actualiza marcasOptions según clienteFueActuacion
+          const facturacionObj = clienteObj?.clientesFacturacion.find(cf => cf.nombre === plan.clienteFueActuacion);
+          this.marcasOptions = facturacionObj ? facturacionObj.marcas.map(m => m.nombre) : [];
+
+          // 3. Actualiza productosOptions según marca
+          const marcaObj = facturacionObj?.marcas.find(m => m.nombre === plan.marca);
+          this.productosOptions = marcaObj ? marcaObj.productos : [];
+
+          // Ahora sí, setea los valores del formulario (asegúrate de hacerlo después de poblar las opciones)
+          setTimeout(() => {
+            this.planMediosForm.patchValue({
+              numeroPlan: plan.numeroPlan,
+              version: plan.version,
+              paisFacturacion: plan.paisFacturacion,
+              paisesPauta: plan.paisesPauta,
+              clienteAnunciante: plan.clienteAnunciante,
+              clienteFueActuacion: plan.clienteFueActuacion,
+              marca: plan.marca,
+              producto: plan.producto,
+              campana: plan.campana,
+              fechaInicio: plan.fechaInicio,
+              fechaFin: plan.fechaFin
+            });
+          });
+
+          // Deshabilita campos no editables en modo edición
+          this.planMediosForm.get('numeroPlan')?.disable();
+          this.planMediosForm.get('version')?.disable();
+          this.planMediosForm.get('paisFacturacion')?.disable();
+          this.planMediosForm.get('clienteAnunciante')?.disable();
+          this.planMediosForm.get('clienteFueActuacion')?.disable();
+          this.planMediosForm.get('marca')?.disable();
+          this.planMediosForm.get('producto')?.disable();
+          // Habilita solo los campos editables
+          this.planMediosForm.get('paisesPauta')?.enable();
+          this.planMediosForm.get('campana')?.enable();
+          this.planMediosForm.get('fechaInicio')?.enable();
+          this.planMediosForm.get('fechaFin')?.enable();
+        }
+      } else {
+        // En modo creación, asegúrate de que todos los campos estén habilitados según corresponda
+        this.planMediosForm.get('numeroPlan')?.disable();
+        this.planMediosForm.get('version')?.disable();
+        this.planMediosForm.get('paisFacturacion')?.enable();
+        this.planMediosForm.get('clienteAnunciante')?.enable();
+        this.planMediosForm.get('clienteFueActuacion')?.enable();
+        this.planMediosForm.get('marca')?.enable();
+        this.planMediosForm.get('producto')?.enable();
+        this.planMediosForm.get('paisesPauta')?.enable();
+        this.planMediosForm.get('campana')?.enable();
+        this.planMediosForm.get('fechaInicio')?.enable();
+        this.planMediosForm.get('fechaFin')?.enable();
+      }
+    });
   }
 
   ngAfterViewInit() {
@@ -256,11 +330,11 @@ export class PlanMediosCreate implements AfterViewInit {
 
   onSubmit() {
     if (this.planMediosForm.valid) {
-      this.snackBar.open('Creando plan de medios...', '', { duration: 1200 });
+      this.snackBar.open(this.editMode ? 'Actualizando plan de medios...' : 'Creando plan de medios...', '', { duration: 1200 });
 
       const planesGuardados: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
       let lastNumeroPlan = 1000;
-      if (planesGuardados.length > 0) {
+      if (!this.editMode && planesGuardados.length > 0) {
         const max = Math.max(
           ...planesGuardados
             .map(p => parseInt(p.numeroPlan, 10))
@@ -280,29 +354,54 @@ export class PlanMediosCreate implements AfterViewInit {
         return d.toISOString().slice(0, 10);
       };
 
-      const nuevoPlan: PlanMediosLocal = {
-        id: Date.now().toString(),
-        numeroPlan: lastNumeroPlan.toString(),
-        version: formValue.version ?? '',
-        paisFacturacion: formValue.paisFacturacion ?? '',
-        paisesPauta: formValue.paisesPauta ?? [],
-        clienteAnunciante: formValue.clienteAnunciante ?? '',
-        clienteFueActuacion: formValue.clienteFueActuacion ?? '',
-        marca: formValue.marca ?? '',
-        producto: formValue.producto ?? '',
-        campana: formValue.campana ?? '',
-        fechaInicio: formatDate(formValue.fechaInicio),
-        fechaFin: formatDate(formValue.fechaFin)
-      };
+      if (this.editMode && this.editId) {
+        // --- Modo edición: actualiza el plan existente ---
+        const idx = planesGuardados.findIndex(p => p.id === this.editId);
+        if (idx !== -1) {
+          planesGuardados[idx] = {
+            ...planesGuardados[idx],
+            // Solo actualiza los campos editables, mantiene id, numeroPlan y version
+            paisFacturacion: formValue.paisFacturacion ?? '',
+            paisesPauta: formValue.paisesPauta ?? [],
+            clienteAnunciante: formValue.clienteAnunciante ?? '',
+            clienteFueActuacion: formValue.clienteFueActuacion ?? '',
+            marca: formValue.marca ?? '',
+            producto: formValue.producto ?? '',
+            campana: formValue.campana ?? '',
+            fechaInicio: formatDate(formValue.fechaInicio),
+            fechaFin: formatDate(formValue.fechaFin)
+          };
+          localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
+        }
+        setTimeout(() => {
+          this.snackBar.open('Plan de medios actualizado correctamente', '', { duration: 2000 });
+          this.router.navigate(['/plan-medios-consulta']);
+        }, 1200);
+      } else {
+        // --- Modo creación ---
+        const nuevoPlan: PlanMediosLocal = {
+          id: Date.now().toString(),
+          numeroPlan: lastNumeroPlan.toString(),
+          version: formValue.version ?? '',
+          paisFacturacion: formValue.paisFacturacion ?? '',
+          paisesPauta: formValue.paisesPauta ?? [],
+          clienteAnunciante: formValue.clienteAnunciante ?? '',
+          clienteFueActuacion: formValue.clienteFueActuacion ?? '',
+          marca: formValue.marca ?? '',
+          producto: formValue.producto ?? '',
+          campana: formValue.campana ?? '',
+          fechaInicio: formatDate(formValue.fechaInicio),
+          fechaFin: formatDate(formValue.fechaFin)
+        };
 
-      planesGuardados.push(nuevoPlan);
-      localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
+        planesGuardados.push(nuevoPlan);
+        localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
 
-      setTimeout(() => {
-        this.snackBar.open('Plan de medios creado correctamente', '', { duration: 2000 });
-        // Opcional: limpiar el formulario o redirigir
-        this.router.navigate(['/plan-medios-consulta']);
-      }, 1200);
+        setTimeout(() => {
+          this.snackBar.open('Plan de medios creado correctamente', '', { duration: 2000 });
+          this.router.navigate(['/plan-medios-consulta']);
+        }, 1200);
+      }
     } else {
       console.log('Formulario inválido:', this.planMediosForm.errors, this.planMediosForm.status, this.planMediosForm.value);
       Object.keys(this.planMediosForm.controls).forEach(key => {
@@ -314,5 +413,9 @@ export class PlanMediosCreate implements AfterViewInit {
         );
       });
     }
+  }
+
+  cancelar() {
+    this.router.navigate(['/plan-medios-consulta']);
   }
 }

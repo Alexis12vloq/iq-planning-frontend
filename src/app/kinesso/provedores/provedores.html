@@ -3,85 +3,92 @@
     <mat-card-title>Proveedores Kinesso</mat-card-title>
   </mat-card-header>
   <mat-card-content>
-    <form [formGroup]="proveedorForm" (ngSubmit)="onSubmit()">
+    <form [formGroup]="proveedorForm" (ngSubmit)="onSubmit()" class="form-container">
       <div class="form-row">
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Vendor Medium</mat-label>
-          <input matInput formControlName="vendor_medium" />
+          <input matInput formControlName="VENDOR_MEDIUM" required />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Vendor Group</mat-label>
-          <input matInput formControlName="vendor_group" />
+          <input matInput formControlName="VENDOR_GROUP" required />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Mediums</mat-label>
-          <input matInput formControlName="mediums" />
+          <input matInput formControlName="MEDIUMS" required />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Vendor</mat-label>
-          <input matInput formControlName="vendor" />
+          <input matInput formControlName="VENDOR" required [readonly]="editMode" />
         </mat-form-field>
       </div>
       <div class="form-row">
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Tipo Vendor</mat-label>
-          <mat-select formControlName="tipo_vendor">
+          <mat-select formControlName="TIPO_VENDOR" required>
             <mat-option *ngFor="let tipo of tipoVendorOptions" [value]="tipo">{{ tipo }}</mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Orion Beneficio Real Vendor</mat-label>
-          <input matInput type="number" formControlName="orion_beneficio_real_vendor" />
+          <input matInput type="number" formControlName="ORION_BENEFICIO_REAL_VENDOR" required />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Directo Tradicional MVSs</mat-label>
-          <input matInput type="number" formControlName="directo_tradicional_mvss" />
+          <input matInput type="number" formControlName="DIRECTO_TRADICIONAL_MVSS" required />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Kinesso Power</mat-label>
-          <input matInput type="number" formControlName="kinesso_power" />
+          <input matInput type="number" formControlName="KINESSO_POWER" required />
         </mat-form-field>
       </div>
       <div class="form-row">
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Kinesso Glass</mat-label>
-          <input matInput type="number" formControlName="kinesso_glass" />
+          <input matInput type="number" formControlName="KINESSO_GLASS" required />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Notas KSO</mat-label>
-          <input matInput formControlName="notas_kso" />
+          <input matInput formControlName="NOTAS_KSO" />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Duo Glass</mat-label>
-          <input matInput type="number" formControlName="duo_glass" />
+          <input matInput type="number" formControlName="DUO_GLASS" required />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Duo Power</mat-label>
-          <input matInput type="number" formControlName="duo_power" />
+          <input matInput type="number" formControlName="DUO_POWER" required />
         </mat-form-field>
         <mat-form-field appearance="fill" class="form-field">
           <mat-label>Estado</mat-label>
-          <mat-select formControlName="estado">
+          <mat-select formControlName="ESTADO" required>
             <mat-option *ngFor="let opt of estadoOptions" [value]="opt.value">{{ opt.label }}</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
-      <div class="button-row">
-        <button mat-raised-button color="primary" type="submit" [disabled]="proveedorForm.invalid">
-          <ng-container *ngIf="editMode; else guardarNuevo">
-            <mat-icon>edit</mat-icon> Guardar edición
-          </ng-container>
-          <ng-template #guardarNuevo>
-            Guardar
-          </ng-template>
+      <div class="form-row" style="justify-content: flex-end;">
+        <button mat-raised-button color="primary" type="submit" [disabled]="!proveedorForm.valid" *ngIf="!editMode">
+          <mat-icon>add</mat-icon> Guardar
+        </button>
+        <!-- Botón para agregar Excel masivo -->
+        <button mat-raised-button color="primary" type="button" style="margin-left:8px;" (click)="fileInput.click()" *ngIf="!editMode">
+          <mat-icon svgIcon="excel"></mat-icon> Agregar Excel masivo
+        </button>
+        <input #fileInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onExcelUpload($event)" />
+        <!-- Botón para descargar Excel -->
+        <button mat-raised-button color="accent" type="button" style="margin-left:8px;" (click)="descargarExcel()">
+          <mat-icon svgIcon="excel"></mat-icon> Descargar Excel
+        </button>
+        <button mat-raised-button color="accent" type="submit" [disabled]="!proveedorForm.valid" *ngIf="editMode">
+          <mat-icon>edit</mat-icon> Guardar edición
         </button>
         <button mat-raised-button color="warn" type="button" (click)="cancelarEdicion()" *ngIf="editMode">
-          Cancelar
+          <mat-icon>cancel</mat-icon> Cancelar
         </button>
       </div>
     </form>
 
-    <div class="form-row" style="margin-top: 24px;">
+    <div class="container-search form-row">
       <mat-form-field appearance="fill" class="form-field">
         <mat-label>Buscar por Vendor</mat-label>
         <input matInput [value]="filterVendor" (input)="onVendorInput($event)" />
@@ -95,8 +102,7 @@
             <th mat-header-cell *matHeaderCellDef mat-sort-header>
               {{ getColumnLabel(column) }}
             </th>
-            <td mat-cell *matCellDef="let row"
-                (dblclick)="onRowDblClick(row)">
+            <td mat-cell *matCellDef="let row" (dblclick)="onRowDblClick(row)">
               {{ getDisplayValue(row, column) }}
             </td>
           </ng-container>

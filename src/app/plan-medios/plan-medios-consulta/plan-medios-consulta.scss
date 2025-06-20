@@ -47,6 +47,7 @@ mat-form-field {
   max-width: 22%;
   min-width: 180px;
   margin: 10px;
+  margin-top: 0px !important;
 }
 .form-field.fecha {
   flex: 0 0 22%;
@@ -85,7 +86,7 @@ table {
   background: #fff;
   border-radius: 10px;
   width: 100%;
-  margin-top: 24px;
+  margin-top: 20px;
   font-size: 1.15rem; 
   margin-bottom: 40px;
   border: 1.5px solid #3c5977;
@@ -94,7 +95,7 @@ table {
 }
 
 th, td {
-  padding: 8px 12px;
+  padding: 2px 8px; // Padding vertical aún más reducido y horizontal más compacto
   text-align: left;
   font-size: 1.25em; // más grande
 }

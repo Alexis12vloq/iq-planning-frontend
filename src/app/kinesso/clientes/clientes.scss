@@ -124,13 +124,13 @@ mat-form-field {
 .form-row {
   display: flex;
   gap: 0px;
-  margin-bottom: 20px;
+  margin-bottom: 0px;
   flex-wrap: wrap;
   justify-content: space-between;
 }
 .form-field.double {
-  flex: 0 0 45.5%;
-  max-width: 45.5%;
+  flex: 0 0 47.5%;
+  max-width: 47.5%;
   min-width: 250px;
 }
 .form-field {
@@ -138,6 +138,7 @@ mat-form-field {
   max-width: 22%;
   min-width: 180px;
   margin: 10px;
+  margin-top: 0px !important;
 }
 .form-field.fecha {
   flex: 0 0 22%;
@@ -200,7 +201,9 @@ th {
   border-top-right-radius: 8px;
   border-bottom: 2px solid #3c5977;
 }
-
+.container-search{
+  margin-top: 0px;
+}
 tr.mat-header-row th:first-child {
   border-top-left-radius: 8px;
 }
