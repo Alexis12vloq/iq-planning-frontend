@@ -871,4 +871,48 @@ $border-color: #e0e0e0;
       }
     }
   }
+}
+
+// Estilos para hints de edición en el modal
+::ng-deep .edit-hint {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 11px !important;
+  color: #666 !important;
+  margin-top: 4px !important;
+
+  .hint-icon {
+    font-size: 14px !important;
+    width: 14px !important;
+    height: 14px !important;
+    color: #2196f3 !important;
+  }
+}
+
+// Estilos globales para snackbars de advertencia
+::ng-deep .warning-snackbar {
+  .mat-mdc-snack-bar-container {
+    --mdc-snackbar-container-color: #fff3cd;
+    --mdc-snackbar-supporting-text-color: #856404;
+    
+    .mdc-snackbar__surface {
+      border-left: 4px solid #ffc107;
+    }
+    
+    .mat-mdc-snack-bar-action {
+      --mat-mdc-snack-bar-button-color: #856404;
+    }
+  }
+}
+
+::ng-deep .success-snackbar {
+  .mat-mdc-snack-bar-container {
+    --mdc-snackbar-container-color: #d4edda;
+    --mdc-snackbar-supporting-text-color: #155724;
+    
+    .mdc-snackbar__surface {
+      border-left: 4px solid #28a745;
+    }
+  }
 } 

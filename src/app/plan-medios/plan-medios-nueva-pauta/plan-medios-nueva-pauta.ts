@@ -1208,11 +1208,18 @@ export class PlanMediosNuevaPauta implements OnInit {
           <form [formGroup]="seleccionForm">
             <mat-form-field class="full-width">
               <mat-label>Medio</mat-label>
-              <mat-select formControlName="medio">
-                <mat-option *ngFor="let medio of data.mediosDisponibles" [value]="medio">
+              <mat-select 
+                formControlName="medio" 
+                (selectionChange)="cargarPlantillaPorMedio($event.value)"
+                [disabled]="data.action === 'edit'">
+                <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
                   {{ medio }}
                 </mat-option>
               </mat-select>
+              <mat-hint *ngIf="data.action === 'edit'" class="edit-hint">
+                <mat-icon class="hint-icon">info</mat-icon>
+                El medio no se puede cambiar durante la edición
+              </mat-hint>
             </mat-form-field>
           </form>
         </mat-card-content>
@@ -1463,6 +1470,12 @@ export class ModalNuevaPautaComponent implements OnInit {
   cargandoPlantilla: boolean = false;
   errorPlantilla: string | null = null;
   private lookupCache = new Map<string, any[]>();
+  
+  // Medios disponibles (todos los medios)
+  todosLosMedios: string[] = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
+  
+  // Medios disponibles filtrados (excluyendo los ya usados)
+  mediosDisponibles: string[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -1492,19 +1505,65 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.errorPlantilla = null;
     this.plantillaActual = null;
     
+    // Filtrar medios disponibles
+    this.filtrarMediosDisponibles();
+    
     // Si es modo edición, cargar los datos existentes
     if (this.data.action === 'edit' && this.data.pautaData) {
       console.log('🔄 Modo edición detectado, cargando datos:', this.data.pautaData);
       this.seleccionForm.patchValue({
         medio: this.data.pautaData.medio
       });
+      // Cargar plantilla automáticamente en modo edición
+      this.cargarPlantillaPorMedio(this.data.pautaData.medio);
     }
+  }
+
+  private filtrarMediosDisponibles(): void {
+    if (this.data.action === 'edit') {
+      // En modo edición, solo mostrar el medio actual (el selector estará deshabilitado)
+      this.mediosDisponibles = [this.data.pautaData.medio];
+      return;
+    }
+    
+    // En modo creación, filtrar medios ya usados
+    const planId = this.data.planData.id || `${this.data.planData.numeroPlan}-v${this.data.planData.version}`;
+    const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    const mediosUsados = pautasExistentes
+      .filter((pauta: RespuestaPauta) => pauta.planId === planId)
+      .map((pauta: RespuestaPauta) => pauta.medio);
+    
+    this.mediosDisponibles = this.todosLosMedios.filter(medio => !mediosUsados.includes(medio));
+    
+    console.log('📊 Medios filtrados:', {
+      todosLosMedios: this.todosLosMedios,
+      mediosUsados: mediosUsados,
+      mediosDisponibles: this.mediosDisponibles,
+      modoEdicion: this.data.action === 'edit'
+    });
   }
 
   cargarPlantillaPorMedio(medio: string): void {
     this.cargandoPlantilla = true;
     this.errorPlantilla = null;
     this.plantillaActual = null;
+    
+    // Verificar si el medio ya existe (solo en modo creación)
+    if (this.data.action !== 'edit') {
+      const planId = this.data.planData.id || `${this.data.planData.numeroPlan}-v${this.data.planData.version}`;
+      const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      const medioYaExiste = pautasExistentes.some((pauta: RespuestaPauta) => 
+        pauta.planId === planId && pauta.medio === medio
+      );
+      
+      if (medioYaExiste) {
+        this.errorPlantilla = `⚠️ Ya existe una pauta para el medio "${medio}" en este plan. Solo se permite una pauta por medio.`;
+        this.plantillaActual = null;
+        this.pautaForm = this.fb.group({});
+        this.cargandoPlantilla = false;
+        return;
+      }
+    }
     
     setTimeout(() => {
       try {
@@ -1651,6 +1710,26 @@ export class ModalNuevaPautaComponent implements OnInit {
     if (!planId) {
       planId = `${this.data.planData.numeroPlan}-v${this.data.planData.version}`;
       console.log('💾 ID generado para el plan:', planId);
+    }
+    
+    // VALIDACIÓN: Solo una pauta por medio por plan (excepto en edición)
+    if (!isEdit) {
+      const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      const medioYaExiste = pautasExistentes.some((pauta: RespuestaPauta) => 
+        pauta.planId === planId && pauta.medio === this.plantillaActual!.medio
+      );
+      
+      if (medioYaExiste) {
+        this.snackBar.open(
+          `⚠️ Ya existe una pauta para el medio "${this.plantillaActual.medio}" en este plan. Solo se permite una pauta por medio.`, 
+          'Cerrar', 
+          { 
+            duration: 5000,
+            panelClass: ['warning-snackbar']
+          }
+        );
+        return;
+      }
     }
     
     const pauta: RespuestaPauta = {
