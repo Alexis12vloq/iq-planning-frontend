@@ -473,7 +473,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         const nuevoPlan = {
           ...original,
           id: Date.now().toString(),
-          numeroPlan: lastNumeroPlan.toString()
+          numeroPlan: lastNumeroPlan.toString(),
+          version: "1"
         };
         planesGuardados.push(nuevoPlan);
         localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
