@@ -479,6 +479,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
         this.snackBar.open('Plan copiado correctamente', '', { duration: 2000 });
         this.recargarTabla();
+        this.selectedRow = null; // <-- Limpia la selección después de copiar
       }
     });
   }
@@ -501,28 +502,19 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         if (versiones.length > 0) {
           nuevaVersion = Math.max(...versiones) + 1;
         }
-        // Calcular nuevo número de plan consecutivo
-        let lastNumeroPlan = 1000;
-        if (planesGuardados.length > 0) {
-          const max = Math.max(
-            ...planesGuardados
-              .map(p => parseInt(p.numeroPlan, 10))
-              .filter(n => !isNaN(n))
-          );
-          if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
-        }
+        // Mantener el mismo numeroPlan, solo cambia el id y la version
         const nuevoPlan = {
           ...original,
           id: Date.now().toString(),
-          numeroPlan: lastNumeroPlan.toString(),
           version: nuevaVersion.toString()
         };
         planesGuardados.push(nuevoPlan);
         localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
         this.snackBar.open('Nueva versión creada correctamente', '', { duration: 2000 });
         this.recargarTabla();
+        this.selectedRow = null; // <-- Limpia la selección después de nueva versión
       }
-    });
+    }); 
   }
 
   // --- NUEVO: Diálogo de confirmación ---
@@ -555,6 +547,11 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       this.dataSource.data = this.allResultados;
       this.isLoading = false;
     }, 400); // Simula carga
+  }
+
+  editarPlan() {
+    if (!this.selectedRow) return;
+    this.router.navigate(['/plan-medios-editar', this.selectedRow.id]);
   }
 }
 

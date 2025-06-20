@@ -12,22 +12,26 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import * as XLSX from 'xlsx';
+
+// Importa el JSON de provedores mockeado
+import PROVEDORES_MOCK from './provedores-mock.json';
 
 interface Proveedor {
   id: string;
-  vendor_medium: string;
-  vendor_group: string;
-  mediums: string;
-  vendor: string;
-  tipo_vendor: string;
-  orion_beneficio_real_vendor: number;
-  directo_tradicional_mvss: number;
-  kinesso_power: number;
-  kinesso_glass: number;
-  notas_kso: string;
-  duo_glass: number;
-  duo_power: number;
-  estado: number;
+  VENDOR_MEDIUM: string;
+  VENDOR_GROUP: string;
+  MEDIUMS: string;
+  VENDOR: string;
+  TIPO_VENDOR: string;
+  ORION_BENEFICIO_REAL_VENDOR: number;
+  DIRECTO_TRADICIONAL_MVSS: number;
+  KINESSO_POWER: number;
+  KINESSO_GLASS: number;
+  NOTAS_KSO: string;
+  DUO_GLASS: number;
+  DUO_POWER: number;
+  ESTADO: number;
 }
 
 @Component({
@@ -51,19 +55,19 @@ interface Proveedor {
 })
 export class Provedores implements OnInit {
   proveedorForm = new FormGroup({
-    vendor_medium: new FormControl('', Validators.required),
-    vendor_group: new FormControl('', Validators.required),
-    mediums: new FormControl('', Validators.required),
-    vendor: new FormControl('', Validators.required),
-    tipo_vendor: new FormControl('', Validators.required),
-    orion_beneficio_real_vendor: new FormControl(0, Validators.required),
-    directo_tradicional_mvss: new FormControl(0, Validators.required),
-    kinesso_power: new FormControl(0, Validators.required),
-    kinesso_glass: new FormControl(0, Validators.required),
-    notas_kso: new FormControl(''),
-    duo_glass: new FormControl(0, Validators.required),
-    duo_power: new FormControl(0, Validators.required),
-    estado: new FormControl(1, Validators.required)
+    VENDOR_MEDIUM: new FormControl('', Validators.required),
+    VENDOR_GROUP: new FormControl('', Validators.required),
+    MEDIUMS: new FormControl('', Validators.required),
+    VENDOR: new FormControl('', Validators.required),
+    TIPO_VENDOR: new FormControl('', Validators.required),
+    ORION_BENEFICIO_REAL_VENDOR: new FormControl(0, Validators.required),
+    DIRECTO_TRADICIONAL_MVSS: new FormControl(0, Validators.required),
+    KINESSO_POWER: new FormControl(0, Validators.required),
+    KINESSO_GLASS: new FormControl(0, Validators.required),
+    NOTAS_KSO: new FormControl(''),
+    DUO_GLASS: new FormControl(0, Validators.required),
+    DUO_POWER: new FormControl(0, Validators.required),
+    ESTADO: new FormControl(1, Validators.required)
   });
 
   tipoVendorOptions = ['REGULAR', 'PREMIUM', 'IMPORTANTE', 'LONGTAIL'];
@@ -72,62 +76,44 @@ export class Provedores implements OnInit {
     { value: 0, label: 'Inactivo' }
   ];
 
-  proveedores: Proveedor[] = [];
-  filteredProveedores: Proveedor[] = [];
+  provedores: Proveedor[] = [];
+  filteredProvedores: Proveedor[] = [];
   filterVendor = '';
 
   editMode = false;
   editingId: string | null = null;
 
   displayedColumns: string[] = [
-    'vendor_medium',
-    'vendor_group',
-    'mediums',
-    'vendor',
-    'tipo_vendor',
-    'orion_beneficio_real_vendor',
-    'directo_tradicional_mvss',
-    'kinesso_power',
-    'kinesso_glass',
-    'notas_kso',
-    'duo_glass',
-    'duo_power',
-    'estado'
+    'VENDOR_MEDIUM',
+    'VENDOR_GROUP',
+    'MEDIUMS',
+    'VENDOR',
+    'TIPO_VENDOR',
+    'ORION_BENEFICIO_REAL_VENDOR',
+    'DIRECTO_TRADICIONAL_MVSS',
+    'KINESSO_POWER',
+    'KINESSO_GLASS',
+    'NOTAS_KSO',
+    'DUO_GLASS',
+    'DUO_POWER',
+    'ESTADO'
   ];
 
   columnLabels: { [key: string]: string } = {
-    vendor_medium: 'Vendor Medium',
-    vendor_group: 'Vendor Group',
-    mediums: 'Mediums',
-    vendor: 'Vendor',
-    tipo_vendor: 'Tipo Vendor',
-    orion_beneficio_real_vendor: 'Orion Beneficio Real Vendor',
-    directo_tradicional_mvss: 'Directo Tradicional MVSs',
-    kinesso_power: 'Kinesso Power',
-    kinesso_glass: 'Kinesso Glass',
-    notas_kso: 'Notas KSO',
-    duo_glass: 'Duo Glass',
-    duo_power: 'Duo Power',
-    estado: 'Estado'
+    VENDOR_MEDIUM: 'Vendor Medium',
+    VENDOR_GROUP: 'Vendor Group',
+    MEDIUMS: 'Mediums',
+    VENDOR: 'Vendor',
+    TIPO_VENDOR: 'Tipo Vendor',
+    ORION_BENEFICIO_REAL_VENDOR: 'Orion Beneficio Real Vendor',
+    DIRECTO_TRADICIONAL_MVSS: 'Directo Tradicional MVSs',
+    KINESSO_POWER: 'Kinesso Power',
+    KINESSO_GLASS: 'Kinesso Glass',
+    NOTAS_KSO: 'Notas KSO',
+    DUO_GLASS: 'Duo Glass',
+    DUO_POWER: 'Duo Power',
+    ESTADO: 'Estado'
   };
-
-  getDisplayValue(row: any, column: string): string | number {
-    // Si el formulario pide números, muestra el número tal cual
-    if (
-      column === 'orion_beneficio_real_vendor' ||
-      column === 'directo_tradicional_mvss' ||
-      column === 'kinesso_power' ||
-      column === 'kinesso_glass' ||
-      column === 'duo_glass' ||
-      column === 'duo_power'
-    ) {
-      return row[column];
-    }
-    if (column === 'estado') {
-      return row.estado === 1 ? 'Activo' : 'Inactivo';
-    }
-    return row[column];
-  }
 
   dataSource: any;
   @ViewChild(MatPaginator) paginator: MatPaginator | undefined;
@@ -136,36 +122,66 @@ export class Provedores implements OnInit {
   constructor(private snackBar: MatSnackBar) {}
 
   ngOnInit() {
-    this.loadProveedores();
-    this.filteredProveedores = [...this.proveedores];
-    this.dataSource = new MatTableDataSource(this.filteredProveedores);
+    // Si no hay datos en localStorage, inicializa con el mock completo
+    if (!localStorage.getItem('provedoresKinesso')) {
+      const provedoresJson = PROVEDORES_MOCK.map((p: any) => ({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
+        VENDOR_MEDIUM: p.VENDOR_MEDIUM,
+        VENDOR_GROUP: p.VENDOR_GROUP,
+        MEDIUMS: p.MEDIUMS,
+        VENDOR: p.VENDOR,
+        TIPO_VENDOR: p.TIPO_VENDOR,
+        ORION_BENEFICIO_REAL_VENDOR: p.ORION_BENEFICIO_REAL_VENDOR,
+        DIRECTO_TRADICIONAL_MVSS: p.DIRECTO_TRADICIONAL_MVSS,
+        KINESSO_POWER: p.KINESSO_POWER,
+        KINESSO_GLASS: p.KINESSO_GLASS,
+        NOTAS_KSO: p.NOTAS_KSO,
+        DUO_GLASS: p.DUO_GLASS,
+        DUO_POWER: p.DUO_POWER,
+        ESTADO: p.ESTADO
+      }));
+      localStorage.setItem('provedoresKinesso', JSON.stringify(provedoresJson));
+    }
+    this.loadProvedores();
+    this.filteredProvedores = [...this.provedores];
+    this.dataSource = new MatTableDataSource(this.filteredProvedores);
     this.dataSource.paginator = this.paginator;
   }
 
   ngAfterViewInit() {
-    if (this.dataSource && this.paginator && this.sort) {
-      this.dataSource.paginator = this.paginator;
-      this.dataSource.sort = this.sort;
-    }
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
   }
 
-  loadProveedores() {
+  loadProvedores() {
     const data = localStorage.getItem('provedoresKinesso');
     if (data) {
-      this.proveedores = JSON.parse(data).map((p: any) => ({
-        ...p,
-        estado: p.estado ?? 1
+      this.provedores = JSON.parse(data).map((p: any) => ({
+        id: p.id,
+        VENDOR_MEDIUM: p.VENDOR_MEDIUM ?? '',
+        VENDOR_GROUP: p.VENDOR_GROUP ?? '',
+        MEDIUMS: p.MEDIUMS ?? '',
+        VENDOR: p.VENDOR ?? '',
+        TIPO_VENDOR: p.TIPO_VENDOR ?? '',
+        ORION_BENEFICIO_REAL_VENDOR: p.ORION_BENEFICIO_REAL_VENDOR ?? 0,
+        DIRECTO_TRADICIONAL_MVSS: p.DIRECTO_TRADICIONAL_MVSS ?? 0,
+        KINESSO_POWER: p.KINESSO_POWER ?? 0,
+        KINESSO_GLASS: p.KINESSO_GLASS ?? 0,
+        NOTAS_KSO: p.NOTAS_KSO ?? '',
+        DUO_GLASS: p.DUO_GLASS ?? 0,
+        DUO_POWER: p.DUO_POWER ?? 0,
+        ESTADO: p.ESTADO ?? 1
       }));
     } else {
-      this.proveedores = [];
+      this.provedores = [];
     }
   }
 
-  saveProveedores() {
-    localStorage.setItem('provedoresKinesso', JSON.stringify(this.proveedores));
-    this.filteredProveedores = this.getFilteredProveedores();
+  saveProvedores() {
+    localStorage.setItem('provedoresKinesso', JSON.stringify(this.provedores));
+    this.filteredProvedores = this.getFilteredProvedores();
     if (this.dataSource) {
-      this.dataSource.data = this.filteredProveedores;
+      this.dataSource.data = this.filteredProvedores;
       if (this.paginator) {
         this.dataSource.paginator = this.paginator;
       }
@@ -174,10 +190,10 @@ export class Provedores implements OnInit {
 
   onSubmit() {
     if (this.proveedorForm.valid) {
-      const newVendor = (this.proveedorForm.value.vendor ?? '').trim().toLowerCase();
-      // Validar que no exista un vendor igual
-      const exists = this.proveedores.some(
-        p => (p.vendor ?? '').trim().toLowerCase() === newVendor
+      const newVendor = (this.proveedorForm.value.VENDOR ?? '').trim().toLowerCase();
+      // Validar que no exista un vendor igual (ignorando mayúsculas/minúsculas y espacios)
+      const exists = this.provedores.some(
+        p => (p.VENDOR ?? '').trim().toLowerCase() === newVendor
       );
       if (!this.editMode && exists) {
         this.snackBar.open('Ya existe un proveedor con ese Vendor', '', { duration: 2500 });
@@ -187,26 +203,26 @@ export class Provedores implements OnInit {
       this.snackBar.open('Guardando proveedor...', '', { duration: 1200 });
 
       const formValue = {
-        vendor_medium: this.proveedorForm.value.vendor_medium ?? '',
-        vendor_group: this.proveedorForm.value.vendor_group ?? '',
-        mediums: this.proveedorForm.value.mediums ?? '',
-        vendor: this.proveedorForm.value.vendor ?? '',
-        tipo_vendor: this.proveedorForm.value.tipo_vendor ?? '',
-        orion_beneficio_real_vendor: Number(this.proveedorForm.value.orion_beneficio_real_vendor),
-        directo_tradicional_mvss: Number(this.proveedorForm.value.directo_tradicional_mvss),
-        kinesso_power: Number(this.proveedorForm.value.kinesso_power),
-        kinesso_glass: Number(this.proveedorForm.value.kinesso_glass),
-        notas_kso: this.proveedorForm.value.notas_kso ?? '',
-        duo_glass: Number(this.proveedorForm.value.duo_glass),
-        duo_power: Number(this.proveedorForm.value.duo_power),
-        estado: Number(this.proveedorForm.value.estado)
+        VENDOR_MEDIUM: this.proveedorForm.value.VENDOR_MEDIUM ?? '',
+        VENDOR_GROUP: this.proveedorForm.value.VENDOR_GROUP ?? '',
+        MEDIUMS: this.proveedorForm.value.MEDIUMS ?? '',
+        VENDOR: this.proveedorForm.value.VENDOR ?? '',
+        TIPO_VENDOR: this.proveedorForm.value.TIPO_VENDOR ?? '',
+        ORION_BENEFICIO_REAL_VENDOR: Number(this.proveedorForm.value.ORION_BENEFICIO_REAL_VENDOR),
+        DIRECTO_TRADICIONAL_MVSS: Number(this.proveedorForm.value.DIRECTO_TRADICIONAL_MVSS),
+        KINESSO_POWER: Number(this.proveedorForm.value.KINESSO_POWER),
+        KINESSO_GLASS: Number(this.proveedorForm.value.KINESSO_GLASS),
+        NOTAS_KSO: this.proveedorForm.value.NOTAS_KSO ?? '',
+        DUO_GLASS: Number(this.proveedorForm.value.DUO_GLASS),
+        DUO_POWER: Number(this.proveedorForm.value.DUO_POWER),
+        ESTADO: Number(this.proveedorForm.value.ESTADO)
       };
 
       if (this.editMode && this.editingId) {
         // Editar existente
-        const idx = this.proveedores.findIndex(p => p.id === this.editingId);
+        const idx = this.provedores.findIndex(p => p.id === this.editingId);
         if (idx > -1) {
-          this.proveedores[idx] = { id: this.editingId, ...formValue };
+          this.provedores[idx] = { id: this.editingId, ...formValue };
         }
         this.editMode = false;
         this.editingId = null;
@@ -216,25 +232,25 @@ export class Provedores implements OnInit {
           id: Date.now().toString(),
           ...formValue
         };
-        this.proveedores.push(nuevo as Proveedor);
+        this.provedores.push(nuevo as Proveedor);
       }
-      this.saveProveedores();
+      this.saveProvedores();
 
-      // Limpia el formulario y los estados de validación para evitar que los campos se pongan en rojo
-      this.proveedorForm.reset({ 
-        vendor_medium: '', 
-        vendor_group: '', 
-        mediums: '', 
-        vendor: '', 
-        tipo_vendor: '', 
-        orion_beneficio_real_vendor: 0, 
-        directo_tradicional_mvss: 0, 
-        kinesso_power: 0, 
-        kinesso_glass: 0, 
-        notas_kso: '', 
-        duo_glass: 0, 
-        duo_power: 0, 
-        estado: 1 
+      // Limpia el formulario y los estados de validación
+      this.proveedorForm.reset({
+        VENDOR_MEDIUM: '',
+        VENDOR_GROUP: '',
+        MEDIUMS: '',
+        VENDOR: '',
+        TIPO_VENDOR: '',
+        ORION_BENEFICIO_REAL_VENDOR: 0,
+        DIRECTO_TRADICIONAL_MVSS: 0,
+        KINESSO_POWER: 0,
+        KINESSO_GLASS: 0,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0,
+        DUO_POWER: 0,
+        ESTADO: 1
       });
       this.proveedorForm.markAsPristine();
       this.proveedorForm.markAsUntouched();
@@ -252,32 +268,34 @@ export class Provedores implements OnInit {
     this.editMode = true;
     this.editingId = proveedor.id;
     this.proveedorForm.setValue({
-      vendor_medium: proveedor.vendor_medium,
-      vendor_group: proveedor.vendor_group,
-      mediums: proveedor.mediums,
-      vendor: proveedor.vendor,
-      tipo_vendor: proveedor.tipo_vendor,
-      orion_beneficio_real_vendor: proveedor.orion_beneficio_real_vendor,
-      directo_tradicional_mvss: proveedor.directo_tradicional_mvss,
-      kinesso_power: proveedor.kinesso_power,
-      kinesso_glass: proveedor.kinesso_glass,
-      notas_kso: proveedor.notas_kso,
-      duo_glass: proveedor.duo_glass,
-      duo_power: proveedor.duo_power,
-      estado: proveedor.estado
+      VENDOR_MEDIUM: proveedor.VENDOR_MEDIUM,
+      VENDOR_GROUP: proveedor.VENDOR_GROUP,
+      MEDIUMS: proveedor.MEDIUMS,
+      VENDOR: proveedor.VENDOR,
+      TIPO_VENDOR: proveedor.TIPO_VENDOR,
+      ORION_BENEFICIO_REAL_VENDOR: proveedor.ORION_BENEFICIO_REAL_VENDOR,
+      DIRECTO_TRADICIONAL_MVSS: proveedor.DIRECTO_TRADICIONAL_MVSS,
+      KINESSO_POWER: proveedor.KINESSO_POWER,
+      KINESSO_GLASS: proveedor.KINESSO_GLASS,
+      NOTAS_KSO: proveedor.NOTAS_KSO,
+      DUO_GLASS: proveedor.DUO_GLASS,
+      DUO_POWER: proveedor.DUO_POWER,
+      ESTADO: proveedor.ESTADO
     });
   }
 
   cancelarEdicion() {
     this.editMode = false;
     this.editingId = null;
-    this.proveedorForm.reset({ estado: 1 });
+    this.proveedorForm.reset({ ESTADO: 1 });
+    // Habilita el campo VENDOR al cancelar edición
+    this.proveedorForm.get('VENDOR')?.enable();
   }
 
   onFilterChange() {
-    this.filteredProveedores = this.getFilteredProveedores();
+    this.filteredProvedores = this.getFilteredProvedores();
     if (this.dataSource) {
-      this.dataSource.data = this.filteredProveedores;
+      this.dataSource.data = this.filteredProvedores;
       if (this.paginator) {
         this.dataSource.paginator = this.paginator;
       }
@@ -288,10 +306,10 @@ export class Provedores implements OnInit {
     return this.columnLabels[column] || column;
   }
 
-  getFilteredProveedores(): Proveedor[] {
-    if (!this.filterVendor.trim()) return [...this.proveedores];
-    return this.proveedores.filter(p =>
-      (p.vendor ?? '').toLowerCase().includes(this.filterVendor.trim().toLowerCase())
+  getFilteredProvedores(): Proveedor[] {
+    if (!this.filterVendor.trim()) return [...this.provedores];
+    return this.provedores.filter(p =>
+      (p.VENDOR ?? '').toLowerCase().includes(this.filterVendor.trim().toLowerCase())
     );
   }
 
@@ -299,5 +317,77 @@ export class Provedores implements OnInit {
     const input = event.target as HTMLInputElement;
     this.filterVendor = input.value;
     this.onFilterChange();
+  }
+
+  getDisplayValue(row: any, column: string): string {
+    if (column === 'ESTADO') {
+      return row.ESTADO === 1 ? 'Activo' : 'Inactivo';
+    }
+    return row[column];
+  }
+
+  onExcelUpload(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const json: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      // Mapea los datos del Excel a la estructura esperada
+      const nuevos = json.map((p: any) => ({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
+        VENDOR_MEDIUM: p.VENDOR_MEDIUM ?? '',
+        VENDOR_GROUP: p.VENDOR_GROUP ?? '',
+        MEDIUMS: p.MEDIUMS ?? '',
+        VENDOR: p.VENDOR ?? '',
+        TIPO_VENDOR: p.TIPO_VENDOR ?? '',
+        ORION_BENEFICIO_REAL_VENDOR: Number(p.ORION_BENEFICIO_REAL_VENDOR ?? 0),
+        DIRECTO_TRADICIONAL_MVSS: Number(p.DIRECTO_TRADICIONAL_MVSS ?? 0),
+        KINESSO_POWER: Number(p.KINESSO_POWER ?? 0),
+        KINESSO_GLASS: Number(p.KINESSO_GLASS ?? 0),
+        NOTAS_KSO: p.NOTAS_KSO ?? '',
+        DUO_GLASS: Number(p.DUO_GLASS ?? 0),
+        DUO_POWER: Number(p.DUO_POWER ?? 0),
+        ESTADO: Number(p.ESTADO ?? 1)
+      }));
+
+      // Evita duplicados por VENDOR
+      const vendorSet = new Set(this.provedores.map(p => (p.VENDOR ?? '').trim().toLowerCase()));
+      const filtrados = nuevos.filter(n => !vendorSet.has((n.VENDOR ?? '').trim().toLowerCase()));
+      this.provedores = [...this.provedores, ...filtrados];
+      this.saveProvedores();
+      this.snackBar.open('Proveedores importados correctamente', '', { duration: 2000 });
+    };
+    reader.readAsArrayBuffer(file);
+    // Limpia el input para permitir subir el mismo archivo de nuevo si se desea
+    event.target.value = '';
+  }
+
+  descargarExcel() {
+    // Exporta los datos actuales de la tabla
+    const data = this.filteredProvedores.length ? this.filteredProvedores : this.provedores;
+    const exportData = data.map(p => ({
+      VENDOR_MEDIUM: p.VENDOR_MEDIUM,
+      VENDOR_GROUP: p.VENDOR_GROUP,
+      MEDIUMS: p.MEDIUMS,
+      VENDOR: p.VENDOR,
+      TIPO_VENDOR: p.TIPO_VENDOR,
+      ORION_BENEFICIO_REAL_VENDOR: p.ORION_BENEFICIO_REAL_VENDOR,
+      DIRECTO_TRADICIONAL_MVSS: p.DIRECTO_TRADICIONAL_MVSS,
+      KINESSO_POWER: p.KINESSO_POWER,
+      KINESSO_GLASS: p.KINESSO_GLASS,
+      NOTAS_KSO: p.NOTAS_KSO,
+      DUO_GLASS: p.DUO_GLASS,
+      DUO_POWER: p.DUO_POWER,
+      ESTADO: p.ESTADO
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Proveedores');
+    XLSX.writeFile(wb, 'provedores_kinesso.xlsx');
   }
 }

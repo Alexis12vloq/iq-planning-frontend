@@ -66,9 +66,18 @@
           </mat-select>
         </mat-form-field>
       </div>
-      <div class="form-row" style="justify-content: flex-end;">
+      <div class="form-row " style="justify-content: flex-end;">
         <button mat-raised-button color="primary" type="submit" [disabled]="!isFormValid()" *ngIf="!editMode">
           <mat-icon>add</mat-icon> Guardar
+        </button>
+        <!-- Botón para agregar Excel masivo -->
+        <button mat-raised-button color="primary" type="button" style="margin-left:8px;" (click)="fileInput.click()" *ngIf="!editMode">
+          <mat-icon svgIcon="excel"></mat-icon> Agregar Excel masivo
+        </button>
+        <input #fileInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onExcelUpload($event)" />
+        <!-- Botón para descargar Excel -->
+        <button mat-raised-button color="accent" type="button" style="margin-left:8px;" (click)="descargarExcel()">
+          <mat-icon svgIcon="excel"></mat-icon> Descargar Excel
         </button>
         <button mat-raised-button color="accent" type="submit" [disabled]="!isFormValid()" *ngIf="editMode">
           <mat-icon>edit</mat-icon> Guardar edición
@@ -79,7 +88,7 @@
       </div>
     </form>
 
-    <div class="form-row" style="margin-top: 24px;">
+    <div class="container-search form-row ">
       <mat-form-field appearance="fill" class="form-field">
         <mat-label>Buscar por Advertiser</mat-label>
         <input matInput [value]="filterAdvertiser" (input)="onAdvertiserInput($event)" />
