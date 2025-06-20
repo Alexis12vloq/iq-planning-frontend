@@ -39,6 +39,7 @@ interface PlanData {
   campana: string;
   fechaInicio?: string;
   fechaFin?: string;
+  medioSeleccionado?: string;
 }
 
 @Component({
@@ -175,6 +176,21 @@ export class PlanMediosNuevaPauta implements OnInit {
     this.migrarPautasExistentes();
     
     this.cargarPautasExistentes();
+    
+    // Si viene un medio seleccionado desde el resumen, pre-seleccionarlo
+    if (this.planData?.medioSeleccionado) {
+      console.log('🎯 Pre-seleccionando medio:', this.planData.medioSeleccionado);
+      this.seleccionForm.patchValue({
+        medio: this.planData.medioSeleccionado
+      });
+      // Mostrar mensaje informativo
+      this.snackBar.open(`Editando medio: ${this.planData.medioSeleccionado}`, 'Cerrar', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['info-snackbar']
+      });
+    }
   }
 
   private migrarPautasExistentes(): void {

@@ -81,7 +81,7 @@
             <ng-container *ngIf="periodoSeleccionado.medios.length > 0">
               <ng-container *ngFor="let medio of periodoSeleccionado.medios; let i = index">
                 <!-- Fila del medio -->
-                <tr class="fila-medio">
+                <tr class="fila-medio" (dblclick)="onEditarMedio(medio)" title="Doble click para editar este medio">
                   <td>{{ medio.nombre }}</td>
                   <td colspan="5">
                     <div class="semanas-cell">

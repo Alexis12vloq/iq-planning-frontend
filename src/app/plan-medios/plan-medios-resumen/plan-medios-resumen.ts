@@ -219,6 +219,26 @@ export class PlanMediosResumen implements OnInit {
     });
   }
 
+  onEditarMedio(medio: any): void {
+    const planData = {
+      id: this.planId, // Usar el ID almacenado
+      numeroPlan: this.resumenPlan.numeroPlan,
+      version: this.resumenPlan.version,
+      cliente: this.resumenPlan.cliente,
+      producto: this.resumenPlan.producto,
+      campana: this.resumenPlan.campana,
+      fechaInicio: this.resumenPlan.fechaInicio,
+      fechaFin: this.resumenPlan.fechaFin,
+      medioSeleccionado: medio.nombre // Pasar el medio seleccionado
+    };
+    
+    console.log('🔄 Navegando a nueva pauta para editar medio:', medio.nombre, 'con plan data:', planData);
+    
+    this.router.navigate(['/plan-medios-nueva-pauta'], { 
+      state: { planData } 
+    });
+  }
+
   onDescargaFlow(): void {
     console.log('Descarga Flow clicked');
   }
