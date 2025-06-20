@@ -1,32 +1,28 @@
 <div class="nueva-pauta-container">
-  <!-- Información del Plan -->
-  <mat-card class="info-card">
-    <mat-card-header>
-      <mat-card-title>Plan de Medios - {{ planData?.numeroPlan }}</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="info-plan">
-        <div class="info-item">
-          <span class="info-label">CLIENTE:</span>
-          <span class="info-value">{{ planData?.cliente }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">PRODUCTO:</span>
-          <span class="info-value">{{ planData?.producto }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">CAMPAÑA:</span>
-          <span class="info-value">{{ planData?.campana }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">VIGENCIA:</span>
-          <span class="info-value">{{ planData?.fechaInicio | date:'dd/MM/yyyy' }} - {{ planData?.fechaFin | date:'dd/MM/yyyy' }}</span>
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
+  <!-- Información del Plan en una sola línea -->
+  <div class="info-header-line">
+    <div class="plan-title">Plan de Medios - {{ planData?.numeroPlan }}</div>
+    <div class="plan-info">
+      <span class="info-item">
+        <span class="info-label">CLIENTE:</span>
+        <span class="info-value">{{ planData?.cliente }}</span>
+      </span>
+      <span class="info-item">
+        <span class="info-label">PRODUCTO:</span>
+        <span class="info-value">{{ planData?.producto }}</span>
+      </span>
+      <span class="info-item">
+        <span class="info-label">CAMPAÑA:</span>
+        <span class="info-value">{{ planData?.campana }}</span>
+      </span>
+      <span class="info-item">
+        <span class="info-label">VIGENCIA:</span>
+        <span class="info-value">{{ planData?.fechaInicio | date:'dd/MM/yyyy' }} - {{ planData?.fechaFin | date:'dd/MM/yyyy' }}</span>
+      </span>
+    </div>
+  </div>
 
-  <!-- Botón para Agregar Nuevo Item -->
+  <!-- Botones de Acción Principales -->
   <div class="add-item-section">
     <button 
       mat-raised-button 
@@ -34,9 +30,35 @@
       class="add-item-btn"
       (click)="abrirModalNuevoItem()">
       <mat-icon>add_circle</mat-icon>
-      Agregar Nuevo Item de Medio
+      Nuevo Item
     </button>
-    <p class="add-item-hint">Agrega un nuevo medio/vehículo a tu plan de medios</p>
+    
+    <button 
+      mat-raised-button 
+      color="accent" 
+      class="action-btn"
+      (click)="exportarPlan()">
+      <mat-icon>download</mat-icon>
+      Exportar Plan
+    </button>
+    
+    <button 
+      mat-raised-button 
+      color="warn" 
+      class="action-btn"
+      (click)="limpiarDatosPrueba()">
+      <mat-icon>delete_sweep</mat-icon>
+      Limpiar Datos
+    </button>
+    
+    <button 
+      mat-raised-button 
+      color="warn" 
+      class="action-btn"
+      (click)="onRegresar()">
+      <mat-icon>arrow_back</mat-icon>
+      Regresar al Resumen
+    </button>
   </div>
 
   <!-- Grilla Principal de Programación -->
@@ -262,31 +284,5 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Botones de Acción -->
-  <div class="action-buttons">
-    <div class="left-buttons">
-      <button mat-raised-button color="accent" type="button" (click)="importarDatos()">
-        <mat-icon>upload</mat-icon>
-        Importar Datos
-      </button>
-      <button mat-raised-button color="accent" type="button" (click)="exportarPlan()">
-        <mat-icon>download</mat-icon>
-        Exportar Plan
-      </button>
-      <button mat-raised-button color="primary" type="button" (click)="programacionMasiva()">
-        <mat-icon>select_all</mat-icon>
-        Programación Masiva
-      </button>
-      <button mat-raised-button color="warn" type="button" (click)="limpiarDatosPrueba()">
-        <mat-icon>delete_sweep</mat-icon>
-        Limpiar Datos
-      </button>
-    </div>
-    <div class="right-buttons">
-      <button mat-raised-button color="warn" type="button" (click)="onRegresar()">
-        <mat-icon>arrow_back</mat-icon>
-        Regresar al Resumen
-      </button>
-    </div>
-  </div>
+
 </div> 

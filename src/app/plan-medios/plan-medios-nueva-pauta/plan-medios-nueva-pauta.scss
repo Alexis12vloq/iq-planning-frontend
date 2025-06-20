@@ -11,66 +11,122 @@ $text-secondary: #757575;
 $border-color: #e0e0e0;
 
 .nueva-pauta-container {
-  padding: 20px;
+  padding: 16px;
   max-width: 100%;
   overflow-x: hidden;
 
-  // Información del Plan
-  .info-card {
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  // Información del Plan en una sola línea
+  .info-header-line {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    background: $surface-color;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    border-left: 4px solid $primary-color;
 
-    .info-plan {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      padding: 8px 0;
+    .plan-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: $primary-color;
+      min-width: fit-content;
+      white-space: nowrap;
+    }
+
+    .plan-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      flex: 1;
 
       .info-item {
         display: flex;
-        flex-direction: column;
+        align-items: center;
         gap: 4px;
+        min-width: fit-content;
 
         .info-label {
-          font-size: 12px;
-          font-weight: 500;
+          font-size: 11px;
+          font-weight: 600;
           color: $text-secondary;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
 
         .info-value {
-          font-size: 14px;
-          font-weight: 600;
+          font-size: 13px;
+          font-weight: 500;
           color: $text-primary;
         }
       }
     }
+
+    // Responsive para pantallas pequeñas
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+
+      .plan-info {
+        gap: 12px;
+      }
+    }
   }
 
-  // Sección de agregar item
+  // Sección de botones principales
   .add-item-section {
-    text-align: center;
-    margin-bottom: 30px;
-    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
     background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
-    border-radius: 12px;
-    border: 2px dashed $primary-color;
+    border-radius: 6px;
+    border: 1px solid lighten($primary-color, 30%);
+    flex-wrap: wrap;
 
-    .add-item-btn {
-      font-size: 16px;
-      padding: 12px 24px;
-      border-radius: 8px;
+    .add-item-btn, .action-btn {
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 4px;
+      white-space: nowrap;
       
       mat-icon {
-        margin-right: 8px;
+        margin-right: 4px;
       }
     }
 
-    .add-item-hint {
-      margin-top: 8px;
-      color: $text-secondary;
-      font-size: 14px;
+    .add-item-btn {
+      order: 1;
+    }
+    
+    .action-btn:nth-of-type(2) { // Exportar Plan
+      order: 2;
+    }
+    
+    .action-btn:nth-of-type(3) { // Limpiar Datos
+      order: 3;
+    }
+    
+    .action-btn:nth-of-type(4) { // Regresar al Resumen
+      order: 4;
+    }
+
+    // Responsive para pantallas pequeñas
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      padding: 10px 12px;
+
+      .add-item-btn, .action-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 6px 12px;
+      }
     }
   }
 
@@ -696,10 +752,6 @@ $border-color: #e0e0e0;
 @media (max-width: 768px) {
   .nueva-pauta-container {
     padding: 12px;
-
-    .info-card .info-plan {
-      grid-template-columns: repeat(2, 1fr);
-    }
 
     .programming-grid-container {
       .programming-summary .summary-stats {
