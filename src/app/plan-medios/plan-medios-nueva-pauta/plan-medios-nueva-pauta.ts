@@ -701,6 +701,13 @@ export class PlanMediosNuevaPauta implements OnInit {
       const hoy = new Date();
       const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
       const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+      
+      // Asignar las fechas al planData para que aparezcan en la vista
+      if (this.planData) {
+        this.planData.fechaInicio = inicio.toISOString().split('T')[0];
+        this.planData.fechaFin = fin.toISOString().split('T')[0];
+      }
+      
       this.generarFechas(inicio, fin);
     } else {
       const inicio = new Date(this.planData.fechaInicio);

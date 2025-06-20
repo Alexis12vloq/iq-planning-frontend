@@ -153,7 +153,9 @@ export class PlanMediosResumen implements OnInit {
       version: this.resumenPlan.version,
       cliente: this.resumenPlan.cliente,
       producto: this.resumenPlan.producto,
-      campana: this.resumenPlan.campana
+      campana: this.resumenPlan.campana,
+      fechaInicio: this.resumenPlan.fechaInicio,
+      fechaFin: this.resumenPlan.fechaFin
     };
     
     this.router.navigate(['/plan-medios-nueva-pauta'], { 
