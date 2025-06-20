@@ -146,6 +146,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     
     // Inicializar fechas del plan
     this.inicializarFechasDelPlan();
+    console.log('✅ FECHAS INICIALIZADAS - Cantidad de fechas generadas:', this.fechasDelPlan.length);
     
     console.log('🆔 Plan Data final con ID:', this.planData);
 
@@ -738,11 +739,19 @@ export class PlanMediosNuevaPauta implements OnInit {
 
   // Métodos para la nueva estructura de calendario
   private inicializarFechasDelPlan(): void {
+    console.log('🚀 INICIANDO INICIALIZACIÓN DE FECHAS DEL PLAN');
+    console.log('🔍 Plan Data recibido:', this.planData);
+    console.log('🔍 Fecha Inicio:', this.planData?.fechaInicio);
+    console.log('🔍 Fecha Fin:', this.planData?.fechaFin);
+    
     if (!this.planData?.fechaInicio || !this.planData?.fechaFin) {
+      console.log('⚠️ No hay fechas definidas, usando rango por defecto');
       // Si no hay fechas, usar un rango por defecto
       const hoy = new Date();
       const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
       const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+      
+      console.log('📅 Fechas por defecto - Inicio:', inicio, 'Fin:', fin);
       
       // Asignar las fechas al planData para que aparezcan en la vista
       if (this.planData) {
@@ -752,8 +761,27 @@ export class PlanMediosNuevaPauta implements OnInit {
       
       this.generarFechas(inicio, fin);
     } else {
-      const inicio = new Date(this.planData.fechaInicio);
-      const fin = new Date(this.planData.fechaFin);
+      console.log('✅ Usando fechas del plan');
+      
+      // Parsear fechas correctamente sin desfase de zona horaria
+      const partesInicio = this.planData.fechaInicio.split('-');
+      const partesFin = this.planData.fechaFin.split('-');
+      
+      const inicio = new Date(
+        parseInt(partesInicio[0]), 
+        parseInt(partesInicio[1]) - 1, 
+        parseInt(partesInicio[2])
+      );
+      
+      const fin = new Date(
+        parseInt(partesFin[0]), 
+        parseInt(partesFin[1]) - 1, 
+        parseInt(partesFin[2])
+      );
+      
+      console.log('📅 Fechas del plan - Inicio:', inicio, 'Fin:', fin);
+      console.log('📅 Fechas parseadas - Inicio válida:', !isNaN(inicio.getTime()), 'Fin válida:', !isNaN(fin.getTime()));
+      
       this.generarFechas(inicio, fin);
     }
   }
@@ -762,12 +790,17 @@ export class PlanMediosNuevaPauta implements OnInit {
     this.fechasDelPlan = [];
     const fechaActual = new Date(inicio);
     
+    console.log('🔄 Generando fechas desde:', inicio.toISOString().split('T')[0], 'hasta:', fin.toISOString().split('T')[0]);
+    
     while (fechaActual <= fin) {
       this.fechasDelPlan.push(new Date(fechaActual));
       fechaActual.setDate(fechaActual.getDate() + 1);
     }
     
     console.log('📅 Fechas del plan generadas:', this.fechasDelPlan.length, 'días');
+    console.log('📅 Primera fecha:', this.fechasDelPlan[0]?.toISOString().split('T')[0]);
+    console.log('📅 Última fecha:', this.fechasDelPlan[this.fechasDelPlan.length - 1]?.toISOString().split('T')[0]);
+    console.log('📅 Primeras 5 fechas:', this.fechasDelPlan.slice(0, 5).map(f => f.toISOString().split('T')[0]));
   }
 
   private cargarItemsPauta(): void {
@@ -882,6 +915,26 @@ export class PlanMediosNuevaPauta implements OnInit {
   esHoy(fecha: Date): boolean {
     const hoy = new Date();
     return fecha.toDateString() === hoy.toDateString();
+  }
+
+  // Método para formatear fechas sin desfase de zona horaria
+  formatearFechaSinDesfase(fechaString: string): string {
+    if (!fechaString) return '';
+    
+    // Parsear la fecha como fecha local (sin conversión UTC)
+    const partes = fechaString.split('-');
+    const year = parseInt(partes[0]);
+    const month = parseInt(partes[1]) - 1; // Los meses van de 0-11
+    const day = parseInt(partes[2]);
+    
+    const fecha = new Date(year, month, day);
+    
+    // Formatear como dd/MM/yyyy
+    const dia = fecha.getDate().toString().padStart(2, '0');
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    const año = fecha.getFullYear();
+    
+    return `${dia}/${mes}/${año}`;
   }
 
   // Funciones de programación con spots numéricos

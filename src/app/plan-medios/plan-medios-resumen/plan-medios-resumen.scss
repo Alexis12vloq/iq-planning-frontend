@@ -1,10 +1,39 @@
 .resumen-container {
-  padding: 20px;
   background-color: #ffffff;
   height: calc(100vh - 64px);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+}
+
+.scroll-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  
+  // Estilos para el scrollbar principal
+  &::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 6px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 6px;
+    
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+  
+  &::-webkit-scrollbar-corner {
+    background: #f1f1f1;
+  }
 }
 
 .resumen-header {
@@ -118,25 +147,21 @@
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   padding: 20px;
-  flex: 1;
-  overflow: auto;
-  min-height: 0;
+  margin-bottom: 20px;
 }
+
+// Removido - ya no necesitamos scroll específico de tabla
 
 .medios-table {
   width: 100%;
+  min-width: 800px; // Ancho mínimo para forzar scroll horizontal si es necesario
   border-collapse: collapse;
   background-color: white;
 
   thead {
-    position: sticky;
-    top: 0;
-    z-index: 1;
     background-color: #1a2732;
 
     th {
-      position: sticky;
-      top: 0;
       background-color: #1a2732;
     }
   }
@@ -267,39 +292,23 @@
 
   // Estilos para el pie de tabla
   tfoot {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
+    background-color: #1a2732;
     
     tr {
       background-color: #1a2732;
       color: white;
 
       td {
-        position: sticky;
-        bottom: 0;
         background-color: #1a2732;
         font-weight: 500;
         border-color: #2d3a45;
+        position: relative;
       }
 
       &.fila-total-inversion {
         td {
-          bottom: 0;
           font-weight: bold;
           font-size: 1.1em;
-        }
-      }
-
-      &.fila-iva {
-        td {
-          bottom: 48px;
-        }
-      }
-
-      &.fila-total {
-        td {
-          bottom: 96px;
         }
       }
 

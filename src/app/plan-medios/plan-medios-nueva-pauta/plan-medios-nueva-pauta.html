@@ -17,7 +17,7 @@
       </span>
       <span class="info-item">
         <span class="info-label">VIGENCIA:</span>
-        <span class="info-value">{{ planData?.fechaInicio | date:'dd/MM/yyyy' }} - {{ planData?.fechaFin | date:'dd/MM/yyyy' }}</span>
+        <span class="info-value">{{ formatearFechaSinDesfase(planData?.fechaInicio || '') }} - {{ formatearFechaSinDesfase(planData?.fechaFin || '') }}</span>
       </span>
     </div>
   </div>
