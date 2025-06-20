@@ -69,12 +69,15 @@
         Programación de Medios ({{ itemsPauta.length }} items)
       </h2>
       <div class="grid-controls">
+        <!-- Botones de expandir/contraer ocultos temporalmente -->
+        <!-- 
         <button mat-icon-button color="primary" (click)="expandirTodosLosItems()" matTooltip="Expandir todo">
           <mat-icon>unfold_more</mat-icon>
         </button>
         <button mat-icon-button (click)="contraerTodosLosItems()" matTooltip="Contraer todo">
           <mat-icon>unfold_less</mat-icon>
         </button>
+        -->
         <button mat-icon-button color="accent" (click)="exportarProgramacion()" matTooltip="Exportar">
           <mat-icon>download</mat-icon>
         </button>
@@ -185,7 +188,8 @@
               </div>
             </div>
 
-            <!-- Fila expandida con detalles -->
+            <!-- Sección de detalles expandibles oculta temporalmente -->
+            <!-- 
             <div class="expanded-details" *ngIf="itemsExpandidos[item.id]">
               <div class="details-content">
                 <div class="details-grid">
@@ -241,7 +245,6 @@
               </div>
             </div>
 
-            <!-- Botón para expandir/contraer -->
             <button 
               mat-icon-button 
               class="expand-button"
@@ -250,6 +253,7 @@
               [matTooltip]="itemsExpandidos[item.id] ? 'Contraer detalles' : 'Ver detalles'">
               <mat-icon>{{ itemsExpandidos[item.id] ? 'expand_less' : 'expand_more' }}</mat-icon>
             </button>
+            -->
           </div>
         </div>
       </div>

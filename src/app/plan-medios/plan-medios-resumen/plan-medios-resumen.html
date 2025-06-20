@@ -69,8 +69,8 @@
                   <span *ngFor="let semana of semanasColumnas">{{ semana }}</span>
                 </div>
               </th>
-              <th class="col-total">TOTAL</th>
-              <th class="col-soi">SOI</th>
+              <th class="col-total">VALOR TOTAL</th>
+              <th class="col-soi">% / SOI</th>
             </tr>
           </thead>
 
@@ -78,7 +78,7 @@
           <tbody>
             <!-- Mostrar medios si existen -->
             <ng-container *ngIf="periodoSeleccionado.medios.length > 0">
-              <ng-container *ngFor="let medio of periodoSeleccionado.medios">
+              <ng-container *ngFor="let medio of periodoSeleccionado.medios; let i = index">
                 <!-- Fila del medio -->
                 <tr class="fila-medio">
                   <td>{{ medio.nombre }}</td>
@@ -91,21 +91,14 @@
                     </div>
                   </td>
                   <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-                  <td class="valor-soi">{{ medio.soi }}%</td>
+                  <td class="valor-soi">{{ calcularPorcentaje(medio.valorNeto) | number:'1.1-1' }}%</td>
                 </tr>
                 <!-- Fila de salidas -->
                 <tr class="fila-salidas">
                   <td>SALIDAS</td>
                   <td colspan="5"></td>
                   <td class="valor-total">{{ medio.salidas }}</td>
-                  <td></td>
-                </tr>
-                <!-- Fila de valor neto -->
-                <tr class="fila-valor">
-                  <td>Valor neto</td>
-                  <td colspan="5"></td>
-                  <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-                  <td></td>
+                  <td class="valor-soi">{{ medio.soi | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 </tr>
               </ng-container>
             </ng-container>

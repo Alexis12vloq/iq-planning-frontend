@@ -486,8 +486,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     const resumenPautas = this.itemsPauta.map(item => ({
       id: item.id,
       medio: item.medio,
-      valorTotal: item.valorTotal,
-      valorNeto: item.valorNeto,
+      valorTotal: item.valorTotal, // Este es el valor principal que se usa
       totalSpots: item.totalSpots,
       fechaCreacion: item.fechaCreacion,
       fechaModificacion: item.fechaModificacion
