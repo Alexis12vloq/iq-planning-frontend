@@ -132,7 +132,8 @@ export class PlanMediosCreate implements AfterViewInit {
     producto: new FormControl('', Validators.required),
     campana: new FormControl('', Validators.required),
     fechaInicio: new FormControl('', Validators.required),
-    fechaFin: new FormControl('', Validators.required)
+    fechaFin: new FormControl('', Validators.required),
+    estado: new FormControl(false, Validators.required)
   });
 
   // Observables para autocompletes
@@ -292,7 +293,8 @@ export class PlanMediosCreate implements AfterViewInit {
               producto: plan.producto,
               campana: plan.campana,
               fechaInicio: plan.fechaInicio,
-              fechaFin: plan.fechaFin
+              fechaFin: plan.fechaFin,
+              estado: plan.estado
             });
           });
 
@@ -380,7 +382,8 @@ export class PlanMediosCreate implements AfterViewInit {
             producto: formValue.producto ?? '',
             campana: formValue.campana ?? '',
             fechaInicio: formatDate(formValue.fechaInicio),
-            fechaFin: formatDate(formValue.fechaFin)
+            fechaFin: formatDate(formValue.fechaFin),
+            estado: formValue.estado ?? false
           };
           localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
         }
@@ -402,7 +405,8 @@ export class PlanMediosCreate implements AfterViewInit {
           producto: formValue.producto ?? '',
           campana: formValue.campana ?? '',
           fechaInicio: formatDate(formValue.fechaInicio),
-          fechaFin: formatDate(formValue.fechaFin)
+          fechaFin: formatDate(formValue.fechaFin),
+          estado: false 
         };
 
         planesGuardados.push(nuevoPlan);

@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Observable, startWith, map } from 'rxjs';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
@@ -13,17 +13,14 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatTableModule, MatTableDataSource } from '@angular/material/table';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MatIconModule } from '@angular/material/icon';
 import { SelectionModel } from '@angular/cdk/collections';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatPaginator } from '@angular/material/paginator';
-import { MatDialog, MatDialogActions, MatDialogContent, MatDialogTitle } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef, MAT_DIALOG_DATA, MatDialogModule, MatDialogActions, MatDialogContent, MatDialogTitle } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 type Resultado = {
@@ -38,6 +35,8 @@ type Resultado = {
   fechaInicio: string;
   fechaFin: string;
   campania: string;
+  estado: boolean;
+  [key: string]: string | boolean; // <-- permite acceso dinámico por string
 };
 
 @Component({
@@ -166,11 +165,11 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   resultados: Resultado[] = [];
 
   displayedColumns: string[] = [
-    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania'
+    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'estado'
   ];
 
   selectColumns: string[] = [
-    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania'
+    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'estado'
   ];
 
   sort: Sort = {active: '', direction: ''};
@@ -198,7 +197,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     producto: 'Producto',
     fechaInicio: 'Fecha Inicio',
     fechaFin: 'Fecha Fin',
-    campania: 'Campaña'
+    campania: 'Campaña',
+    estado: 'Estado'
   };
 
   isLoading = false;
@@ -328,6 +328,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
       }
 
+      // Al final, asegúrate de mostrar solo la última versión por número de plan
+      filtrados = this.filtrarUltimaVersionPorNumeroPlan(filtrados);
       this.dataSource.data = filtrados;
       this.isLoading = false;
     }, 400); // Simula carga visual
@@ -359,7 +361,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       // Cargar planes guardados en localStorage
       const planesLocal: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
       const planesLocalAsResultados = planesLocal.map(plan => ({
-        id: plan.id, // Agregar el ID para poder recuperar el plan completo
+        id: plan.id,
         numeroPlan: plan.numeroPlan,
         version: plan.version,
         pais: plan.paisFacturacion,
@@ -369,9 +371,11 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         producto: plan.producto,
         fechaInicio: plan.fechaInicio,
         fechaFin: plan.fechaFin,
-        campania: plan.campana
+        campania: plan.campana,
+        estado: plan.estado ?? false // si no existe, por defecto false
       }));
-      this.allResultados = planesLocalAsResultados;
+      // Solo la última versión por número de plan
+      this.allResultados = this.filtrarUltimaVersionPorNumeroPlan(planesLocalAsResultados);
       this.dataSource = new MatTableDataSource<Resultado>(this.allResultados);
       this.isLoading = false;
     }, 400); // Simula carga
@@ -430,25 +434,53 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   onRowDoubleClick(row: Resultado) {
-    this.selectedRow = row;
-    const planData = {
-      id: row.id,
-      numeroPlan: row.numeroPlan,
-      version: row.version,
-      cliente: row.cliente,
-      producto: row.producto,
-      campana: row.campania,
-      fechaInicio: row.fechaInicio,
-      fechaFin: row.fechaFin
-    };
-    
-    this.router.navigate(['/plan-medios-resumen'], { 
-      state: { planData } 
+    // Busca todas las versiones para ese número de plan
+    const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+    const versiones = planesGuardados
+      .filter(p => p.numeroPlan === row.numeroPlan)
+      .map(plan => ({
+        id: plan.id,
+        numeroPlan: plan.numeroPlan,
+        version: plan.version,
+        pais: plan.paisFacturacion,
+        anunciante: plan.clienteAnunciante,
+        cliente: plan.clienteFueActuacion,
+        marca: plan.marca,
+        producto: plan.producto,
+        fechaInicio: plan.fechaInicio,
+        fechaFin: plan.fechaFin,
+        campania: plan.campana,
+        estado: plan.estado ?? false
+      }))
+      .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
+
+    const dialogRef = this.dialog.open(VersionesPlanDialog, {
+      width: '1200px',
+      data: { versiones },
+      disableClose: true,
     });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.recargarTabla(); // <-- Recarga el listado general
+      }
+    });
+    this.selectedRow = null;
   }
 
   getColumnLabel(column: string): string {
+    if (column === 'estado') return 'Estado';
     return this.columnLabels[column] || column;
+  }
+
+  getDisplayValue(row: any, column: string): string {
+    const value = row[column];
+    if (typeof value === 'boolean') {
+      return value ? 'Aprobado' : 'Sin aprobar';
+    }
+    if (typeof value === 'number') {
+      return value.toString();
+    }
+    return value ?? '';
   }
 
   // --- NUEVO: Copiar plan ---
@@ -541,10 +573,11 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         producto: plan.producto,
         fechaInicio: plan.fechaInicio,
         fechaFin: plan.fechaFin,
-        campania: plan.campana
+        campania: plan.campana,
+        estado: plan.estado ?? false // si no existe, por defecto false
       }));
-      // Ordena por id descendente (más reciente primero)
-      this.allResultados = planesLocalAsResultados.sort((a, b) => Number(b.id) - Number(a.id));
+      // Solo la última versión por número de plan
+      this.allResultados = this.filtrarUltimaVersionPorNumeroPlan(planesLocalAsResultados).sort((a, b) => Number(b.id) - Number(a.id));
       this.dataSource.data = this.allResultados;
       this.isLoading = false;
     }, 400); // Simula carga
@@ -554,10 +587,20 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     if (!this.selectedRow) return;
     this.router.navigate(['/plan-medios-editar', this.selectedRow.id]);
   }
-}
 
-import { Component as NgComponent, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+  // Añade esta función utilitaria:
+  private filtrarUltimaVersionPorNumeroPlan(resultados: Resultado[]): Resultado[] {
+    const map = new Map<string, Resultado>();
+    for (const r of resultados) {
+      const numPlan = r.numeroPlan;
+      const versionNum = parseInt(r.version, 10);
+      if (!map.has(numPlan) || versionNum > parseInt(map.get(numPlan)!.version, 10)) {
+        map.set(numPlan, r);
+      }
+    }
+    return Array.from(map.values());
+  }
+}
 
 @NgComponent({
   selector: 'confirm-dialog',
@@ -587,4 +630,245 @@ export class ConfirmDialogComponent {
   ) {}
   onNo() { this.dialogRef.close(false); }
   onYes() { this.dialogRef.close(true); }
+}
+
+// --- DIALOGO DE VERSIONES ---
+import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
+
+@NgComponent({
+  selector: 'versiones-plan-dialog',
+  standalone: true,
+  imports: [
+    MatDialogModule,
+    MatButtonModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatIconModule
+  ],
+  template: `
+      <h2 mat-dialog-title 
+          style="font-family: 'Montserrat', 'Roboto', Arial, sans-serif; font-size:1.5rem; font-weight:700; color:#3c5977; letter-spacing:1px; text-transform:uppercase; margin-bottom:0; display: flex; justify-content: space-between; align-items: center;">
+        
+        <span>
+          Versiones del Plan {{ data.versiones[0]?.numeroPlan || '' }}
+        </span>
+
+        <button mat-icon-button  (click)="cerrar()" aria-label="Cerrar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </h2>
+
+    <mat-dialog-content style="max-width: 1000px;">
+      <div style="overflow-x:auto; margin-bottom:24px;">
+        <div class="mat-elevation-z8">
+          <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8" style="width:100%;">
+            <ng-container matColumnDef="version">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Versión</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+                {{ row.version }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="fechaInicio">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Inicio</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+                {{ row.fechaInicio }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="fechaFin">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Fin</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+                {{ row.fechaFin }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="campania">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Campaña</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+                {{ row.campania }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="estado">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+                {{ row.estado ? 'Aprobado' : 'Sin aprobar' }}
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)"></tr>
+          </table>
+          <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page"></mat-paginator>
+        </div>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="center" style="display:flex; flex-direction:row; gap:25px;">
+      <button mat-raised-button color="primary" (click)="copiarPlan()" [disabled]="!selectedRow">
+        <mat-icon>content_copy</mat-icon> Copiar plan
+      </button>
+      <button mat-raised-button color="accent" (click)="nuevaVersion()" [disabled]="!selectedRow">
+        <mat-icon>add_circle_outline</mat-icon> Generar nueva versión
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .selected-row {
+      background: #e3f2fd !important;
+    }
+    table { width: 100%; }
+    td, th { cursor: pointer; }
+    mat-dialog-actions { margin-top: 16px; }
+  `]
+})
+export class VersionesPlanDialog implements AfterViewInit {
+  displayedColumns = ['version', 'fechaInicio', 'fechaFin', 'campania', 'estado'];
+  dataSource: MatTableDataSource<any>;
+  selectedRow: any = null;
+  isLoading = false;
+
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+
+  constructor(
+    private router: Router, 
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar,
+    public dialogRef: MatDialogRef<VersionesPlanDialog>,
+    @Inject(MAT_DIALOG_DATA) public data: { versiones: any[] }
+  ) {
+    this.dataSource = new MatTableDataSource<any>(data.versiones); // <-- inicializa aquí
+  }
+
+  ngAfterViewInit() {
+    this.dataSource.paginator = this.paginator;
+  }
+
+  selectRow(row: any) {
+    this.selectedRow = row;
+  }
+
+  cerrar() {
+    this.dialogRef.close();
+  }
+
+  redirigir(row: Resultado) {
+    const planData = {
+      id: row.id,
+      numeroPlan: row.numeroPlan,
+      version: row.version,
+      cliente: row.cliente,
+      producto: row.producto,
+      campana: row.campania,
+      fechaInicio: row.fechaInicio,
+      fechaFin: row.fechaFin
+    };
+    
+    this.router.navigate(['/plan-medios-resumen'], { 
+      state: { planData } 
+    });
+    this.dialogRef.close();
+  }
+
+    // --- NUEVO: Diálogo de confirmación ---
+  openConfirmDialog(msg: string) {
+    return this.dialog.open(ConfirmDialogComponent, {
+      data: { message: msg }
+    });
+  }
+ // --- NUEVO: Copiar plan ---
+  copiarPlan() {
+    if (!this.selectedRow) return;
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Copiar plan',
+        message: '¿Estás seguro que deseas copiar este plan? Se generará un nuevo número de plan.'
+      }
+    });
+    dialogRef.afterClosed().subscribe(confirmado => {
+      if (confirmado) {
+        const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        const original = planesGuardados.find(p => p.id === this.selectedRow!.id);
+        if (!original) return;
+        let lastNumeroPlan = 1000;
+        if (planesGuardados.length > 0) {
+          const max = Math.max(
+            ...planesGuardados
+              .map(p => parseInt(p.numeroPlan, 10))
+              .filter(n => !isNaN(n))
+          );
+          if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
+        }
+        const nuevoPlan = {
+          ...original,
+          id: Date.now().toString(),
+          numeroPlan: lastNumeroPlan.toString(),
+          version: "1"
+        };
+        planesGuardados.push(nuevoPlan);
+        localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
+        this.snackBar.open('Plan copiado correctamente', '', { duration: 2000 });
+        this.dialogRef.close(true); // <-- Cierra el popup y notifica al padre
+      }
+    });
+  }
+
+  // --- NUEVO: Nueva versión ---
+  nuevaVersion() {
+    if (!this.selectedRow) return;
+    this.openConfirmDialog('¿Deseas crear una nueva versión de este plan?').afterClosed().subscribe(result => {
+      if (result) {
+        const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        // Buscar el plan original por id
+        const original = planesGuardados.find(p => p.id === this.selectedRow!.id);
+        if (!original) return;
+        // Calcular nueva versión (consecutivo)
+        let nuevaVersion = 1;
+        const versiones = planesGuardados
+          .filter(p => p.numeroPlan === original.numeroPlan)
+          .map(p => parseInt(p.version, 10))
+          .filter(n => !isNaN(n));
+        if (versiones.length > 0) {
+          nuevaVersion = Math.max(...versiones) + 1;
+        }
+        // Mantener el mismo numeroPlan, solo cambia el id y la version
+        const nuevoPlan = {
+          ...original,
+          id: Date.now().toString(),
+          version: nuevaVersion.toString()
+        };
+        planesGuardados.push(nuevoPlan);
+        localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
+        this.snackBar.open('Nueva versión creada correctamente', '', { duration: 2000 });
+        this.recargarTabla(this.selectedRow!.numeroPlan);
+        this.selectedRow = null; // <-- Limpia la selección después de nueva versión
+      }
+    }); 
+  }
+
+   recargarTabla(id: string) {
+    console.log(id);
+    this.isLoading = true;
+    setTimeout(() => {
+      const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+      const versiones = planesGuardados
+        .filter(p => p.numeroPlan === id)
+        .map(plan => ({
+          id: plan.id,
+          numeroPlan: plan.numeroPlan,
+          version: plan.version,
+          pais: plan.paisFacturacion,
+          anunciante: plan.clienteAnunciante,
+          cliente: plan.clienteFueActuacion,
+          marca: plan.marca,
+          producto: plan.producto,
+          fechaInicio: plan.fechaInicio,
+          fechaFin: plan.fechaFin,
+          campania: plan.campana,
+          estado: plan.estado ?? false
+        }))
+        .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
+        
+      
+      this.dataSource.data = versiones;
+      this.isLoading = false;
+    }, 400); // Simula carga
+  }
+
+
 }

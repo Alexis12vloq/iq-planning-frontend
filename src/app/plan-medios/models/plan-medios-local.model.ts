@@ -13,5 +13,6 @@ export interface PlanMediosLocal {
   campana: string;
   fechaInicio: string;
   fechaFin: string;
+  estado: boolean;
   // Puedes agregar más campos aquí en el futuro
 }

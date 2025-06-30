@@ -12,7 +12,6 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import * as XLSX from 'xlsx';
 
 // Importa el JSON de clientes mockeado
 import CLIENTES_MOCK from './clientes-mock.json';
@@ -350,79 +349,6 @@ export class Clientes implements OnInit {
     const input = event.target as HTMLInputElement;
     this.filterAdvertiser = input.value;
     this.onFilterChange();
-  }
-
-  onExcelUpload(event: any) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const json: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-
-      // Mapea los datos del Excel a la estructura esperada
-      const nuevos = json.map((c: any) => ({
-        id: Date.now().toString() + Math.random().toString(36).slice(2),
-        advertiser: c.ADVERTISER ?? '',
-        directo: Number(c.DIRECTO ?? 0),
-        orion: Number(c.ORION ?? 0),
-        kinesso: Number(c.KINESSO ?? 0),
-        kinesso_type: c.KINESSO_TYPE ?? '',
-        duo: Number(c.DUO ?? 0),
-        available_dsp_equative: c.AVAILABLE_DSP_EQUATIVE ?? '',
-        notas_1: c.NOTAS_1 ?? '',
-        avaliable_deals_curados: c.AVALIABLE_DEALS_CURADOS ?? '',
-        notas_2: c.NOTAS_2 ?? '',
-        estado: Number(c.ESTADO ?? 1),
-        // Para compatibilidad con la interfaz Cliente
-        ADVERTISER: c.ADVERTISER ?? '',
-        DIRECTO: Number(c.DIRECTO ?? 0),
-        ORION: Number(c.ORION ?? 0),
-        KINESSO: Number(c.KINESSO ?? 0),
-        KINESSO_TYPE: c.KINESSO_TYPE ?? '',
-        DUO: Number(c.DUO ?? 0),
-        AVAILABLE_DSP_EQUATIVE: c.AVAILABLE_DSP_EQUATIVE ?? '',
-        NOTAS_1: c.NOTAS_1 ?? '',
-        AVALIABLE_DEALS_CURADOS: c.AVALIABLE_DEALS_CURADOS ?? '',
-        NOTAS_2: c.NOTAS_2 ?? '',
-        ESTADO: Number(c.ESTADO ?? 1)
-      }));
-
-      // Evita duplicados por ADVERTISER
-      const advSet = new Set(this.clientes.map(c => (c.ADVERTISER ?? '').trim().toLowerCase()));
-      const filtrados = nuevos.filter(n => !advSet.has((n.ADVERTISER ?? '').trim().toLowerCase()));
-      this.clientes = [...this.clientes, ...filtrados];
-      this.saveClientes();
-      this.snackBar.open('Clientes importados correctamente', '', { duration: 2000 });
-    };
-    reader.readAsArrayBuffer(file);
-    // Limpia el input para permitir subir el mismo archivo de nuevo si se desea
-    event.target.value = '';
-  }
-
-  descargarExcel() {
-    // Exporta los datos actuales de la tabla
-    const data = this.filteredClientes.length ? this.filteredClientes : this.clientes;
-    const exportData = data.map(c => ({
-      ADVERTISER: c.ADVERTISER,
-      DIRECTO: c.DIRECTO,
-      ORION: c.ORION,
-      KINESSO: c.KINESSO,
-      KINESSO_TYPE: c.KINESSO_TYPE,
-      DUO: c.DUO,
-      AVAILABLE_DSP_EQUATIVE: c.AVAILABLE_DSP_EQUATIVE,
-      NOTAS_1: c.NOTAS_1,
-      AVALIABLE_DEALS_CURADOS: c.AVALIABLE_DEALS_CURADOS,
-      NOTAS_2: c.NOTAS_2,
-      ESTADO: c.ESTADO
-    }));
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
-    XLSX.writeFile(wb, 'clientes_kinesso.xlsx');
   }
 
   // Cambia el valor mostrado en la tabla para los campos booleanos y estado

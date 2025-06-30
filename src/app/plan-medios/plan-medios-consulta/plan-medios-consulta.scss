@@ -157,8 +157,20 @@ tr.selected-row:hover td {
 }
 
 .selected-row {
-  background-color: #e3f2fd !important;
+  background: #e3f2fd !important;
+}
+.no-hover-focus:hover,
+.no-hover-focus:focus,
+.no-hover-focus:focus-visible,
+.no-hover-focus:focus-within,
+.no-hover-focus:active {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
-
-
+.no-hover-focus {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
