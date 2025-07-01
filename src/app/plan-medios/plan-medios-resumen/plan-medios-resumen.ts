@@ -47,6 +47,7 @@ export class PlanMediosResumen implements OnInit {
   resumenPlan: ResumenPlan = this.crearPlanEjemplo(); // Inicializar con plan de ejemplo
   displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
   semanasColumnas: string[] = ['L1', 'L7', 'L14', 'L21', 'L28'];
+  semanasConFechas: Array<{nombre: string, fechaInicio: string, fechaFin: string}> = [];
   dataSource: FilaMedio[] = [];
   planId: string | undefined; // Almacenar el ID del plan
 
@@ -133,6 +134,7 @@ export class PlanMediosResumen implements OnInit {
     }
 
     this.periodoSeleccionado = this.resumenPlan.periodos[0];
+    this.calcularSemanasConFechas();
     this.prepararDataSource();
     
     console.log('📋 Resumen final configurado:', this.resumenPlan);
@@ -197,7 +199,43 @@ export class PlanMediosResumen implements OnInit {
 
   onPeriodoChange(periodo: PeriodoPlan): void {
     this.periodoSeleccionado = periodo;
+    this.calcularSemanasConFechas();
     this.prepararDataSource();
+  }
+
+  calcularSemanasConFechas(): void {
+    this.semanasConFechas = [];
+    const fechaInicio = new Date(this.periodoSeleccionado.fechaInicio);
+    const fechaFin = new Date(this.periodoSeleccionado.fechaFin);
+    
+    // Calcular 5 semanas desde la fecha de inicio
+    for (let i = 0; i < 5; i++) {
+      const inicioSemana = new Date(fechaInicio);
+      inicioSemana.setDate(fechaInicio.getDate() + (i * 7));
+      
+      const finSemana = new Date(inicioSemana);
+      finSemana.setDate(inicioSemana.getDate() + 6);
+      
+      // Si la fecha fin de la semana supera la fecha fin del período, ajustarla
+      if (finSemana > fechaFin) {
+        finSemana.setTime(fechaFin.getTime());
+      }
+      
+      // Solo agregar si la fecha de inicio está dentro del rango del período
+      if (inicioSemana <= fechaFin) {
+        this.semanasConFechas.push({
+          nombre: `S${i + 1}`,
+          fechaInicio: this.formatearFecha(inicioSemana),
+          fechaFin: this.formatearFecha(finSemana)
+        });
+      }
+    }
+  }
+
+  formatearFecha(fecha: Date): string {
+    const dia = fecha.getDate().toString().padStart(2, '0');
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    return `${dia}/${mes}`;
   }
 
   onNuevaPauta(): void {
@@ -241,6 +279,16 @@ export class PlanMediosResumen implements OnInit {
 
   onDescargaFlow(): void {
     console.log('Descarga Flow clicked');
+  }
+
+  onAgregarMedio(): void {
+    // Lógica para agregar un nuevo medio
+    this.snackBar.open('Funcionalidad de agregar medio en desarrollo', 'Cerrar', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+      panelClass: ['success-snackbar']
+    });
   }
 
   onAprobarPlan(): void {

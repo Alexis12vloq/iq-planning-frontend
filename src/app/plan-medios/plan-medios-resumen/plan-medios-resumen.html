@@ -44,11 +44,14 @@
           <button mat-raised-button class="action-button yellow-button" (click)="onNuevaPauta()">
             <mat-icon>add</mat-icon> Nueva Pauta
           </button>
+          <button mat-raised-button class="action-button green-button" (click)="onAgregarMedio()">
+            <mat-icon>add_circle</mat-icon> Agregar Medio
+          </button>
           <button mat-raised-button class="action-button blue-button" (click)="onDescargaFlow()">
             <mat-icon>download</mat-icon> Descarga FlowChart
           </button>
-          <button mat-raised-button class="action-button blue-button" (click)="onAprobarPlan()">
-            <mat-icon>check_circle</mat-icon> Aprobar Plan
+          <button mat-raised-button class="action-button purple-button" (click)="onAprobarPlan()">
+            <mat-icon>check_circle</mat-icon> Aprobar Plan de Medios
           </button>
         </div>
         <div class="right-buttons">
@@ -67,11 +70,22 @@
               <th class="col-medios">MEDIOS</th>
               <th class="col-semanas" colspan="5">
                 <div class="semanas-header">
-                  <span *ngFor="let semana of semanasColumnas">{{ semana }}</span>
+                  <div class="semanas-title">CRONOGRAMA</div>
                 </div>
               </th>
               <th class="col-total">VALOR TOTAL</th>
               <th class="col-soi">% / SOI</th>
+            </tr>
+            <tr class="fechas-subheader">
+              <th></th>
+              <th class="col-fecha" *ngFor="let semana of semanasConFechas">
+                <div class="fecha-container">
+                  <div class="semana-nombre">{{ semana.nombre }}</div>
+                  <div class="fecha-rango">{{ semana.fechaInicio }} - {{ semana.fechaFin }}</div>
+                </div>
+              </th>
+              <th></th>
+              <th></th>
             </tr>
           </thead>
 
