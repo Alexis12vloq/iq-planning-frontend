@@ -115,7 +115,7 @@
           <input matInput [matDatepicker]="pickerFin"
                  formControlName="fechaFin"
                  [min]="minFechaFin"
-                 [disabled]="!planMediosForm.get('fechaInicio')?.value || editMode ? false : true"
+                 [disabled]="editMode ? false : false"
                  required />
           <mat-datepicker-toggle matSuffix [for]="pickerFin"></mat-datepicker-toggle>
           <mat-datepicker #pickerFin></mat-datepicker>

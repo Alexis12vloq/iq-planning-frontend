@@ -66,12 +66,6 @@
       </div>
       <div class="form-row" style="justify-content: space-between; align-items: center;">
         <div>
-          <button mat-raised-button color="accent" type="button" id="copiarPlanBtn" [disabled]="!selectedRow" (click)="copiarPlan()">
-            <mat-icon>content_copy</mat-icon> Copiar Plan
-          </button>
-          <button mat-raised-button color="primary" type="button" id="nuevaVersionBtn" [disabled]="!selectedRow" (click)="nuevaVersion()">
-            <mat-icon>note_add</mat-icon> Nueva Versión
-          </button>
           <button mat-raised-button color="primary" type="button" id="calendarioBtn" style="background:#26c6da;color:#252525;">
             <mat-icon>calendar_month</mat-icon> Calendario
           </button>
@@ -104,7 +98,7 @@
                 (dblclick)="onRowDoubleClick(row)"
                 [class.selected-row]="selectedRow === row"
                 [ngClass]="{'selected-column': selectedColumn === column}">
-              {{ row[column] }}
+              {{ column === 'estado' ? (row.estado ? 'Aprobado' : 'Sin aprobar') : row[column] }}
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="selectColumns"></tr>
