@@ -114,147 +114,118 @@
           </div>
         </div>
 
-        <!-- Filas de items -->
+        <!-- Filas agrupadas por medio -->
         <div class="table-body">
-          <div 
-            *ngFor="let item of itemsPauta; let itemIndex = index; trackBy: trackByItem"
-            class="table-row"
-            [class.expanded]="itemsExpandidos[item.id]">
+          <ng-container *ngFor="let grupo of itemsAgrupadosPorMedio">
             
-            <!-- Columnas fijas -->
-            <div class="fixed-columns">
-              <!-- Acción -->
-              <div class="data-cell action-col">
-                <div class="action-buttons">
-                  <button 
-                    mat-icon-button 
-                    class="action-edit-button"
-                    (click)="editarItem(item)"
-                    matTooltip="Editar">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button 
-                    mat-icon-button 
-                    class="action-delete-button"
-                    (click)="eliminarItem(item.id, itemIndex)"
-                    matTooltip="Eliminar">
-                    <mat-icon>delete</mat-icon>
+            <!-- Fila del grupo/medio -->
+            <div class="table-row grupo-medio-row" (click)="toggleGrupoMedio(grupo.medio)">
+              <div class="fixed-columns">
+                <div class="data-cell action-col">
+                  <button mat-icon-button class="expand-grupo-btn">
+                    <mat-icon>{{ grupo.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
                   </button>
                 </div>
-              </div>
-              
-              <!-- Medio -->
-              <div class="data-cell medium-col">
-                <div class="cell-content">
-                  <mat-icon class="medio-icon">{{ obtenerIconoMedio(item.medio) }}</mat-icon>
-                  <div class="medio-info">
-                    <div class="medio-name">{{ item.medio }}</div>
-                    <div class="medio-stats">{{ item.totalSpots }} spots</div>
+                
+                <div class="data-cell medium-col">
+                  <div class="cell-content grupo-header">
+                    <mat-icon class="medio-icon">{{ obtenerIconoMedio(grupo.medio) }}</mat-icon>
+                    <div class="medio-info">
+                      <div class="medio-name-grupo">{{ grupo.medio }}</div>
+                      <div class="medio-stats-grupo">{{ grupo.totalPautas }} pautas • {{ grupo.totalSpots }} spots</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="data-cell budget-col">
+                  <div class="cell-content">
+                    <div class="budget-total-grupo">{{ grupo.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                    <div class="budget-sub-grupo">Total del medio</div>
                   </div>
                 </div>
               </div>
               
-              <!-- Presupuesto -->
-              <div class="data-cell budget-col">
-                <div class="cell-content">
-                  <div class="budget-total">{{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
-                  <div class="budget-sub">{{ item.totalSpots }} spots</div>
-                </div>
+              <div class="scrollable-columns grupo-summary">
+                <div class="summary-dates">Programación por fechas</div>
               </div>
             </div>
 
-            <!-- Columnas de fechas (scrollables) -->
-            <div class="scrollable-columns">
+            <!-- Filas de pautas del grupo (expandibles) -->
+            <ng-container *ngIf="grupo.expandido">
               <div 
-                *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
-                class="data-cell date-col"
-                [class.weekend]="esFinDeSemana(fecha)"
-                [class.today]="esHoy(fecha)"
-                [class.programmed]="tieneProgramacion(item.id, fecha)">
+                *ngFor="let item of grupo.pautas; let itemIndex = index; trackBy: trackByItem"
+                class="table-row pauta-row"
+                [class.expanded]="itemsExpandidos[item.id]">
                 
-                <div class="date-cell-content">
-                  <input 
-                    type="text"
-                    class="spots-input"
-                    [value]="obtenerSpotsPorFecha(item.id, fecha) || ''"
-                    (input)="actualizarSpotsPorFecha(item.id, fecha, $event)"
-                    (keypress)="validarSoloNumeros($event)"
-                    (paste)="validarPegado($event)"
-                    (focus)="seleccionarTextoInput($event)"
-                    placeholder="0"
-                    maxlength="4"
-                    title="Cantidad de spots para este día (solo números enteros)">
-                </div>
-              </div>
-            </div>
-
-            <!-- Sección de detalles expandibles oculta temporalmente -->
-            <!-- 
-            <div class="expanded-details" *ngIf="itemsExpandidos[item.id]">
-              <div class="details-content">
-                <div class="details-grid">
-                  <div class="detail-group">
-                    <h4>Información del Medio</h4>
-                    <div class="detail-item" *ngFor="let key of getMainFields(item.datos).slice(0, 6)">
-                      <span class="detail-label">{{ getFieldLabel(key) }}</span>
-                      <span class="detail-value">{{ formatFieldValue(item.datos[key], key) }}</span>
+                <!-- Columnas fijas -->
+                <div class="fixed-columns">
+                  <!-- Acción -->
+                  <div class="data-cell action-col">
+                    <div class="action-buttons">
+                      <button 
+                        mat-icon-button 
+                        class="action-edit-button"
+                        (click)="editarItem(item)"
+                        matTooltip="Editar">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button 
+                        mat-icon-button 
+                        class="action-delete-button"
+                        (click)="eliminarItem(item.id, itemIndex)"
+                        matTooltip="Eliminar">
+                        <mat-icon>delete</mat-icon>
+                      </button>
                     </div>
                   </div>
                   
-                  <div class="detail-group">
-                    <h4>Programación</h4>
-                    <div class="programming-stats">
-                      <div class="stat-item">
-                        <span class="stat-label">Días programados:</span>
-                        <span class="stat-value">{{ contarDiasProgramados(item.id) }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-label">Total spots programados:</span>
-                        <span class="stat-value">{{ contarTotalSpotsProgramados(item.id) }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-label">Costo por spot:</span>
-                        <span class="stat-value">{{ calcularCostoPorSpot(item) | currency:'USD':'symbol-narrow':'1.2-2' }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-label">Promedio spots/día:</span>
-                        <span class="stat-value">{{ calcularPromedioSpotsPorDia(item) | number:'1.1-1' }}</span>
+                  <!-- Proveedor/detalle -->
+                  <div class="data-cell medium-col">
+                    <div class="cell-content pauta-detail">
+                      <div class="proveedor-info">
+                        <div class="proveedor-name">{{ item.proveedor || 'Sin proveedor' }}</div>
+                        <div class="pauta-stats">{{ item.totalSpots }} spots • {{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
                       </div>
                     </div>
                   </div>
+                  
+                  <!-- Presupuesto individual -->
+                  <div class="data-cell budget-col">
+                    <div class="cell-content">
+                      <div class="budget-total">{{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                      <div class="budget-sub">{{ item.totalSpots }} spots</div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div class="actions-row">
-                  <button mat-button color="primary" (click)="editarItem(item)">
-                    <mat-icon>edit</mat-icon>
-                    Editar
-                  </button>
-                  <button mat-button color="accent" (click)="duplicarItem(item)">
-                    <mat-icon>content_copy</mat-icon>
-                    Duplicar
-                  </button>
-                  <button mat-button color="warn" (click)="eliminarItem(item.id, itemIndex)">
-                    <mat-icon>delete</mat-icon>
-                    Eliminar
-                  </button>
-                  <button mat-button (click)="toggleExpandirItem(item.id)">
-                    <mat-icon>expand_less</mat-icon>
-                    Contraer
-                  </button>
+
+                <!-- Columnas de fechas (scrollables) -->
+                <div class="scrollable-columns">
+                  <div 
+                    *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
+                    class="data-cell date-col"
+                    [class.weekend]="esFinDeSemana(fecha)"
+                    [class.today]="esHoy(fecha)"
+                    [class.programmed]="tieneProgramacion(item.id, fecha)">
+                    
+                    <div class="date-cell-content">
+                      <input 
+                        type="text"
+                        class="spots-input"
+                        [value]="obtenerSpotsPorFecha(item.id, fecha) || ''"
+                        (input)="actualizarSpotsPorFecha(item.id, fecha, $event)"
+                        (keypress)="validarSoloNumeros($event)"
+                        (paste)="validarPegado($event)"
+                        (focus)="seleccionarTextoInput($event)"
+                        placeholder="0"
+                        maxlength="4"
+                        title="Cantidad de spots para este día (solo números enteros)">
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <button 
-              mat-icon-button 
-              class="expand-button"
-              [class.expanded]="itemsExpandidos[item.id]"
-              (click)="toggleExpandirItem(item.id)"
-              [matTooltip]="itemsExpandidos[item.id] ? 'Contraer detalles' : 'Ver detalles'">
-              <mat-icon>{{ itemsExpandidos[item.id] ? 'expand_less' : 'expand_more' }}</mat-icon>
-            </button>
-            -->
-          </div>
+            </ng-container>
+            
+          </ng-container>
         </div>
       </div>
     </div>

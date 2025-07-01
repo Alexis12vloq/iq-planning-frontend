@@ -41,6 +41,8 @@ export interface RespuestaPauta {
   plantillaId: string;
   paisFacturacion: string;
   medio: string;
+  proveedor?: string;
+  proveedorId?: string;
   datos: { [key: string]: any }; // Respuestas dinámicas del formulario
   fechaCreacion: string;
   fechaModificacion?: string;

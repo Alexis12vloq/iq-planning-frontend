@@ -1,6 +1,23 @@
 import { Injectable } from '@angular/core';
 import { PlantillaPauta, LookupData, CampoPlantilla } from '../models/plantilla-pauta.model';
 
+interface ProveedorKinesso {
+  id?: string;
+  VENDOR_MEDIUM: string;
+  VENDOR_GROUP: string;
+  MEDIUMS: string;
+  VENDOR: string;
+  TIPO_VENDOR: string;
+  ORION_BENEFICIO_REAL_VENDOR: number;
+  DIRECTO_TRADICIONAL_MVSS: number;
+  KINESSO_POWER: number;
+  KINESSO_GLASS: number;
+  NOTAS_KSO: string | number;
+  DUO_GLASS: number;
+  DUO_POWER: number;
+  ESTADO?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -8,6 +25,7 @@ export class PlantillaPautaService {
 
   constructor() {
     this.inicializarDatosEjemplo();
+    this.verificarYCargarProveedores();
   }
 
   // Obtener plantilla según país de facturación y medio
@@ -48,6 +66,38 @@ export class PlantillaPautaService {
     );
     
     return tablaData ? tablaData.datos.filter(d => d.activo) : [];
+  }
+
+  // Métodos para proveedores
+  obtenerProveedores(): ProveedorKinesso[] {
+    const proveedoresData = localStorage.getItem('provedoresKinesso');
+    if (proveedoresData) {
+      return JSON.parse(proveedoresData);
+    }
+    return [];
+  }
+
+  obtenerProveedoresPorMedio(medio: string): ProveedorKinesso[] {
+    const proveedores = this.obtenerProveedores();
+    
+    // Mapear medios del sistema a medios de proveedores
+    const mapeoMedios: { [key: string]: string[] } = {
+      'TV NAL': ['TELEVISION AIRE', 'TELEVISION CABLE'],
+      'Radio': ['RADIO'],
+      'Digital': ['INTERNET'],
+      'Prensa': ['GRAFICA'],
+      'OOH': ['VIA PUBLICA', 'PRODUCCIONES']
+    };
+    
+    const mediosProveedor = mapeoMedios[medio] || [];
+    
+    return proveedores.filter(proveedor => {
+      const estaActivo = proveedor.ESTADO === undefined || proveedor.ESTADO === 1;
+      const tieneElMedio = mediosProveedor.some(medioProveedor => 
+        proveedor.MEDIUMS.toLowerCase().includes(medioProveedor.toLowerCase())
+      );
+      return estaActivo && tieneElMedio;
+    });
   }
 
   // Obtener todos los lookups desde localStorage
@@ -169,5 +219,149 @@ export class PlantillaPautaService {
     // Guardar datos iniciales
     localStorage.setItem('plantillasPautas', JSON.stringify([plantillaTV, plantillaRadio]));
     localStorage.setItem('lookupData', JSON.stringify(lookupData));
+  }
+
+  private verificarYCargarProveedores(): void {
+    const proveedoresExistentes = localStorage.getItem('provedoresKinesso');
+    
+    if (!proveedoresExistentes) {
+      // Cargar datos de ejemplo si no existen
+      this.cargarProveedoresEjemplo();
+    }
+  }
+
+  private cargarProveedoresEjemplo(): void {
+    const proveedoresEjemplo: ProveedorKinesso[] = [
+      {
+        id: 'prov-1',
+        VENDOR_MEDIUM: 'AMERICA TELEVISION S.A.TELEVISION AIRE',
+        VENDOR_GROUP: 'AMERICA TELEVISION',
+        MEDIUMS: 'TELEVISION AIRE',
+        VENDOR: 'AMERICA TELEVISION S.A.',
+        TIPO_VENDOR: 'PREMIUM',
+        ORION_BENEFICIO_REAL_VENDOR: 0.25,
+        DIRECTO_TRADICIONAL_MVSS: 0.05,
+        KINESSO_POWER: 0.2,
+        KINESSO_GLASS: 0.15,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0.1,
+        DUO_POWER: 0.18,
+        ESTADO: 1
+      },
+      {
+        id: 'prov-2',
+        VENDOR_MEDIUM: 'LATINA TELEVISION S.A.TELEVISION AIRE',
+        VENDOR_GROUP: 'LATINA TELEVISION',
+        MEDIUMS: 'TELEVISION AIRE',
+        VENDOR: 'LATINA TELEVISION S.A.',
+        TIPO_VENDOR: 'PREMIUM',
+        ORION_BENEFICIO_REAL_VENDOR: 0.22,
+        DIRECTO_TRADICIONAL_MVSS: 0.04,
+        KINESSO_POWER: 0.18,
+        KINESSO_GLASS: 0.12,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0.08,
+        DUO_POWER: 0.15,
+        ESTADO: 1
+      },
+      {
+        id: 'prov-3',
+        VENDOR_MEDIUM: 'ATV PERU S.A.TELEVISION AIRE',
+        VENDOR_GROUP: 'ATV',
+        MEDIUMS: 'TELEVISION AIRE',
+        VENDOR: 'ATV PERU S.A.',
+        TIPO_VENDOR: 'IMPORTANTE',
+        ORION_BENEFICIO_REAL_VENDOR: 0.20,
+        DIRECTO_TRADICIONAL_MVSS: 0.03,
+        KINESSO_POWER: 0.15,
+        KINESSO_GLASS: 0.10,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0.05,
+        DUO_POWER: 0.12,
+        ESTADO: 1
+      },
+      {
+        id: 'prov-4',
+        VENDOR_MEDIUM: 'RPP NOTICIAS S.A.RADIO',
+        VENDOR_GROUP: 'RPP NOTICIAS',
+        MEDIUMS: 'RADIO',
+        VENDOR: 'RPP NOTICIAS S.A.',
+        TIPO_VENDOR: 'PREMIUM',
+        ORION_BENEFICIO_REAL_VENDOR: 0.30,
+        DIRECTO_TRADICIONAL_MVSS: 0.05,
+        KINESSO_POWER: 0.0,
+        KINESSO_GLASS: 0.0,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0.0,
+        DUO_POWER: 0.0,
+        ESTADO: 1
+      },
+      {
+        id: 'prov-5',
+        VENDOR_MEDIUM: 'GOOGLE PERU S.R.L.INTERNET',
+        VENDOR_GROUP: 'GOOGLE',
+        MEDIUMS: 'INTERNET',
+        VENDOR: 'GOOGLE PERU S.R.L.',
+        TIPO_VENDOR: 'PREMIUM',
+        ORION_BENEFICIO_REAL_VENDOR: 0.15,
+        DIRECTO_TRADICIONAL_MVSS: 0.0,
+        KINESSO_POWER: 0.0,
+        KINESSO_GLASS: 0.0,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0.0,
+        DUO_POWER: 0.0,
+        ESTADO: 1
+      },
+      {
+        id: 'prov-6',
+        VENDOR_MEDIUM: 'FACEBOOK PERU S.R.L.INTERNET',
+        VENDOR_GROUP: 'META',
+        MEDIUMS: 'INTERNET',
+        VENDOR: 'FACEBOOK PERU S.R.L.',
+        TIPO_VENDOR: 'PREMIUM',
+        ORION_BENEFICIO_REAL_VENDOR: 0.12,
+        DIRECTO_TRADICIONAL_MVSS: 0.0,
+        KINESSO_POWER: 0.0,
+        KINESSO_GLASS: 0.0,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0.0,
+        DUO_POWER: 0.0,
+        ESTADO: 1
+      },
+      {
+        id: 'prov-7',
+        VENDOR_MEDIUM: 'EL COMERCIO S.A.GRAFICA',
+        VENDOR_GROUP: 'EL COMERCIO',
+        MEDIUMS: 'GRAFICA',
+        VENDOR: 'EL COMERCIO S.A.',
+        TIPO_VENDOR: 'IMPORTANTE',
+        ORION_BENEFICIO_REAL_VENDOR: 0.25,
+        DIRECTO_TRADICIONAL_MVSS: 0.08,
+        KINESSO_POWER: 0.0,
+        KINESSO_GLASS: 0.0,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0.0,
+        DUO_POWER: 0.0,
+        ESTADO: 1
+      },
+      {
+        id: 'prov-8',
+        VENDOR_MEDIUM: 'CLEAR CHANNEL PERU S.A.VIA PUBLICA',
+        VENDOR_GROUP: 'CLEAR CHANNEL',
+        MEDIUMS: 'VIA PUBLICA',
+        VENDOR: 'CLEAR CHANNEL PERU S.A.',
+        TIPO_VENDOR: 'PREMIUM',
+        ORION_BENEFICIO_REAL_VENDOR: 0.28,
+        DIRECTO_TRADICIONAL_MVSS: 0.06,
+        KINESSO_POWER: 0.0,
+        KINESSO_GLASS: 0.0,
+        NOTAS_KSO: '',
+        DUO_GLASS: 0.0,
+        DUO_POWER: 0.0,
+        ESTADO: 1
+      }
+    ];
+    
+    localStorage.setItem('provedoresKinesso', JSON.stringify(proveedoresEjemplo));
   }
 } 

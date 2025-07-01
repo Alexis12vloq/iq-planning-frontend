@@ -98,6 +98,9 @@ export class PlanMediosNuevaPauta implements OnInit {
   // Items de la pauta (nueva estructura)
   itemsPauta: RespuestaPauta[] = [];
   
+  // Items agrupados por medio
+  itemsAgrupadosPorMedio: GrupoMedio[] = [];
+  
   // Fechas del plan para las columnas
   fechasDelPlan: Date[] = [];
   
@@ -825,11 +828,49 @@ export class PlanMediosNuevaPauta implements OnInit {
     console.log('📋 Items de pauta cargados:', this.itemsPauta.length);
     console.log('📋 Items cargados:', this.itemsPauta.map(item => ({ id: item.id, medio: item.medio })));
     
+    // Agrupar items por medio
+    this.agruparItemsPorMedio();
+    
     // Cargar programación guardada
     this.cargarProgramacion();
     
     // Forzar detección de cambios
     this.cdr.detectChanges();
+  }
+
+  private agruparItemsPorMedio(): void {
+    const grupos: { [medio: string]: GrupoMedio } = {};
+    
+    // Agrupar pautas por medio
+    this.itemsPauta.forEach(pauta => {
+      if (!grupos[pauta.medio]) {
+        grupos[pauta.medio] = {
+          medio: pauta.medio,
+          pautas: [],
+          totalPautas: 0,
+          valorTotal: 0,
+          totalSpots: 0,
+          expandido: true // Por defecto expandido
+        };
+      }
+      
+      grupos[pauta.medio].pautas.push(pauta);
+      grupos[pauta.medio].totalPautas++;
+      grupos[pauta.medio].valorTotal += pauta.valorTotal || 0;
+      grupos[pauta.medio].totalSpots += pauta.totalSpots || 0;
+    });
+    
+    // Convertir a array ordenado
+    this.itemsAgrupadosPorMedio = Object.values(grupos).sort((a, b) => a.medio.localeCompare(b.medio));
+    
+    console.log('📊 Items agrupados por medio:', this.itemsAgrupadosPorMedio);
+  }
+
+  toggleGrupoMedio(medio: string): void {
+    const grupo = this.itemsAgrupadosPorMedio.find(g => g.medio === medio);
+    if (grupo) {
+      grupo.expandido = !grupo.expandido;
+    }
   }
 
   obtenerIconoMedio(medio: string): string {
@@ -1334,6 +1375,20 @@ export class PlanMediosNuevaPauta implements OnInit {
                 El medio no se puede cambiar durante la edición
               </mat-hint>
             </mat-form-field>
+
+            <mat-form-field class="full-width" *ngIf="seleccionForm.get('medio')?.value">
+              <mat-label>Proveedor</mat-label>
+              <mat-select 
+                formControlName="proveedor"
+                [disabled]="data.action === 'edit'">
+                <mat-option *ngFor="let proveedor of proveedoresDisponibles" [value]="proveedor.id">
+                  {{ proveedor.VENDOR }}
+                </mat-option>
+              </mat-select>
+              <mat-hint *ngIf="data.action === 'edit'">
+                El proveedor no se puede cambiar durante la edición
+              </mat-hint>
+            </mat-form-field>
           </form>
         </mat-card-content>
       </mat-card>
@@ -1589,6 +1644,9 @@ export class ModalNuevaPautaComponent implements OnInit {
   
   // Medios disponibles filtrados (excluyendo los ya usados)
   mediosDisponibles: string[] = [];
+  
+  // Proveedores disponibles para el medio seleccionado
+  proveedoresDisponibles: any[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -1598,13 +1656,17 @@ export class ModalNuevaPautaComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.seleccionForm = this.fb.group({
-      medio: ['']
+      medio: [''],
+      proveedor: ['']
     });
 
     this.seleccionForm.get('medio')?.valueChanges.subscribe(medio => {
       if (medio && medio.trim()) {
+        this.cargarProveedoresPorMedio(medio);
+        this.seleccionForm.patchValue({ proveedor: '' });
         this.cargarPlantillaPorMedio(medio);
       } else {
+        this.proveedoresDisponibles = [];
         this.plantillaActual = null;
         this.errorPlantilla = null;
         this.cargandoPlantilla = false;
@@ -1625,9 +1687,11 @@ export class ModalNuevaPautaComponent implements OnInit {
     if (this.data.action === 'edit' && this.data.pautaData) {
       console.log('🔄 Modo edición detectado, cargando datos:', this.data.pautaData);
       this.seleccionForm.patchValue({
-        medio: this.data.pautaData.medio
+        medio: this.data.pautaData.medio,
+        proveedor: this.data.pautaData.proveedorId || ''
       });
-      // Cargar plantilla automáticamente en modo edición
+      // Cargar proveedores y plantilla automáticamente en modo edición
+      this.cargarProveedoresPorMedio(this.data.pautaData.medio);
       this.cargarPlantillaPorMedio(this.data.pautaData.medio);
     }
   }
@@ -1639,44 +1703,14 @@ export class ModalNuevaPautaComponent implements OnInit {
       return;
     }
     
-    // En modo creación, filtrar medios ya usados
-    const planId = this.data.planData.id || `${this.data.planData.numeroPlan}-v${this.data.planData.version}`;
-    const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const mediosUsados = pautasExistentes
-      .filter((pauta: RespuestaPauta) => pauta.planId === planId)
-      .map((pauta: RespuestaPauta) => pauta.medio);
-    
-    this.mediosDisponibles = this.todosLosMedios.filter(medio => !mediosUsados.includes(medio));
-    
-    console.log('📊 Medios filtrados:', {
-      todosLosMedios: this.todosLosMedios,
-      mediosUsados: mediosUsados,
-      mediosDisponibles: this.mediosDisponibles,
-      modoEdicion: this.data.action === 'edit'
-    });
+    // En modo creación, mostrar todos los medios (permitir repetición)
+    this.mediosDisponibles = this.todosLosMedios;
   }
 
   cargarPlantillaPorMedio(medio: string): void {
     this.cargandoPlantilla = true;
     this.errorPlantilla = null;
     this.plantillaActual = null;
-    
-    // Verificar si el medio ya existe (solo en modo creación)
-    if (this.data.action !== 'edit') {
-      const planId = this.data.planData.id || `${this.data.planData.numeroPlan}-v${this.data.planData.version}`;
-      const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-      const medioYaExiste = pautasExistentes.some((pauta: RespuestaPauta) => 
-        pauta.planId === planId && pauta.medio === medio
-      );
-      
-      if (medioYaExiste) {
-        this.errorPlantilla = `⚠️ Ya existe una pauta para el medio "${medio}" en este plan. Solo se permite una pauta por medio.`;
-        this.plantillaActual = null;
-        this.pautaForm = this.fb.group({});
-        this.cargandoPlantilla = false;
-        return;
-      }
-    }
     
     setTimeout(() => {
       try {
@@ -1791,6 +1825,10 @@ export class ModalNuevaPautaComponent implements OnInit {
     return !!campo.lookupTable;
   }
 
+  cargarProveedoresPorMedio(medio: string): void {
+    this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
+  }
+
   obtenerTipoCampo(campo: CampoPlantilla): string {
     switch (campo.type) {
       case 'integer':
@@ -1825,32 +1863,24 @@ export class ModalNuevaPautaComponent implements OnInit {
       console.log('💾 ID generado para el plan:', planId);
     }
     
-    // VALIDACIÓN: Solo una pauta por medio por plan (excepto en edición)
-    if (!isEdit) {
-      const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-      const medioYaExiste = pautasExistentes.some((pauta: RespuestaPauta) => 
-        pauta.planId === planId && pauta.medio === this.plantillaActual!.medio
-      );
-      
-      if (medioYaExiste) {
-        this.snackBar.open(
-          `⚠️ Ya existe una pauta para el medio "${this.plantillaActual.medio}" en este plan. Solo se permite una pauta por medio.`, 
-          'Cerrar', 
-          { 
-            duration: 5000,
-            panelClass: ['warning-snackbar']
-          }
-        );
-        return;
-      }
-    }
+    // Ya no validamos medios únicos - se permite repetir medios con diferentes proveedores
     
+    // Obtener información del proveedor seleccionado
+    const proveedorId = this.seleccionForm.get('proveedor')?.value;
+    let proveedorNombre = '';
+    if (proveedorId) {
+      const proveedor = this.proveedoresDisponibles.find(p => p.id === proveedorId);
+      proveedorNombre = proveedor ? proveedor.VENDOR : '';
+    }
+
     const pauta: RespuestaPauta = {
       id: isEdit ? this.data.pautaData.id : Date.now().toString(),
       planId: planId,
       plantillaId: this.plantillaActual.id,
       paisFacturacion: this.plantillaActual.paisFacturacion,
       medio: this.plantillaActual.medio,
+      proveedor: proveedorNombre,
+      proveedorId: proveedorId,
       datos: valores,
       fechaCreacion: isEdit ? this.data.pautaData.fechaCreacion : new Date().toISOString(),
       fechaModificacion: isEdit ? new Date().toISOString() : undefined,
