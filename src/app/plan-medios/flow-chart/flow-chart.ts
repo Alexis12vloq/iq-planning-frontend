@@ -529,9 +529,9 @@ export class FlowChart implements OnInit {
       mediosUtilizados: [...new Set(this.itemsPauta.map(item => item.medio))]
     };
     
-    console.log('📋 Regresando al resumen con datos completos:', planDataCompleto);
+    console.log('📋 Regresando a consulta con datos completos:', planDataCompleto);
     
-    this.router.navigate(['/plan-medios-resumen'], {
+    this.router.navigate(['/plan-medios-consulta'], {
       state: { planData: planDataCompleto }
     });
   }

@@ -447,11 +447,14 @@ export class PlanMediosResumen implements OnInit {
       }];
     }
 
-    // Agrupar pautas por medio
+    // Agrupar pautas por medio y proveedor
     const mediosMap = new Map<string, MedioPlan>();
     
     pautasDelPlan.forEach((respuestaPauta: any) => {
       const medio = respuestaPauta.medio;
+      const proveedor = respuestaPauta.proveedor || 'Sin proveedor';
+      const proveedorId = respuestaPauta.proveedorId;
+      const claveAgrupacion = `${medio}_${proveedor}`;
       const valorTotal = Number(respuestaPauta.valorTotal) || 0; // FORZAR conversión a número
       const totalSpots = Number(respuestaPauta.totalSpots) || 1;
       
@@ -484,9 +487,9 @@ export class PlanMediosResumen implements OnInit {
         );
       }
       
-      if (mediosMap.has(medio)) {
-        // Si el medio ya existe, sumar los valores
-        const medioExistente = mediosMap.get(medio)!;
+      if (mediosMap.has(claveAgrupacion)) {
+        // Si el medio y proveedor ya existen, sumar los valores
+        const medioExistente = mediosMap.get(claveAgrupacion)!;
         medioExistente.salidas = Number(medioExistente.salidas) + Number(totalSpots);
         medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
         // Para semanas, hacer OR lógico (si cualquier pauta tiene true, el resultado es true)
@@ -496,9 +499,11 @@ export class PlanMediosResumen implements OnInit {
         // Calcular SOI promedio
         medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
       } else {
-        // Crear nuevo medio
-        mediosMap.set(medio, {
+        // Crear nuevo medio con proveedor
+        mediosMap.set(claveAgrupacion, {
           nombre: medio,
+          proveedor: proveedor,
+          proveedorId: proveedorId,
           salidas: Number(totalSpots),
           valorNeto: Number(valorTotal),
           soi: Math.round((Number(valorTotal) / Number(totalSpots)) || 0),
@@ -535,27 +540,32 @@ export class PlanMediosResumen implements OnInit {
     const fechaFin = planData.fechaFin;
     const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
 
-    // Agrupar pautas por medio
+    // Agrupar pautas por medio y proveedor
     const mediosMap = new Map<string, MedioPlan>();
     
     planData.pautas.forEach((pautaResumen: any) => {
       const medio = pautaResumen.medio;
+      const proveedor = pautaResumen.proveedor || 'Sin proveedor';
+      const proveedorId = pautaResumen.proveedorId;
+      const claveAgrupacion = `${medio}_${proveedor}`;
       const valorTotal = Number(pautaResumen.valorTotal) || 0; // FORZAR conversión a número
       const totalSpots = Number(pautaResumen.totalSpots) || 1;
       
       // Para pautas del estado, usar semanas por defecto (se pueden mejorar después)
       const semanasBoolean = [true, true, true, true, true]; // Todas las semanas activas por defecto
       
-              if (mediosMap.has(medio)) {
-        // Si el medio ya existe, sumar los valores
-        const medioExistente = mediosMap.get(medio)!;
+              if (mediosMap.has(claveAgrupacion)) {
+        // Si el medio y proveedor ya existen, sumar los valores
+        const medioExistente = mediosMap.get(claveAgrupacion)!;
         medioExistente.salidas = Number(medioExistente.salidas) + Number(totalSpots);
         medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
         medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
       } else {
-        // Crear nuevo medio
-        mediosMap.set(medio, {
+        // Crear nuevo medio con proveedor
+        mediosMap.set(claveAgrupacion, {
           nombre: medio,
+          proveedor: proveedor,
+          proveedorId: proveedorId,
           salidas: Number(totalSpots),
           valorNeto: Number(valorTotal),
           soi: Math.round((Number(valorTotal) / Number(totalSpots)) || 0),

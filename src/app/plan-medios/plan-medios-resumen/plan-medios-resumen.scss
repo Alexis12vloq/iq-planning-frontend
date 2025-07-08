@@ -203,6 +203,25 @@
     text-transform: uppercase;
   }
 
+  // Estilos para la información del medio y proveedor
+  .medio-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    
+    .medio-nombre {
+      font-weight: bold;
+      color: #333;
+      font-size: 13px;
+    }
+    
+    .medio-proveedor {
+      font-size: 11px;
+      color: #666;
+      font-style: italic;
+    }
+  }
+
   .col-medios {
     width: 180px;
   }

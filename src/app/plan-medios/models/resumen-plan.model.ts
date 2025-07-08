@@ -24,6 +24,8 @@ export interface PeriodoPlan {
 
 export interface MedioPlan {
     nombre: string;
+    proveedor?: string;
+    proveedorId?: string;
     salidas: number;
     valorNeto: number;
     soi: number;
