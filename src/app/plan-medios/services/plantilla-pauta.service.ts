@@ -38,6 +38,15 @@ export class PlantillaPautaService {
     ) || null;
   }
 
+  // Obtener plantilla solo por medio (sin considerar país - temporal)
+  obtenerPlantillaPorMedio(medio: string): PlantillaPauta | null {
+    const plantillas = this.obtenerTodasLasPlantillas();
+    return plantillas.find(p => 
+      p.medio.toLowerCase() === medio.toLowerCase() &&
+      p.activa
+    ) || null;
+  }
+
   // Obtener todas las plantillas desde localStorage
   obtenerTodasLasPlantillas(): PlantillaPauta[] {
     return JSON.parse(localStorage.getItem('plantillasPautas') || '[]');
@@ -105,6 +114,14 @@ export class PlantillaPautaService {
     return JSON.parse(localStorage.getItem('lookupData') || '[]');
   }
 
+  // Método para limpiar y reinicializar plantillas (para desarrollo)
+  limpiarYReinicializarPlantillas(): void {
+    localStorage.removeItem('plantillasPautas');
+    localStorage.removeItem('lookupData');
+    this.inicializarDatosEjemplo();
+    console.log('🧹 Plantillas reinicializadas correctamente');
+  }
+
   // Inicializar datos de ejemplo (solo la primera vez)
   private inicializarDatosEjemplo(): void {
     // Verificar si ya existen datos
@@ -112,20 +129,20 @@ export class PlantillaPautaService {
       return;
     }
 
-    // Plantilla de ejemplo para TV NAL en Perú
+    // Plantilla para TV NAL
     const plantillaTV: PlantillaPauta = {
-      id: 'tv-nal-peru',
-      paisFacturacion: 'Perú',
+      id: 'tv-nal-plantilla',
+      paisFacturacion: 'General',
       medio: 'TV NAL',
-      nombre: 'Televisión Nacional - Perú',
-      descripcion: 'Plantilla para pautas de TV Nacional en Perú',
+      nombre: 'Televisión Nacional',
+      descripcion: 'Plantilla para pautas de TV Nacional',
       fields: [
         { name: "IdTipoCompra", type: "integer", label: "Tipo de Compra", required: true, lookupTable: "TablaParametros", lookupCategory: "TIPOCOMPRA" },
         { name: "IdProveedor", type: "integer", label: "Proveedor", required: true, lookupTable: "Proveedores", lookupColumn: "CODIGO", displayColumn: "VENDOR" },
-        { name: "IdVehiculo", type: "integer", label: "Vehículo", required: true, lookupTable: "TablaParametros", lookupCategory: "VEHICULO" },
+        { name: "IdVehiculo", type: "integer", label: "Canal", required: true, lookupTable: "TablaParametros", lookupCategory: "VEHICULO" },
         { name: "IdPrograma", type: "integer", label: "Programa", required: false, lookupTable: "TablaParametros", lookupCategory: "PROGRAMA" },
         { name: "emision", type: "string", label: "Emisión", required: false, maxLength: 50 },
-        { name: "franja", type: "string", label: "Franja Horaria", required: false, maxLength: 50, options: ["Prime Time", "Day Time", "Late Night"] },
+        { name: "franja", type: "string", label: "Franja Horaria", required: false, maxLength: 50, options: ["Prime Time", "Day Time", "Late Night", "Madrugada"] },
         { name: "hora", type: "time", label: "Hora", required: true },
         { name: "formato", type: "string", label: "Formato", required: false, maxLength: 50 },
         { name: "rat_canal", type: "decimal", label: "Rating Canal", required: false, precision: 5, scale: 2 },
@@ -133,15 +150,15 @@ export class PlantillaPautaService {
         { name: "rat_up_target", type: "decimal", label: "Rating UP Target", required: false, precision: 5, scale: 2 },
         { name: "crp_30", type: "money", label: "CRP 30s", required: false },
         { name: "tarifa_bruta_30", type: "money", label: "Tarifa Bruta (30s)", required: true },
-        { name: "duracion_real", type: "integer", label: "Duración Real (segundos)", required: true, min: 5, max: 300 },
+        { name: "duracion_real", type: "integer", label: "Duración Real (segundos)", required: true, min: 5, max: 300, defaultValue: 30 },
         { name: "dto_cliente", type: "decimal", label: "Dto Cliente (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
         { name: "dto_agencia", type: "decimal", label: "Dto Agencia (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
         { name: "valor_spot", type: "money", label: "Valor Spot", required: true },
         { name: "valor_neto", type: "money", label: "Valor Neto", required: true },
-        { name: "%_iva", type: "decimal", label: "% IVA", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "%_iva", type: "decimal", label: "% IVA", required: false, precision: 5, scale: 2, min: 0, max: 100, defaultValue: 18 },
         { name: "iva", type: "money", label: "Valor IVA", required: false },
         { name: "fee", type: "money", label: "Fee", required: false },
-        { name: "total_spots", type: "integer", label: "Total Spots", required: true, min: 1 },
+        { name: "total_spots", type: "integer", label: "Total Spots", required: true, min: 1, defaultValue: 1 },
         { name: "valor_total", type: "money", label: "Valor Total", required: true },
         { name: "trps", type: "decimal", label: "TRPs", required: false, precision: 5, scale: 2 },
         { name: "grps", type: "decimal", label: "GRPs", required: false, precision: 5, scale: 2 }
@@ -150,23 +167,111 @@ export class PlantillaPautaService {
       activa: true
     };
 
-    // Plantilla para Radio en Perú (más simple)
+    // Plantilla para Radio
     const plantillaRadio: PlantillaPauta = {
-      id: 'radio-peru',
-      paisFacturacion: 'Perú',
+      id: 'radio-plantilla',
+      paisFacturacion: 'General',
       medio: 'Radio',
-      nombre: 'Radio - Perú',
-      descripcion: 'Plantilla para pautas de Radio en Perú',
+      nombre: 'Radio',
+      descripcion: 'Plantilla para pautas de Radio',
       fields: [
         { name: "IdProveedor", type: "integer", label: "Emisora", required: true, lookupTable: "Proveedores", lookupColumn: "CODIGO", displayColumn: "VENDOR" },
         { name: "programa", type: "string", label: "Programa", required: false, maxLength: 100 },
         { name: "franja", type: "string", label: "Franja Horaria", required: true, options: ["Mañana", "Tarde", "Noche", "Madrugada"] },
         { name: "hora", type: "time", label: "Hora", required: true },
-        { name: "duracion_real", type: "integer", label: "Duración (segundos)", required: true, min: 10, max: 180 },
+        { name: "duracion_real", type: "integer", label: "Duración (segundos)", required: true, min: 10, max: 180, defaultValue: 30 },
         { name: "tarifa_bruta", type: "money", label: "Tarifa Bruta", required: true },
         { name: "dto_cliente", type: "decimal", label: "Dto Cliente (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "dto_agencia", type: "decimal", label: "Dto Agencia (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "valor_spot", type: "money", label: "Valor Spot", required: true },
         { name: "valor_neto", type: "money", label: "Valor Neto", required: true },
-        { name: "total_spots", type: "integer", label: "Total Spots", required: true, min: 1 },
+        { name: "iva", type: "money", label: "Valor IVA", required: false },
+        { name: "total_spots", type: "integer", label: "Total Spots", required: true, min: 1, defaultValue: 1 },
+        { name: "valor_total", type: "money", label: "Valor Total", required: true }
+      ],
+      fechaCreacion: new Date().toISOString(),
+      activa: true
+    };
+
+    // Plantilla para Digital
+    const plantillaDigital: PlantillaPauta = {
+      id: 'digital-plantilla',
+      paisFacturacion: 'General',
+      medio: 'Digital',
+      nombre: 'Digital',
+      descripcion: 'Plantilla para pautas de medios digitales',
+      fields: [
+        { name: "IdProveedor", type: "integer", label: "Plataforma", required: true, lookupTable: "Proveedores", lookupColumn: "CODIGO", displayColumn: "VENDOR" },
+        { name: "tipo_campana", type: "string", label: "Tipo de Campaña", required: true, options: ["Display", "Video", "Search", "Social", "Programmatic"] },
+        { name: "formato", type: "string", label: "Formato", required: false, maxLength: 50 },
+        { name: "segmentacion", type: "string", label: "Segmentación", required: false, maxLength: 100 },
+        { name: "objetivo", type: "string", label: "Objetivo", required: false, options: ["Impresiones", "Clicks", "Conversiones", "Views", "Engagement"] },
+        { name: "cpm", type: "money", label: "CPM", required: false },
+        { name: "cpc", type: "money", label: "CPC", required: false },
+        { name: "ctr", type: "decimal", label: "CTR (%)", required: false, precision: 5, scale: 2 },
+        { name: "impresiones", type: "integer", label: "Impresiones", required: false },
+        { name: "clicks", type: "integer", label: "Clicks", required: false },
+        { name: "dto_cliente", type: "decimal", label: "Dto Cliente (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "dto_agencia", type: "decimal", label: "Dto Agencia (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "valor_neto", type: "money", label: "Valor Neto", required: true },
+        { name: "iva", type: "money", label: "Valor IVA", required: false },
+        { name: "total_spots", type: "integer", label: "Total Spots", required: true, min: 1, defaultValue: 1 },
+        { name: "valor_total", type: "money", label: "Valor Total", required: true }
+      ],
+      fechaCreacion: new Date().toISOString(),
+      activa: true
+    };
+
+    // Plantilla para Prensa
+    const plantillaPresnsa: PlantillaPauta = {
+      id: 'prensa-plantilla',
+      paisFacturacion: 'General',
+      medio: 'Prensa',
+      nombre: 'Prensa',
+      descripcion: 'Plantilla para pautas de prensa escrita',
+      fields: [
+        { name: "IdProveedor", type: "integer", label: "Publicación", required: true, lookupTable: "Proveedores", lookupColumn: "CODIGO", displayColumn: "VENDOR" },
+        { name: "tipo_aviso", type: "string", label: "Tipo de Aviso", required: true, options: ["Módulo", "Página Completa", "Media Página", "Clasificado", "Encarte"] },
+        { name: "seccion", type: "string", label: "Sección", required: false, maxLength: 50 },
+        { name: "posicion", type: "string", label: "Posición", required: false, options: ["Primera Página", "Contraportada", "Interior", "Especial"] },
+        { name: "tamano", type: "string", label: "Tamaño", required: false, maxLength: 50 },
+        { name: "color", type: "string", label: "Color", required: false, options: ["Full Color", "Blanco y Negro", "Duotono"] },
+        { name: "fecha_publicacion", type: "date", label: "Fecha de Publicación", required: false },
+        { name: "tarifa_bruta", type: "money", label: "Tarifa Bruta", required: true },
+        { name: "dto_cliente", type: "decimal", label: "Dto Cliente (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "dto_agencia", type: "decimal", label: "Dto Agencia (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "valor_neto", type: "money", label: "Valor Neto", required: true },
+        { name: "iva", type: "money", label: "Valor IVA", required: false },
+        { name: "total_spots", type: "integer", label: "Total Spots", required: true, min: 1, defaultValue: 1 },
+        { name: "valor_total", type: "money", label: "Valor Total", required: true }
+      ],
+      fechaCreacion: new Date().toISOString(),
+      activa: true
+    };
+
+    // Plantilla para OOH
+    const plantillaOOH: PlantillaPauta = {
+      id: 'ooh-plantilla',
+      paisFacturacion: 'General',
+      medio: 'OOH',
+      nombre: 'Out of Home',
+      descripcion: 'Plantilla para pautas de medios exteriores',
+      fields: [
+        { name: "IdProveedor", type: "integer", label: "Proveedor", required: true, lookupTable: "Proveedores", lookupColumn: "CODIGO", displayColumn: "VENDOR" },
+        { name: "tipo_medio", type: "string", label: "Tipo de Medio", required: true, options: ["Vallas", "Paraderos", "Estaciones", "Malls", "Aeropuertos", "Pantallas LED"] },
+        { name: "ubicacion", type: "string", label: "Ubicación", required: true, maxLength: 100 },
+        { name: "distrito", type: "string", label: "Distrito", required: false, maxLength: 50 },
+        { name: "tamano", type: "string", label: "Tamaño", required: false, maxLength: 50 },
+        { name: "formato", type: "string", label: "Formato", required: false, options: ["Estático", "Digital", "Móvil"] },
+        { name: "periodo", type: "string", label: "Período", required: false, options: ["Quincenal", "Mensual", "Bimensual", "Trimestral"] },
+        { name: "flujo_vehicular", type: "integer", label: "Flujo Vehicular", required: false },
+        { name: "flujo_peatonal", type: "integer", label: "Flujo Peatonal", required: false },
+        { name: "tarifa_bruta", type: "money", label: "Tarifa Bruta", required: true },
+        { name: "dto_cliente", type: "decimal", label: "Dto Cliente (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "dto_agencia", type: "decimal", label: "Dto Agencia (%)", required: false, precision: 5, scale: 2, min: 0, max: 100 },
+        { name: "valor_neto", type: "money", label: "Valor Neto", required: true },
+        { name: "iva", type: "money", label: "Valor IVA", required: false },
+        { name: "total_spots", type: "integer", label: "Total Spots", required: true, min: 1, defaultValue: 1 },
         { name: "valor_total", type: "money", label: "Valor Total", required: true }
       ],
       fechaCreacion: new Date().toISOString(),
@@ -217,7 +322,7 @@ export class PlantillaPautaService {
     ];
 
     // Guardar datos iniciales
-    localStorage.setItem('plantillasPautas', JSON.stringify([plantillaTV, plantillaRadio]));
+    localStorage.setItem('plantillasPautas', JSON.stringify([plantillaTV, plantillaRadio, plantillaDigital, plantillaPresnsa, plantillaOOH]));
     localStorage.setItem('lookupData', JSON.stringify(lookupData));
   }
 

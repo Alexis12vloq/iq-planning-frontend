@@ -55,13 +55,22 @@
       mat-raised-button 
       color="warn" 
       class="action-btn"
+      (click)="limpiarPlantillas()">
+      <mat-icon>refresh</mat-icon>
+      Reinicializar Plantillas
+    </button>
+    
+    <button 
+      mat-raised-button 
+      color="warn" 
+      class="action-btn"
       (click)="onRegresar()">
       <mat-icon>arrow_back</mat-icon>
       Regresar
     </button>
   </div>
 
-  <!-- Grilla Principal de Programación -->
+  <!-- Grilla Principal con Pestañas por Medio -->
   <div class="programming-grid-container" *ngIf="itemsPauta.length > 0">
     <div class="grid-header">
       <h2 class="grid-title">
@@ -69,166 +78,141 @@
         Programación de Medios ({{ itemsPauta.length }} items)
       </h2>
       <div class="grid-controls">
-        <!-- Botones de expandir/contraer ocultos temporalmente -->
-        <!-- 
-        <button mat-icon-button color="primary" (click)="expandirTodosLosItems()" matTooltip="Expandir todo">
-          <mat-icon>unfold_more</mat-icon>
-        </button>
-        <button mat-icon-button (click)="contraerTodosLosItems()" matTooltip="Contraer todo">
-          <mat-icon>unfold_less</mat-icon>
-        </button>
-        -->
         <button mat-icon-button color="accent" (click)="exportarProgramacion()" matTooltip="Exportar">
           <mat-icon>download</mat-icon>
         </button>
       </div>
     </div>
 
-    <!-- Contenedor con scroll horizontal -->
-    <div class="grid-scroll-container">
-      <!-- Tabla de programación -->
-      <div class="programming-table">
-        
-        <!-- Encabezado de la tabla -->
-        <div class="table-header">
-          <!-- Columnas fijas -->
-          <div class="fixed-columns">
-            <div class="header-cell action-col"></div>
-            <div class="header-cell medium-col">Medio</div>
-            <div class="header-cell budget-col">Presupuesto</div>
-          </div>
+    <!-- Mensaje informativo -->
+    <div class="info-message" *ngIf="mediosActivos.length > 0">
+      <mat-icon>info</mat-icon>
+      <span>Los items están organizados por pestañas según el medio. Cada pestaña muestra todos los campos específicos del medio y las fechas de programación.</span>
+    </div>
+
+    <!-- Pestañas por Medio -->
+    <mat-tab-group class="medios-tabs" *ngIf="mediosActivos.length > 0">
+      <mat-tab *ngFor="let medio of mediosActivos" [label]="medio + ' (' + itemsPorMedio[medio].length + ')'">
+        <ng-template matTabContent>
           
-          <!-- Columnas de fechas (scrollables) -->
-          <div class="scrollable-columns">
-            <div 
-              *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
-              class="header-cell date-col"
-              [class.weekend]="esFinDeSemana(fecha)"
-              [class.today]="esHoy(fecha)">
-              <div class="date-header">
-                <div class="date-day">{{ fecha | date:'dd' }}</div>
-                <div class="date-month">{{ fecha | date:'MMM' }}</div>
-                <div class="date-weekday">{{ fecha | date:'EEE' }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filas agrupadas por medio -->
-        <div class="table-body">
-          <ng-container *ngFor="let grupo of itemsAgrupadosPorMedio">
-            
-            <!-- Fila del grupo/medio -->
-            <div class="table-row grupo-medio-row" (click)="toggleGrupoMedio(grupo.medio)">
-              <div class="fixed-columns">
-                <div class="data-cell action-col">
-                  <button mat-icon-button class="expand-grupo-btn">
-                    <mat-icon>{{ grupo.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
-                  </button>
-                </div>
-                
-                <div class="data-cell medium-col">
-                  <div class="cell-content grupo-header">
-                    <mat-icon class="medio-icon">{{ obtenerIconoMedio(grupo.medio) }}</mat-icon>
-                    <div class="medio-info">
-                      <div class="medio-name-grupo">{{ grupo.medio }}</div>
-                      <div class="medio-stats-grupo">{{ grupo.totalPautas }} pautas • {{ grupo.totalSpots }} spots</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="data-cell budget-col">
-                  <div class="cell-content">
-                    <div class="budget-total-grupo">{{ grupo.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
-                    <div class="budget-sub-grupo">Total del medio</div>
-                  </div>
-                </div>
-              </div>
+          <!-- Contenedor con scroll horizontal para cada medio -->
+          <div class="grid-scroll-container">
+            <div class="programming-table">
               
-              <div class="scrollable-columns grupo-summary">
-                <div class="summary-dates">Programación por fechas</div>
-              </div>
-            </div>
-
-            <!-- Filas de pautas del grupo (expandibles) -->
-            <ng-container *ngIf="grupo.expandido">
-              <div 
-                *ngFor="let item of grupo.pautas; let itemIndex = index; trackBy: trackByItem"
-                class="table-row pauta-row"
-                [class.expanded]="itemsExpandidos[item.id]">
-                
+              <!-- Encabezado de la tabla -->
+              <div class="table-header">
                 <!-- Columnas fijas -->
                 <div class="fixed-columns">
-                  <!-- Acción -->
-                  <div class="data-cell action-col">
-                    <div class="action-buttons">
-                      <button 
-                        mat-icon-button 
-                        class="action-edit-button"
-                        (click)="editarItem(item)"
-                        matTooltip="Editar">
-                        <mat-icon>edit</mat-icon>
-                      </button>
-                      <button 
-                        mat-icon-button 
-                        class="action-delete-button"
-                        (click)="eliminarItem(item.id, itemIndex)"
-                        matTooltip="Eliminar">
-                        <mat-icon>delete</mat-icon>
-                      </button>
+                  <div class="header-cell action-col">Acciones</div>
+                  <div class="header-cell proveedor-col">Proveedor</div>
+                </div>
+                
+                <!-- Columnas dinámicas de campos -->
+                <div class="dynamic-columns">
+                  <div 
+                    *ngFor="let campo of obtenerColumnasDinamicas(medio)"
+                    class="header-cell dynamic-col"
+                    [style.min-width.px]="120">
+                    {{ campo.label }}
+                  </div>
+                </div>
+                
+                <!-- Columnas de fechas (al final) -->
+                <div class="scrollable-columns">
+                  <div 
+                    *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
+                    class="header-cell date-col"
+                    [class.weekend]="esFinDeSemana(fecha)"
+                    [class.today]="esHoy(fecha)">
+                    <div class="date-header">
+                      <div class="date-day">{{ fecha | date:'dd' }}</div>
+                      <div class="date-month">{{ fecha | date:'MMM' }}</div>
+                      <div class="date-weekday">{{ fecha | date:'EEE' }}</div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- Filas de pautas del medio -->
+              <div class="table-body">
+                <div 
+                  *ngFor="let item of itemsPorMedio[medio]; let itemIndex = index; trackBy: trackByItem"
+                  class="table-row pauta-row">
                   
-                  <!-- Proveedor/detalle -->
-                  <div class="data-cell medium-col">
-                    <div class="cell-content pauta-detail">
-                      <div class="proveedor-info">
+                  <!-- Columnas fijas -->
+                  <div class="fixed-columns">
+                    <!-- Acciones -->
+                    <div class="data-cell action-col">
+                      <div class="action-buttons">
+                        <button 
+                          mat-icon-button 
+                          class="action-edit-button"
+                          (click)="editarItem(item)"
+                          matTooltip="Editar">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button 
+                          mat-icon-button 
+                          class="action-delete-button"
+                          (click)="eliminarItem(item.id, itemIndex)"
+                          matTooltip="Eliminar">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- Proveedor -->
+                    <div class="data-cell proveedor-col">
+                      <div class="cell-content proveedor-info">
                         <div class="proveedor-name">{{ item.proveedor || 'Sin proveedor' }}</div>
                         <div class="pauta-stats">{{ item.totalSpots }} spots • {{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
                       </div>
                     </div>
                   </div>
-                  
-                  <!-- Presupuesto individual -->
-                  <div class="data-cell budget-col">
-                    <div class="cell-content">
-                      <div class="budget-total">{{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
-                      <div class="budget-sub">{{ item.totalSpots }} spots</div>
+
+                  <!-- Columnas dinámicas -->
+                  <div class="dynamic-columns">
+                    <div 
+                      *ngFor="let campo of obtenerColumnasDinamicas(medio)"
+                      class="data-cell dynamic-col"
+                      [style.min-width.px]="120">
+                      <div class="cell-content">
+                        {{ formatearValorCampo(obtenerValorCampo(item, campo.name), campo) }}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <!-- Columnas de fechas (scrollables) -->
-                <div class="scrollable-columns">
-                  <div 
-                    *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
-                    class="data-cell date-col"
-                    [class.weekend]="esFinDeSemana(fecha)"
-                    [class.today]="esHoy(fecha)"
-                    [class.programmed]="tieneProgramacion(item.id, fecha)">
-                    
-                    <div class="date-cell-content">
-                      <input 
-                        type="text"
-                        class="spots-input"
-                        [value]="obtenerSpotsPorFecha(item.id, fecha) || ''"
-                        (input)="actualizarSpotsPorFecha(item.id, fecha, $event)"
-                        (keypress)="validarSoloNumeros($event)"
-                        (paste)="validarPegado($event)"
-                        (focus)="seleccionarTextoInput($event)"
-                        placeholder="0"
-                        maxlength="4"
-                        title="Cantidad de spots para este día (solo números enteros)">
+                  <!-- Columnas de fechas (scrollables) -->
+                  <div class="scrollable-columns">
+                    <div 
+                      *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
+                      class="data-cell date-col"
+                      [class.weekend]="esFinDeSemana(fecha)"
+                      [class.today]="esHoy(fecha)"
+                      [class.programmed]="tieneProgramacion(item.id, fecha)">
+                      
+                      <div class="date-cell-content">
+                        <input 
+                          type="text"
+                          class="spots-input"
+                          [value]="obtenerSpotsPorFecha(item.id, fecha) || ''"
+                          (input)="actualizarSpotsPorFecha(item.id, fecha, $event)"
+                          (keypress)="validarSoloNumeros($event)"
+                          (paste)="validarPegado($event)"
+                          (focus)="seleccionarTextoInput($event)"
+                          placeholder="0"
+                          maxlength="4"
+                          title="Cantidad de spots para este día (solo números enteros)">
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </ng-container>
-            
-          </ng-container>
-        </div>
-      </div>
-    </div>
+            </div>
+          </div>
+        </ng-template>
+      </mat-tab>
+    </mat-tab-group>
 
     <!-- Resumen de programación -->
     <div class="programming-summary">

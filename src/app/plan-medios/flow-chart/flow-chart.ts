@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatTabsModule } from '@angular/material/tabs';
 import { Router } from '@angular/router';
 import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { PlantillaPauta, CampoPlantilla, RespuestaPauta, DiaCalendario } from '../models/plantilla-pauta.model';
@@ -61,7 +62,8 @@ interface PlanData {
     MatTooltipModule,
     MatDialogModule,
     MatDatepickerModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    MatTabsModule
   ],
   templateUrl: './flow-chart.html',
   styleUrls: ['./flow-chart.scss'],
@@ -116,6 +118,12 @@ export class FlowChart implements OnInit {
   // Medios disponibles
   mediosDisponibles: string[] = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
   
+  // Medios activos (que tienen pautas)
+  mediosActivos: string[] = [];
+  
+  // Items agrupados por medio para pestañas
+  itemsPorMedio: { [medio: string]: RespuestaPauta[] } = {};
+  
   // Semanas disponibles para la pauta
   semanasDisponibles = [
     { codigo: 'L1', nombre: 'Semana 1' },
@@ -168,6 +176,9 @@ export class FlowChart implements OnInit {
         this.pautaForm = this.fb.group({});
       }
     });
+    
+    // Verificar si necesita inicializar plantillas
+    this.verificarPlantillas();
   }
 
   ngOnInit(): void {
@@ -243,11 +254,8 @@ export class FlowChart implements OnInit {
     
     setTimeout(() => {
       try {
-        const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-        const planCompleto = planesLocal.find((plan: any) => plan.id === this.planData?.id);
-        const paisFacturacion = planCompleto?.paisFacturacion || 'Perú';
-
-        this.plantillaActual = this.plantillaService.obtenerPlantilla(paisFacturacion, medio);
+        // Usar el nuevo método que busca solo por medio
+        this.plantillaActual = this.plantillaService.obtenerPlantillaPorMedio(medio);
         
         if (this.plantillaActual) {
           this.generarFormularioSimplificado();
@@ -258,8 +266,8 @@ export class FlowChart implements OnInit {
           });
           this.errorPlantilla = null;
         } else {
-          this.errorPlantilla = `No existe plantilla configurada para "${medio}" en ${paisFacturacion}. ` +
-                               `Contacta al administrador para configurar esta combinación.`;
+          this.errorPlantilla = `No existe plantilla configurada para "${medio}". ` +
+                               `Contacta al administrador para configurar esta plantilla.`;
           this.pautaForm = this.fb.group({});
         }
       } catch (error) {
@@ -485,6 +493,7 @@ export class FlowChart implements OnInit {
     setTimeout(() => {
       this.cdr.detectChanges();
       console.log('✅ Lista refrescada - Items visibles:', this.itemsPauta.length);
+      console.log('✅ Medios activos:', this.mediosActivos);
     }, 50);
     
     setTimeout(() => {
@@ -831,6 +840,9 @@ export class FlowChart implements OnInit {
     // Agrupar items por medio
     this.agruparItemsPorMedio();
     
+    // Agrupar para pestañas
+    this.agruparItemsParaPestañas();
+    
     // Cargar programación guardada
     this.cargarProgramacion();
     
@@ -866,6 +878,26 @@ export class FlowChart implements OnInit {
     console.log('📊 Items agrupados por medio:', this.itemsAgrupadosPorMedio);
   }
 
+  private agruparItemsParaPestañas(): void {
+    // Resetear agrupación
+    this.itemsPorMedio = {};
+    this.mediosActivos = [];
+    
+    // Agrupar pautas por medio
+    this.itemsPauta.forEach(pauta => {
+      if (!this.itemsPorMedio[pauta.medio]) {
+        this.itemsPorMedio[pauta.medio] = [];
+      }
+      this.itemsPorMedio[pauta.medio].push(pauta);
+    });
+    
+    // Obtener medios activos y ordenarlos
+    this.mediosActivos = Object.keys(this.itemsPorMedio).sort();
+    
+    console.log('📑 Items agrupados para pestañas:', this.itemsPorMedio);
+    console.log('📑 Medios activos:', this.mediosActivos);
+  }
+
   toggleGrupoMedio(medio: string): void {
     const grupo = this.itemsAgrupadosPorMedio.find(g => g.medio === medio);
     if (grupo) {
@@ -883,6 +915,68 @@ export class FlowChart implements OnInit {
       'default': 'campaign'
     };
     return iconos[medio] || iconos['default'];
+  }
+
+  // Obtener campos de plantilla por medio
+  obtenerCamposPlantillaPorMedio(medio: string): CampoPlantilla[] {
+    const plantilla = this.plantillaService.obtenerPlantillaPorMedio(medio);
+    return plantilla ? plantilla.fields : [];
+  }
+
+  // Obtener columnas dinámicas para un medio específico
+  obtenerColumnasDinamicas(medio: string): CampoPlantilla[] {
+    const campos = this.obtenerCamposPlantillaPorMedio(medio);
+    // Filtrar campos que no queremos mostrar como columnas
+    const camposExcluidos = ['semanas', 'iva', 'fee', '%_iva'];
+    return campos.filter(campo => !camposExcluidos.includes(campo.name));
+  }
+
+  // Obtener valor de campo de una pauta
+  obtenerValorCampo(pauta: RespuestaPauta, nombreCampo: string): any {
+    return pauta.datos?.[nombreCampo] || '';
+  }
+
+  // Formatear valor de campo para mostrar
+  formatearValorCampo(valor: any, campo: CampoPlantilla): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return '-';
+    }
+
+    switch (campo.type) {
+      case 'money':
+        const numValue = parseFloat(valor);
+        if (isNaN(numValue)) return '-';
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(numValue);
+      
+      case 'decimal':
+        const decValue = parseFloat(valor);
+        if (isNaN(decValue)) return '-';
+        return new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(decValue);
+      
+      case 'integer':
+        const intValue = parseInt(valor);
+        if (isNaN(intValue)) return '-';
+        return new Intl.NumberFormat('en-US').format(intValue);
+      
+      case 'time':
+        return valor.toString();
+      
+      default:
+        if (campo.lookupTable) {
+          const opciones = this.obtenerOpcionesLookup(campo);
+          const opcion = opciones.find(o => o.codigo == valor);
+          return opcion ? opcion.valor : valor.toString();
+        }
+        return valor.toString();
+    }
   }
 
   // Métodos obsoletos removidos - ahora usamos la estructura de items
@@ -929,6 +1023,32 @@ export class FlowChart implements OnInit {
         panelClass: ['success-snackbar']
       });
       console.log('🧹 Datos de prueba limpiados del localStorage');
+    }
+  }
+
+  limpiarPlantillas(): void {
+    if (confirm('¿Estás seguro de que deseas reinicializar todas las plantillas? Esta acción no se puede deshacer.')) {
+      this.plantillaService.limpiarYReinicializarPlantillas();
+      this.snackBar.open('Plantillas reinicializadas correctamente', '', {
+        duration: 3000,
+        panelClass: ['success-snackbar']
+      });
+      console.log('🧹 Plantillas reinicializadas');
+    }
+  }
+
+  // Verificar si las plantillas están actualizadas
+  private verificarPlantillas(): void {
+    const plantillas = this.plantillaService.obtenerTodasLasPlantillas();
+    const mediosRequeridos = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
+    
+    // Verificar si todas las plantillas existen
+    const plantillasExistentes = plantillas.map(p => p.medio);
+    const faltanPlantillas = mediosRequeridos.some(medio => !plantillasExistentes.includes(medio));
+    
+    if (faltanPlantillas || plantillas.length === 0) {
+      console.log('🔄 Plantillas incompletas, inicializando...');
+      this.plantillaService.limpiarYReinicializarPlantillas();
     }
   }
 
@@ -1714,18 +1834,16 @@ export class ModalNuevaPautaComponent implements OnInit {
     
     setTimeout(() => {
       try {
-        const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-        const planCompleto = planesLocal.find((plan: any) => plan.id === this.data.planData?.id);
-        const paisFacturacion = planCompleto?.paisFacturacion || 'Perú';
-
-        this.plantillaActual = this.plantillaService.obtenerPlantilla(paisFacturacion, medio);
+        // Usar el nuevo método que busca solo por medio
+        this.plantillaActual = this.plantillaService.obtenerPlantillaPorMedio(medio);
         
         if (this.plantillaActual) {
           this.generarFormulario();
           this.configurarCalculosAutomaticos();
           this.errorPlantilla = null;
         } else {
-          this.errorPlantilla = `No existe plantilla configurada para "${medio}" en ${paisFacturacion}`;
+          this.errorPlantilla = `No existe plantilla configurada para "${medio}". ` +
+                               `Contacta al administrador para configurar esta plantilla.`;
           this.pautaForm = this.fb.group({});
         }
       } catch (error) {
