@@ -177,7 +177,7 @@
 
 .medios-table {
   width: 100%;
-  min-width: 800px; // Ancho mínimo para forzar scroll horizontal si es necesario
+  min-width: 900px; // Ancho mínimo para forzar scroll horizontal si es necesario
   border-collapse: collapse;
   background-color: white;
 
@@ -203,27 +203,14 @@
     text-transform: uppercase;
   }
 
-  // Estilos para la información del medio y proveedor
-  .medio-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    
-    .medio-nombre {
-      font-weight: bold;
-      color: #333;
-      font-size: 13px;
-    }
-    
-    .medio-proveedor {
-      font-size: 11px;
-      color: #666;
-      font-style: italic;
-    }
-  }
+
 
   .col-medios {
-    width: 180px;
+    width: 120px;
+  }
+
+  .col-proveedor {
+    width: 140px;
   }
 
   .col-semanas {

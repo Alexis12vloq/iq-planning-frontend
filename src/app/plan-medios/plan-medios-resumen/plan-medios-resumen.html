@@ -65,6 +65,7 @@
           <thead>
             <tr>
               <th class="col-medios">MEDIOS</th>
+              <th class="col-proveedor">PROVEEDOR</th>
               <th class="col-semanas" colspan="5">
                 <div class="semanas-header">
                   <div class="semanas-title">CRONOGRAMA</div>
@@ -74,6 +75,7 @@
               <th class="col-soi">% / SOI</th>
             </tr>
             <tr class="fechas-subheader">
+              <th></th>
               <th></th>
               <th class="col-fecha" *ngFor="let semana of semanasConFechas">
                 <div class="fecha-container">
@@ -93,12 +95,8 @@
               <ng-container *ngFor="let medio of periodoSeleccionado.medios; let i = index">
                 <!-- Fila del medio -->
                 <tr class="fila-medio" (dblclick)="onEditarMedio(medio)" title="Doble click para editar este medio">
-                  <td>
-                    <div class="medio-info">
-                      <div class="medio-nombre">{{ medio.nombre }}</div>
-                      <div class="medio-proveedor" *ngIf="medio.proveedor">{{ medio.proveedor }}</div>
-                    </div>
-                  </td>
+                  <td>{{ medio.nombre }}</td>
+                  <td>{{ medio.proveedor || 'Sin proveedor' }}</td>
                   <td colspan="5">
                     <div class="semanas-cell">
                       <div *ngFor="let activo of medio.semanas" 
@@ -113,6 +111,7 @@
                 <!-- Fila de salidas -->
                 <tr class="fila-salidas">
                   <td>SALIDAS</td>
+                  <td></td>
                   <td colspan="5"></td>
                   <td class="valor-total">{{ medio.salidas }}</td>
                   <td class="valor-soi">{{ medio.soi | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
@@ -120,6 +119,7 @@
                 <!-- Fila de valor neto -->
                 <tr class="fila-valor">
                   <td>Valor neto</td>
+                  <td></td>
                   <td colspan="5"></td>
                   <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td></td>
@@ -130,7 +130,7 @@
             <!-- Mostrar mensaje cuando no hay pautas -->
             <ng-container *ngIf="periodoSeleccionado.medios.length === 0">
               <tr class="fila-sin-pautas">
-                <td colspan="8" class="text-center">
+                <td colspan="9" class="text-center">
                   <div class="mensaje-sin-pautas">
                     <mat-icon>info</mat-icon>
                     <span>No hay pautas creadas para este plan. Utiliza el botón "Agregar Medio" para agregar medios.</span>
@@ -144,18 +144,21 @@
           <tfoot>
             <tr class="fila-total">
               <td>Total Inversión Neta</td>
+              <td></td>
               <td colspan="5"></td>
               <td class="valor-total">{{ periodoSeleccionado.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
             <tr class="fila-iva">
               <td>IVA 19%</td>
+              <td></td>
               <td colspan="5"></td>
               <td class="valor-total">{{ periodoSeleccionado.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
             <tr class="fila-total-inversion">
               <td>Total Inversión</td>
+              <td></td>
               <td colspan="5"></td>
               <td class="valor-total">{{ periodoSeleccionado.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>

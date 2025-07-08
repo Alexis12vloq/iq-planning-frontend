@@ -1,15 +1,20 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { ResumenPlan, PeriodoPlan, MedioPlan, PlanConsultaData, PERIODOS_EJEMPLO } from '../models/resumen-plan.model';
 import { PautaLocal } from '../models/pauta-local.model';
+import { PlantillaPautaService } from '../services/plantilla-pauta.service';
+import { RespuestaPauta } from '../models/plantilla-pauta.model';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -29,12 +34,16 @@ interface FilaMedio {
   imports: [
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatTableModule,
     MatSelectModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule
   ],
   templateUrl: './plan-medios-resumen.html',
   styleUrls: ['./plan-medios-resumen.scss']
@@ -53,7 +62,9 @@ export class PlanMediosResumen implements OnInit {
 
   constructor(
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private dialog: MatDialog,
+    private plantillaService: PlantillaPautaService
   ) {
     const navigation = this.router.getCurrentNavigation();
     const planData = navigation?.extras?.state?.['planData'] as any;
@@ -293,10 +304,19 @@ export class PlanMediosResumen implements OnInit {
       fechaFin: this.resumenPlan.fechaFin
     };
     
-    console.log('🔄 Navegando a nueva pauta desde agregar medio con plan data:', planData);
+    console.log('🔄 Abriendo modal para agregar medio:', planData);
     
-    this.router.navigate(['/plan-medios-nueva-pauta'], { 
-      state: { planData } 
+    const dialogRef = this.dialog.open(ModalAgregarMedioComponent, {
+      width: '600px',
+      data: { planData },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe((result: any) => {
+      if (result && result.shouldRefresh) {
+        console.log('✅ Medio agregado, recargando resumen');
+        this.recargarResumen();
+      }
     });
   }
 
@@ -668,6 +688,240 @@ export class PlanMediosResumen implements OnInit {
         nombre: `${meses[mesInicio]} ${anioInicio} - ${meses[mesFin]} ${anioFin}`,
         anio: anioInicio // Usar el año de inicio como referencia
       };
+    }
+  }
+
+  // Método para recargar el resumen después de agregar un medio
+  recargarResumen(): void {
+    if (this.planId) {
+      // Recargar las pautas del plan
+      const periodosReales = this.cargarPeriodosConPautas(this.planId);
+      this.resumenPlan.periodos = periodosReales;
+      this.periodos = periodosReales;
+      this.periodoSeleccionado = periodosReales[0];
+      this.calcularSemanasConFechas();
+      this.prepararDataSource();
+    }
+  }
+}
+
+// Componente Modal para Agregar Medio
+@Component({
+  selector: 'app-modal-agregar-medio',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule
+  ],
+  template: `
+    <div class="modal-header">
+      <h3 mat-dialog-title>
+        <mat-icon>add_circle</mat-icon>
+        Agregar Medio - Plan {{ data.planData?.numeroPlan }}
+      </h3>
+      <button mat-icon-button mat-dialog-close>
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-dialog-content class="modal-content">
+      <!-- Información del Plan -->
+      <div class="plan-info">
+        <div class="info-item">
+          <span class="label">Cliente:</span>
+          <span class="value">{{ data.planData?.cliente }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Producto:</span>
+          <span class="value">{{ data.planData?.producto }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Campaña:</span>
+          <span class="value">{{ data.planData?.campana }}</span>
+        </div>
+      </div>
+
+      <!-- Formulario Simplificado -->
+      <mat-card class="form-card">
+        <mat-card-header>
+          <mat-card-title>Nuevo Medio</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="medioForm">
+            <mat-form-field class="full-width">
+              <mat-label>Seleccionar Medio</mat-label>
+              <mat-select formControlName="medio" (selectionChange)="onMedioChange($event.value)">
+                <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
+                  {{ medio }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field class="full-width" *ngIf="medioForm.get('medio')?.value">
+              <mat-label>Seleccionar Proveedor</mat-label>
+              <mat-select formControlName="proveedor">
+                <mat-option *ngFor="let proveedor of proveedoresDisponibles" [value]="proveedor.id">
+                  {{ proveedor.VENDOR }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field class="full-width">
+              <mat-label>Tarifa</mat-label>
+              <input matInput type="number" formControlName="tarifa" step="0.01">
+            </mat-form-field>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </mat-dialog-content>
+
+    <mat-dialog-actions class="modal-actions">
+      <button mat-button mat-dialog-close>Cancelar</button>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        [disabled]="!medioForm.valid"
+        (click)="guardarMedio()">
+        <mat-icon>save</mat-icon>
+        Guardar Medio
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-content {
+      padding: 16px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .plan-info {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .value {
+      font-size: 14px;
+      color: #333;
+    }
+
+    .form-card {
+      margin-bottom: 16px;
+    }
+
+    .full-width {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .modal-actions {
+      padding: 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+  `]
+})
+export class ModalAgregarMedioComponent implements OnInit {
+  medioForm!: FormGroup;
+  mediosDisponibles = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
+  proveedoresDisponibles: any[] = [];
+
+  constructor(
+    private fb: FormBuilder,
+    private plantillaService: PlantillaPautaService,
+    private dialogRef: MatDialogRef<ModalAgregarMedioComponent>,
+    private snackBar: MatSnackBar,
+    @Inject(MAT_DIALOG_DATA) public data: any
+  ) {
+    this.medioForm = this.fb.group({
+      medio: [''],
+      proveedor: [''],
+      tarifa: [0]
+    });
+  }
+
+  ngOnInit(): void {
+    // Inicialización del modal
+  }
+
+  onMedioChange(medio: string): void {
+    if (medio) {
+      this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
+      this.medioForm.patchValue({ proveedor: '' });
+    }
+  }
+
+  guardarMedio(): void {
+    if (this.medioForm.valid) {
+      const valores = this.medioForm.value;
+      const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+      
+      // Crear una pauta simple para almacenar el medio
+      const nuevaPauta: RespuestaPauta = {
+        id: Date.now().toString(),
+        planId: this.data.planData.id,
+        plantillaId: 'simple',
+        paisFacturacion: 'Perú',
+        medio: valores.medio,
+        proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
+        proveedorId: valores.proveedor,
+        datos: { tarifa: valores.tarifa },
+        fechaCreacion: new Date().toISOString(),
+        valorTotal: valores.tarifa,
+        valorNeto: valores.tarifa,
+        totalSpots: 1,
+        diasSeleccionados: [],
+        totalDiasSeleccionados: 0
+      };
+
+      // Guardar en localStorage
+      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      pautas.push(nuevaPauta);
+      localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+
+      this.snackBar.open('Medio agregado correctamente', '', { duration: 2000 });
+      this.dialogRef.close({ shouldRefresh: true });
     }
   }
 } 
