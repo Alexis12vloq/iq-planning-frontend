@@ -1,0 +1,276 @@
+<div class="nueva-pauta-container">
+  <!-- Información del Plan en una sola línea -->
+  <div class="info-header-line">
+    <div class="plan-title">Plan de Medios - {{ planData?.numeroPlan }}</div>
+    <div class="plan-info">
+      <span class="info-item">
+        <span class="info-label">CLIENTE:</span>
+        <span class="info-value">{{ planData?.cliente }}</span>
+      </span>
+      <span class="info-item">
+        <span class="info-label">PRODUCTO:</span>
+        <span class="info-value">{{ planData?.producto }}</span>
+      </span>
+      <span class="info-item">
+        <span class="info-label">CAMPAÑA:</span>
+        <span class="info-value">{{ planData?.campana }}</span>
+      </span>
+      <span class="info-item">
+        <span class="info-label">VIGENCIA:</span>
+        <span class="info-value">{{ formatearFechaSinDesfase(planData?.fechaInicio || '') }} - {{ formatearFechaSinDesfase(planData?.fechaFin || '') }}</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Botones de Acción Principales -->
+  <div class="add-item-section">
+    <button 
+      mat-raised-button 
+      color="primary" 
+      class="add-item-btn"
+      (click)="abrirModalNuevoItem()">
+      <mat-icon>add_circle</mat-icon>
+      Nuevo Item
+    </button>
+    
+    <button 
+      mat-raised-button 
+      color="accent" 
+      class="action-btn"
+      (click)="exportarPlan()">
+      <mat-icon>download</mat-icon>
+      Exportar Plan
+    </button>
+    
+    <button 
+      mat-raised-button 
+      color="warn" 
+      class="action-btn"
+      (click)="limpiarDatosPrueba()">
+      <mat-icon>delete_sweep</mat-icon>
+      Limpiar Datos
+    </button>
+    
+    <button 
+      mat-raised-button 
+      color="warn" 
+      class="action-btn"
+      (click)="onRegresar()">
+      <mat-icon>arrow_back</mat-icon>
+      Regresar
+    </button>
+  </div>
+
+  <!-- Grilla Principal de Programación -->
+  <div class="programming-grid-container" *ngIf="itemsPauta.length > 0">
+    <div class="grid-header">
+      <h2 class="grid-title">
+        <mat-icon>calendar_view_month</mat-icon>
+        Programación de Medios ({{ itemsPauta.length }} items)
+      </h2>
+      <div class="grid-controls">
+        <!-- Botones de expandir/contraer ocultos temporalmente -->
+        <!-- 
+        <button mat-icon-button color="primary" (click)="expandirTodosLosItems()" matTooltip="Expandir todo">
+          <mat-icon>unfold_more</mat-icon>
+        </button>
+        <button mat-icon-button (click)="contraerTodosLosItems()" matTooltip="Contraer todo">
+          <mat-icon>unfold_less</mat-icon>
+        </button>
+        -->
+        <button mat-icon-button color="accent" (click)="exportarProgramacion()" matTooltip="Exportar">
+          <mat-icon>download</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenedor con scroll horizontal -->
+    <div class="grid-scroll-container">
+      <!-- Tabla de programación -->
+      <div class="programming-table">
+        
+        <!-- Encabezado de la tabla -->
+        <div class="table-header">
+          <!-- Columnas fijas -->
+          <div class="fixed-columns">
+            <div class="header-cell action-col"></div>
+            <div class="header-cell medium-col">Medio</div>
+            <div class="header-cell budget-col">Presupuesto</div>
+          </div>
+          
+          <!-- Columnas de fechas (scrollables) -->
+          <div class="scrollable-columns">
+            <div 
+              *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
+              class="header-cell date-col"
+              [class.weekend]="esFinDeSemana(fecha)"
+              [class.today]="esHoy(fecha)">
+              <div class="date-header">
+                <div class="date-day">{{ fecha | date:'dd' }}</div>
+                <div class="date-month">{{ fecha | date:'MMM' }}</div>
+                <div class="date-weekday">{{ fecha | date:'EEE' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filas agrupadas por medio -->
+        <div class="table-body">
+          <ng-container *ngFor="let grupo of itemsAgrupadosPorMedio">
+            
+            <!-- Fila del grupo/medio -->
+            <div class="table-row grupo-medio-row" (click)="toggleGrupoMedio(grupo.medio)">
+              <div class="fixed-columns">
+                <div class="data-cell action-col">
+                  <button mat-icon-button class="expand-grupo-btn">
+                    <mat-icon>{{ grupo.expandido ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                </div>
+                
+                <div class="data-cell medium-col">
+                  <div class="cell-content grupo-header">
+                    <mat-icon class="medio-icon">{{ obtenerIconoMedio(grupo.medio) }}</mat-icon>
+                    <div class="medio-info">
+                      <div class="medio-name-grupo">{{ grupo.medio }}</div>
+                      <div class="medio-stats-grupo">{{ grupo.totalPautas }} pautas • {{ grupo.totalSpots }} spots</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="data-cell budget-col">
+                  <div class="cell-content">
+                    <div class="budget-total-grupo">{{ grupo.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                    <div class="budget-sub-grupo">Total del medio</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="scrollable-columns grupo-summary">
+                <div class="summary-dates">Programación por fechas</div>
+              </div>
+            </div>
+
+            <!-- Filas de pautas del grupo (expandibles) -->
+            <ng-container *ngIf="grupo.expandido">
+              <div 
+                *ngFor="let item of grupo.pautas; let itemIndex = index; trackBy: trackByItem"
+                class="table-row pauta-row"
+                [class.expanded]="itemsExpandidos[item.id]">
+                
+                <!-- Columnas fijas -->
+                <div class="fixed-columns">
+                  <!-- Acción -->
+                  <div class="data-cell action-col">
+                    <div class="action-buttons">
+                      <button 
+                        mat-icon-button 
+                        class="action-edit-button"
+                        (click)="editarItem(item)"
+                        matTooltip="Editar">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button 
+                        mat-icon-button 
+                        class="action-delete-button"
+                        (click)="eliminarItem(item.id, itemIndex)"
+                        matTooltip="Eliminar">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Proveedor/detalle -->
+                  <div class="data-cell medium-col">
+                    <div class="cell-content pauta-detail">
+                      <div class="proveedor-info">
+                        <div class="proveedor-name">{{ item.proveedor || 'Sin proveedor' }}</div>
+                        <div class="pauta-stats">{{ item.totalSpots }} spots • {{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Presupuesto individual -->
+                  <div class="data-cell budget-col">
+                    <div class="cell-content">
+                      <div class="budget-total">{{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                      <div class="budget-sub">{{ item.totalSpots }} spots</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Columnas de fechas (scrollables) -->
+                <div class="scrollable-columns">
+                  <div 
+                    *ngFor="let fecha of fechasDelPlan; trackBy: trackByFecha"
+                    class="data-cell date-col"
+                    [class.weekend]="esFinDeSemana(fecha)"
+                    [class.today]="esHoy(fecha)"
+                    [class.programmed]="tieneProgramacion(item.id, fecha)">
+                    
+                    <div class="date-cell-content">
+                      <input 
+                        type="text"
+                        class="spots-input"
+                        [value]="obtenerSpotsPorFecha(item.id, fecha) || ''"
+                        (input)="actualizarSpotsPorFecha(item.id, fecha, $event)"
+                        (keypress)="validarSoloNumeros($event)"
+                        (paste)="validarPegado($event)"
+                        (focus)="seleccionarTextoInput($event)"
+                        placeholder="0"
+                        maxlength="4"
+                        title="Cantidad de spots para este día (solo números enteros)">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+            
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumen de programación -->
+    <div class="programming-summary">
+      <div class="summary-stats">
+        <div class="summary-item">
+          <span class="summary-label">Total Items:</span>
+          <span class="summary-value">{{ itemsPauta.length }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Presupuesto Total:</span>
+          <span class="summary-value">{{ calcularPresupuestoTotal() | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Días con Programación:</span>
+          <span class="summary-value">{{ contarDiasConProgramacion() }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Spots Programados:</span>
+          <span class="summary-value">{{ calcularTotalSpots() }} / {{ calcularTotalSpotsOriginales() }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensaje cuando no hay items -->
+  <mat-card class="empty-state" *ngIf="itemsPauta.length === 0">
+    <mat-card-content>
+      <div class="empty-container">
+        <mat-icon class="empty-icon">calendar_month</mat-icon>
+        <h3>No hay items en el plan</h3>
+        <p>Comienza agregando tu primer medio/vehículo al plan de medios. Podrás programar cada item día por día.</p>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="abrirModalNuevoItem()"
+          class="empty-action-btn">
+          <mat-icon>add_circle</mat-icon>
+          Crear Primer Item
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+
+</div> 
