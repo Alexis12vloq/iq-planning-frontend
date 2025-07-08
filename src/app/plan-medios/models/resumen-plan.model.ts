@@ -30,6 +30,8 @@ export interface MedioPlan {
     valorNeto: number;
     soi: number;
     semanas: boolean[];
+    tarifa?: number; // Nueva propiedad para almacenar la tarifa
+    spotsPorSemana?: number[]; // Nueva propiedad para almacenar spots por semana
 }
 
 // Interface para pasar datos desde la consulta al resumen

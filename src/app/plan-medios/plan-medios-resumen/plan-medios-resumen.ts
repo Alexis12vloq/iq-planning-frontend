@@ -475,8 +475,9 @@ export class PlanMediosResumen implements OnInit {
       const proveedor = respuestaPauta.proveedor || 'Sin proveedor';
       const proveedorId = respuestaPauta.proveedorId;
       const claveAgrupacion = `${medio}_${proveedor}`;
-      const valorTotal = Number(respuestaPauta.valorTotal) || 0; // FORZAR conversión a número
+      const valorTotal = Number(respuestaPauta.valorTotal) || 0;
       const totalSpots = Number(respuestaPauta.totalSpots) || 1;
+      const tarifa = Number(respuestaPauta.datos?.tarifa) || (valorTotal / totalSpots) || 0;
       
       // Calcular semanas basado en días seleccionados del calendario
       let semanasBoolean = [false, false, false, false, false]; // L1, L7, L14, L21, L28
@@ -518,6 +519,8 @@ export class PlanMediosResumen implements OnInit {
         );
         // Calcular SOI promedio
         medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
+        // Actualizar distribución de spots por semana
+        medioExistente.spotsPorSemana = this.distribuirSpotsEnSemanas(medioExistente.salidas, medioExistente.semanas);
       } else {
         // Crear nuevo medio con proveedor
         mediosMap.set(claveAgrupacion, {
@@ -527,7 +530,9 @@ export class PlanMediosResumen implements OnInit {
           salidas: Number(totalSpots),
           valorNeto: Number(valorTotal),
           soi: Math.round((Number(valorTotal) / Number(totalSpots)) || 0),
-          semanas: semanasBoolean
+          semanas: semanasBoolean,
+          tarifa: tarifa,
+          spotsPorSemana: respuestaPauta.datos?.spotsPorSemana || this.distribuirSpotsEnSemanas(Number(totalSpots), semanasBoolean)
         });
       }
     });
@@ -568,18 +573,21 @@ export class PlanMediosResumen implements OnInit {
       const proveedor = pautaResumen.proveedor || 'Sin proveedor';
       const proveedorId = pautaResumen.proveedorId;
       const claveAgrupacion = `${medio}_${proveedor}`;
-      const valorTotal = Number(pautaResumen.valorTotal) || 0; // FORZAR conversión a número
+      const valorTotal = Number(pautaResumen.valorTotal) || 0;
       const totalSpots = Number(pautaResumen.totalSpots) || 1;
+      const tarifa = Number(pautaResumen.datos?.tarifa) || (valorTotal / totalSpots) || 0;
       
       // Para pautas del estado, usar semanas por defecto (se pueden mejorar después)
       const semanasBoolean = [true, true, true, true, true]; // Todas las semanas activas por defecto
       
-              if (mediosMap.has(claveAgrupacion)) {
+      if (mediosMap.has(claveAgrupacion)) {
         // Si el medio y proveedor ya existen, sumar los valores
         const medioExistente = mediosMap.get(claveAgrupacion)!;
         medioExistente.salidas = Number(medioExistente.salidas) + Number(totalSpots);
         medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
         medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
+        // Actualizar distribución de spots por semana
+        medioExistente.spotsPorSemana = this.distribuirSpotsEnSemanas(medioExistente.salidas, medioExistente.semanas);
       } else {
         // Crear nuevo medio con proveedor
         mediosMap.set(claveAgrupacion, {
@@ -589,7 +597,9 @@ export class PlanMediosResumen implements OnInit {
           salidas: Number(totalSpots),
           valorNeto: Number(valorTotal),
           soi: Math.round((Number(valorTotal) / Number(totalSpots)) || 0),
-          semanas: semanasBoolean
+          semanas: semanasBoolean,
+          tarifa: tarifa,
+          spotsPorSemana: this.distribuirSpotsEnSemanas(Number(totalSpots), semanasBoolean)
         });
       }
     });
@@ -702,6 +712,124 @@ export class PlanMediosResumen implements OnInit {
       this.calcularSemanasConFechas();
       this.prepararDataSource();
     }
+  }
+
+  // Método para actualizar spots y recalcular inversiones
+  onSpotsChange(medio: MedioPlan, semanaIndex: number, event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const nuevoSpots = parseInt(target.value) || 0;
+    
+    // Inicializar spotsPorSemana si no existe
+    if (!medio.spotsPorSemana) {
+      medio.spotsPorSemana = [0, 0, 0, 0, 0];
+    }
+    
+    // Actualizar spots de la semana específica
+    medio.spotsPorSemana[semanaIndex] = nuevoSpots;
+    
+    // Recalcular salidas totales
+    medio.salidas = medio.spotsPorSemana.reduce((total, spots) => total + spots, 0);
+    
+    // Recalcular inversiones totales
+    if (medio.tarifa) {
+      medio.valorNeto = medio.salidas * medio.tarifa;
+    }
+    
+    // Recalcular SOI
+    medio.soi = medio.salidas > 0 ? Math.round(medio.valorNeto / medio.salidas) : 0;
+    
+    // Actualizar totales del período
+    this.actualizarTotalesPeriodo();
+    
+    // Guardar cambios en localStorage
+    this.guardarCambiosEnLocalStorage();
+    
+    console.log(`✅ Spots actualizados para ${medio.nombre} semana ${semanaIndex + 1}: ${nuevoSpots}`);
+    console.log(`✅ Nueva inversión total: ${medio.valorNeto}`);
+  }
+
+  // Método para calcular total de spots
+  calcularTotalSpots(medio: MedioPlan): number {
+    if (!medio.spotsPorSemana) {
+      return medio.salidas || 0;
+    }
+    return medio.spotsPorSemana.reduce((total, spots) => total + spots, 0);
+  }
+
+  // Método para calcular inversión por semana
+  calcularInversionSemana(medio: MedioPlan, semanaIndex: number): number {
+    if (!medio.spotsPorSemana || !medio.tarifa) {
+      return 0;
+    }
+    const spotsEnSemana = medio.spotsPorSemana[semanaIndex] || 0;
+    return spotsEnSemana * medio.tarifa;
+  }
+
+  // Método para actualizar totales del período
+  private actualizarTotalesPeriodo(): void {
+    const totalInversionNeta = this.periodoSeleccionado.medios.reduce((total, medio) => total + medio.valorNeto, 0);
+    const iva = Math.round(totalInversionNeta * 0.19);
+    const totalInversion = totalInversionNeta + iva;
+    
+    this.periodoSeleccionado.totalInversionNeta = totalInversionNeta;
+    this.periodoSeleccionado.iva = iva;
+    this.periodoSeleccionado.totalInversion = totalInversion;
+  }
+
+  // Método para guardar cambios en localStorage
+  private guardarCambiosEnLocalStorage(): void {
+    if (!this.planId) return;
+    
+    // Obtener pautas existentes
+    const respuestasPautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    
+    // Actualizar pautas del plan actual
+    this.periodoSeleccionado.medios.forEach(medio => {
+      const claveAgrupacion = `${medio.nombre}_${medio.proveedor}`;
+      
+      // Buscar y actualizar la pauta correspondiente
+      const pautaIndex = respuestasPautas.findIndex((pauta: any) => 
+        pauta.planId === this.planId && 
+        pauta.medio === medio.nombre && 
+        pauta.proveedor === medio.proveedor
+      );
+      
+      if (pautaIndex !== -1) {
+        respuestasPautas[pautaIndex].totalSpots = medio.salidas;
+        respuestasPautas[pautaIndex].valorTotal = medio.valorNeto;
+        respuestasPautas[pautaIndex].valorNeto = medio.valorNeto;
+        if (medio.tarifa) {
+          respuestasPautas[pautaIndex].datos = respuestasPautas[pautaIndex].datos || {};
+          respuestasPautas[pautaIndex].datos.tarifa = medio.tarifa;
+        }
+        // Guardar distribución de spots por semana
+        if (medio.spotsPorSemana) {
+          respuestasPautas[pautaIndex].datos = respuestasPautas[pautaIndex].datos || {};
+          respuestasPautas[pautaIndex].datos.spotsPorSemana = medio.spotsPorSemana;
+        }
+      }
+    });
+    
+    // Guardar en localStorage
+    localStorage.setItem('respuestasPautas', JSON.stringify(respuestasPautas));
+    
+    console.log('💾 Cambios guardados en localStorage');
+  }
+
+  private distribuirSpotsEnSemanas(totalSpots: number, semanasBoolean: boolean[]): number[] {
+    const spotsPorSemana: number[] = [];
+    let spotsRestantes = totalSpots;
+
+    for (let i = 0; i < 5; i++) {
+      const spotsParaSemana = Math.floor(spotsRestantes / (5 - i)); // Distribuir proporcionalmente
+      spotsPorSemana.push(spotsParaSemana);
+      spotsRestantes -= spotsParaSemana;
+    }
+
+    // Asegurar que los spots restantes se distribuyan en la última semana
+    spotsPorSemana[4] += spotsRestantes;
+
+    return spotsPorSemana;
   }
 }
 
@@ -906,11 +1034,11 @@ export class ModalAgregarMedioComponent implements OnInit {
         medio: valores.medio,
         proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
         proveedorId: valores.proveedor,
-        datos: { tarifa: valores.tarifa },
+        datos: { tarifa: Number(valores.tarifa) },
         fechaCreacion: new Date().toISOString(),
-        valorTotal: valores.tarifa,
-        valorNeto: valores.tarifa,
-        totalSpots: 1,
+        valorTotal: Number(valores.tarifa), // Inicialmente el valor es igual a la tarifa (1 spot)
+        valorNeto: Number(valores.tarifa),
+        totalSpots: 1, // Inicialmente 1 spot
         diasSeleccionados: [],
         totalDiasSeleccionados: 0
       };

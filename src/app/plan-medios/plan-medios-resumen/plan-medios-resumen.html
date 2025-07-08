@@ -94,7 +94,7 @@
             <ng-container *ngIf="periodoSeleccionado.medios.length > 0">
               <ng-container *ngFor="let medio of periodoSeleccionado.medios; let i = index">
                 <!-- Fila del medio -->
-                <tr class="fila-medio" (dblclick)="onEditarMedio(medio)" title="Doble click para editar este medio">
+                <tr class="fila-medio">
                   <td>{{ medio.nombre }}</td>
                   <td>{{ medio.proveedor || 'Sin proveedor' }}</td>
                   <td colspan="5">
@@ -108,19 +108,30 @@
                   <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td class="valor-soi">{{ calcularPorcentaje(medio.valorNeto) | number:'1.1-1' }}%</td>
                 </tr>
-                <!-- Fila de salidas -->
-                <tr class="fila-salidas">
-                  <td>SALIDAS</td>
+                <!-- Fila de spots -->
+                <tr class="fila-spots">
+                  <td>SPOTS</td>
                   <td></td>
-                  <td colspan="5"></td>
-                  <td class="valor-total">{{ medio.salidas }}</td>
+                  <td *ngFor="let semana of medio.semanas; let j = index" class="spots-cell">
+                    <input 
+                      type="number" 
+                      class="spots-input"
+                      [value]="medio.spotsPorSemana && medio.spotsPorSemana[j] ? medio.spotsPorSemana[j] : 0"
+                      (blur)="onSpotsChange(medio, j, $event)"
+                      min="0"
+                      step="1"
+                      [disabled]="!semana">
+                  </td>
+                  <td class="valor-total">{{ calcularTotalSpots(medio) }}</td>
                   <td class="valor-soi">{{ medio.soi | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 </tr>
-                <!-- Fila de valor neto -->
-                <tr class="fila-valor">
-                  <td>Valor neto</td>
+                <!-- Fila de inversiones -->
+                <tr class="fila-inversiones">
+                  <td>INVERSIONES</td>
                   <td></td>
-                  <td colspan="5"></td>
+                  <td *ngFor="let semana of medio.semanas; let j = index" class="inversiones-cell">
+                    {{ calcularInversionSemana(medio, j) | currency:'USD':'symbol-narrow':'1.0-0' }}
+                  </td>
                   <td class="valor-total">{{ medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td></td>
                 </tr>
