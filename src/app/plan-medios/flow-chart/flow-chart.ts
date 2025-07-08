@@ -43,7 +43,7 @@ interface PlanData {
 }
 
 @Component({
-  selector: 'app-plan-medios-nueva-pauta',
+  selector: 'app-flow-chart',
   standalone: true,
   imports: [
     CommonModule,
@@ -63,8 +63,8 @@ interface PlanData {
     MatDatepickerModule,
     MatNativeDateModule
   ],
-  templateUrl: './plan-medios-nueva-pauta.html',
-  styleUrls: ['./plan-medios-nueva-pauta.scss'],
+  templateUrl: './flow-chart.html',
+  styleUrls: ['./flow-chart.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [
     trigger('slideAnimation', [
@@ -78,7 +78,7 @@ interface PlanData {
     ])
   ]
 })
-export class PlanMediosNuevaPauta implements OnInit {
+export class FlowChart implements OnInit {
   // Formulario principal para seleccionar medio
   seleccionForm!: FormGroup;
   

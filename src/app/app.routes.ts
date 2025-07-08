@@ -16,6 +16,12 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'flow-chart',
+    loadComponent: () =>
+      import('./plan-medios/flow-chart/flow-chart').then(
+        (m) => m.FlowChart
+      ),
+  }, {
     path: 'plan-medios-consulta',
     loadComponent: () =>
       import('./plan-medios/plan-medios-consulta/plan-medios-consulta').then(
