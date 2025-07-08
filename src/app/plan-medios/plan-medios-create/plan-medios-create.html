@@ -133,12 +133,7 @@
           </mat-select>
         </mat-form-field>
 
-        <!-- Tarifa (solo si es Plan de Medios) -->
-        <mat-form-field appearance="fill" class="form-field" 
-                       *ngIf="planMediosForm.get('tipoIngresoPlan')?.value === 'Plan de Medios'">
-          <mat-label>Tarifa</mat-label>
-          <input matInput formControlName="tarifa" type="number" min="0" step="0.01" />
-        </mat-form-field>
+
       </div>
 
       <!-- Botón -->

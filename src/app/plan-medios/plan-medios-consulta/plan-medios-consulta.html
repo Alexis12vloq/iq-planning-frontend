@@ -99,8 +99,7 @@
                 [class.selected-row]="selectedRow === row"
                 [ngClass]="{'selected-column': selectedColumn === column}">
               <span *ngIf="column === 'estado'">{{ row.estado ? 'Aprobado' : 'Sin aprobar' }}</span>
-              <span *ngIf="column === 'tarifa'">{{ row.tipoIngresoPlan === 'Plan de Medios' ? (row.tarifa === 0 ? '-' : (row.tarifa | number:'1.2-2')) : '-' }}</span>
-              <span *ngIf="column !== 'estado' && column !== 'tarifa'">{{ row[column] }}</span>
+                          <span *ngIf="column !== 'estado'">{{ row[column] }}</span>
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="selectColumns"></tr>
