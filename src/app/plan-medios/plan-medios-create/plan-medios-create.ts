@@ -133,6 +133,8 @@ export class PlanMediosCreate implements AfterViewInit {
     campana: new FormControl('', Validators.required),
     fechaInicio: new FormControl('', Validators.required),
     fechaFin: new FormControl('', Validators.required),
+    tipoIngresoPlan: new FormControl('Plan de Medios', Validators.required),
+    tarifa: new FormControl(0),
     estado: new FormControl(false, Validators.required)
   });
 
@@ -294,6 +296,8 @@ export class PlanMediosCreate implements AfterViewInit {
               campana: plan.campana,
               fechaInicio: plan.fechaInicio,
               fechaFin: plan.fechaFin,
+              tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
+              tarifa: plan.tarifa || 0,
               estado: plan.estado
             });
           });
@@ -383,6 +387,8 @@ export class PlanMediosCreate implements AfterViewInit {
             campana: formValue.campana ?? '',
             fechaInicio: formatDate(formValue.fechaInicio),
             fechaFin: formatDate(formValue.fechaFin),
+            tipoIngresoPlan: formValue.tipoIngresoPlan ?? 'Plan de Medios',
+            tarifa: formValue.tarifa ?? 0,
             estado: formValue.estado ?? false
           };
           localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
@@ -406,6 +412,8 @@ export class PlanMediosCreate implements AfterViewInit {
           campana: formValue.campana ?? '',
           fechaInicio: formatDate(formValue.fechaInicio),
           fechaFin: formatDate(formValue.fechaFin),
+          tipoIngresoPlan: formValue.tipoIngresoPlan ?? 'Plan de Medios',
+          tarifa: formValue.tarifa ?? 0,
           estado: false 
         };
 

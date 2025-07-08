@@ -282,12 +282,21 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onAgregarMedio(): void {
-    // Lógica para agregar un nuevo medio
-    this.snackBar.open('Funcionalidad de agregar medio en desarrollo', 'Cerrar', {
-      duration: 3000,
-      horizontalPosition: 'center',
-      verticalPosition: 'top',
-      panelClass: ['success-snackbar']
+    const planData = {
+      id: this.planId, // Usar el ID almacenado
+      numeroPlan: this.resumenPlan.numeroPlan,
+      version: this.resumenPlan.version,
+      cliente: this.resumenPlan.cliente,
+      producto: this.resumenPlan.producto,
+      campana: this.resumenPlan.campana,
+      fechaInicio: this.resumenPlan.fechaInicio,
+      fechaFin: this.resumenPlan.fechaFin
+    };
+    
+    console.log('🔄 Navegando a nueva pauta desde agregar medio con plan data:', planData);
+    
+    this.router.navigate(['/plan-medios-nueva-pauta'], { 
+      state: { planData } 
     });
   }
 

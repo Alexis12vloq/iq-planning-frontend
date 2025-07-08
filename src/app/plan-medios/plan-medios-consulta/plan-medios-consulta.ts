@@ -35,8 +35,10 @@ type Resultado = {
   fechaInicio: string;
   fechaFin: string;
   campania: string;
+  tipoIngresoPlan: string;
+  tarifa: number;
   estado: boolean;
-  [key: string]: string | boolean; // <-- permite acceso dinámico por string
+  [key: string]: string | boolean | number; // <-- permite acceso dinámico por string
 };
 
 @Component({
@@ -165,11 +167,11 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   resultados: Resultado[] = [];
 
   displayedColumns: string[] = [
-    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'estado'
+    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'tipoIngresoPlan', 'tarifa', 'estado'
   ];
 
   selectColumns: string[] = [
-    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'estado'
+    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'tipoIngresoPlan', 'tarifa', 'estado'
   ];
 
   sort: Sort = {active: '', direction: ''};
@@ -198,6 +200,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     fechaInicio: 'Fecha Inicio',
     fechaFin: 'Fecha Fin',
     campania: 'Campaña',
+    tipoIngresoPlan: 'Tipo de Ingreso',
+    tarifa: 'Tarifa',
     estado: 'Estado'
   };
 
@@ -372,6 +376,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         fechaInicio: plan.fechaInicio,
         fechaFin: plan.fechaFin,
         campania: plan.campana,
+        tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
+        tarifa: plan.tarifa || 0,
         estado: plan.estado ?? false // si no existe, por defecto false
       }));
       // Solo la última versión por número de plan
@@ -450,6 +456,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         fechaInicio: plan.fechaInicio,
         fechaFin: plan.fechaFin,
         campania: plan.campana,
+        tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
+        tarifa: plan.tarifa || 0,
         estado: plan.estado ?? false
       }))
       .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
@@ -478,6 +486,9 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       return value ? 'Aprobado' : 'Sin aprobar';
     }
     if (typeof value === 'number') {
+      if (column === 'tarifa') {
+        return value === 0 ? '-' : value.toFixed(2);
+      }
       return value.toString();
     }
     return value ?? '';
@@ -574,6 +585,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         fechaInicio: plan.fechaInicio,
         fechaFin: plan.fechaFin,
         campania: plan.campana,
+        tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
+        tarifa: plan.tarifa || 0,
         estado: plan.estado ?? false // si no existe, por defecto false
       }));
       // Solo la última versión por número de plan

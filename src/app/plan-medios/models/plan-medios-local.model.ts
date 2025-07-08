@@ -14,5 +14,7 @@ export interface PlanMediosLocal {
   fechaInicio: string;
   fechaFin: string;
   estado: boolean;
+  tipoIngresoPlan: string; // Nuevo campo: 'Plan de Medios' o 'Flow Chart'
+  tarifa?: number; // Nuevo campo: Solo para 'Plan de Medios'
   // Puedes agregar más campos aquí en el futuro
 }
