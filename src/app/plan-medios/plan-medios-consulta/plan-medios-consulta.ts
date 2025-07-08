@@ -769,12 +769,22 @@ export class VersionesPlanDialog implements AfterViewInit {
       producto: row.producto,
       campana: row.campania,
       fechaInicio: row.fechaInicio,
-      fechaFin: row.fechaFin
+      fechaFin: row.fechaFin,
+      tipoIngresoPlan: row.tipoIngresoPlan
     };
     
-    this.router.navigate(['/plan-medios-resumen'], { 
-      state: { planData } 
-    });
+    // Validar el tipo de plan para redirigir a la ruta correcta
+    if (row.tipoIngresoPlan === 'Plan de Medios') {
+      this.router.navigate(['/plan-medios-resumen'], { 
+        state: { planData } 
+      });
+    } else {
+      // Si no es Plan de Medios, redirigir al flow chart
+      this.router.navigate(['/flow-chart'], { 
+        state: { planData } 
+      });
+    }
+    
     this.dialogRef.close();
   }
 
@@ -873,6 +883,7 @@ export class VersionesPlanDialog implements AfterViewInit {
           fechaInicio: plan.fechaInicio,
           fechaFin: plan.fechaFin,
           campania: plan.campana,
+          tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
           estado: plan.estado ?? false
         }))
         .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
