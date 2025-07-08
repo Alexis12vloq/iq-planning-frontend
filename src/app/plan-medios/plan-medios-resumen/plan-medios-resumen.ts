@@ -19,7 +19,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 interface FilaMedio {
-  tipo: 'nombre' | 'salidas' | 'valor';
+  tipo: 'nombre' | 'salidas' | 'valor' | 'encabezado-medio' | 'spots' | 'inversiones';
   medio?: MedioPlan;
   nombre?: string;
   salidas?: number;
@@ -155,34 +155,70 @@ export class PlanMediosResumen implements OnInit {
   ngOnInit(): void {}
 
   prepararDataSource() {
-    const filas: FilaMedio[] = [];
+    // Agrupar medios por nombre de medio
+    const mediosAgrupados = new Map<string, MedioPlan[]>();
+    
     this.periodoSeleccionado.medios.forEach(medio => {
-      // Fila del nombre del medio
-      filas.push({
-        tipo: 'nombre',
-        medio: medio,
-        nombre: medio.nombre,
-        semanas: medio.semanas,
-        soi: medio.soi
-      });
-      // Fila de salidas
-      filas.push({
-        tipo: 'salidas',
-        salidas: medio.salidas
-      });
-      // Fila de valor neto
-      filas.push({
-        tipo: 'valor',
-        valorNeto: medio.valorNeto
+      if (!mediosAgrupados.has(medio.nombre)) {
+        mediosAgrupados.set(medio.nombre, []);
+      }
+      mediosAgrupados.get(medio.nombre)!.push(medio);
+    });
+
+    const filas: FilaMedio[] = [];
+    
+    // Iterar sobre cada grupo de medios
+    mediosAgrupados.forEach((mediosDelGrupo, nombreMedio) => {
+      // Agregar fila de encabezado del medio (solo si hay más de un proveedor)
+      if (mediosDelGrupo.length > 1) {
+        filas.push({
+          tipo: 'encabezado-medio',
+          nombre: nombreMedio,
+          semanas: [],
+          soi: 0
+        });
+      }
+
+      // Agregar filas para cada proveedor del medio
+      mediosDelGrupo.forEach(medio => {
+        // Fila del proveedor
+        filas.push({
+          tipo: 'nombre',
+          medio: medio,
+          nombre: mediosDelGrupo.length > 1 ? `  ${medio.proveedor || 'Sin proveedor'}` : medio.nombre,
+          semanas: medio.semanas,
+          soi: medio.soi
+        });
+        
+        // Fila de spots del proveedor
+        filas.push({
+          tipo: 'spots',
+          medio: medio,
+          nombre: 'SPOTS'
+        });
+        
+        // Fila de inversiones del proveedor
+        filas.push({
+          tipo: 'inversiones',
+          medio: medio,
+          nombre: 'INVERSIONES'
+        });
       });
     });
+
     this.dataSource = filas;
   }
 
   obtenerClaseFila(fila: FilaMedio): string {
     switch (fila.tipo) {
+      case 'encabezado-medio':
+        return 'fila-encabezado-medio';
       case 'nombre':
         return 'fila-medio';
+      case 'spots':
+        return 'fila-spots';
+      case 'inversiones':
+        return 'fila-inversiones';
       case 'salidas':
         return 'fila-salidas';
       case 'valor':
@@ -774,6 +810,9 @@ export class PlanMediosResumen implements OnInit {
     this.periodoSeleccionado.totalInversionNeta = totalInversionNeta;
     this.periodoSeleccionado.iva = iva;
     this.periodoSeleccionado.totalInversion = totalInversion;
+    
+    // Actualizar el dataSource para reflejar los cambios
+    this.prepararDataSource();
   }
 
   // Método para guardar cambios en localStorage

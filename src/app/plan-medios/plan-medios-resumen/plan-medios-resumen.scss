@@ -456,6 +456,19 @@
   }
 } 
 
+  .fila-encabezado-medio {
+    background-color: #2d3a45;
+    color: white;
+    font-weight: bold;
+    
+    td {
+      padding: 8px;
+      font-size: 13px;
+      color: white;
+      border-color: #2d3a45;
+    }
+  }
+
   .fila-spots {
     background-color: #f0f8ff;
     
