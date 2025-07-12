@@ -59,6 +59,7 @@ export class PlanMediosResumen implements OnInit {
   semanasConFechas: Array<{nombre: string, fechaInicio: string, fechaFin: string}> = [];
   dataSource: FilaMedio[] = [];
   planId: string | undefined; // Almacenar el ID del plan
+  flowChartAsociado: boolean = false; // Flag para saber si ya está asociado al flowchart
 
   constructor(
     private snackBar: MatSnackBar,
@@ -148,8 +149,15 @@ export class PlanMediosResumen implements OnInit {
     this.calcularSemanasConFechas();
     this.prepararDataSource();
     
+    // Verificar si el flowchart ya está asociado
+    if (this.planId) {
+      const flowChartFlags = JSON.parse(localStorage.getItem('flowChartFlags') || '{}');
+      this.flowChartAsociado = flowChartFlags[this.planId] || false;
+    }
+    
     console.log('📋 Resumen final configurado:', this.resumenPlan);
     console.log('📋 Período seleccionado:', this.periodoSeleccionado);
+    console.log('📊 FlowChart asociado:', this.flowChartAsociado);
   }
 
   ngOnInit(): void {}
@@ -356,6 +364,62 @@ export class PlanMediosResumen implements OnInit {
     });
   }
 
+  onAsociarFlowChart(): void {
+    // Marcar como asociado al flowchart
+    this.flowChartAsociado = true;
+    
+    // Guardar el flag en localStorage
+    if (this.planId) {
+      const flowChartFlags = JSON.parse(localStorage.getItem('flowChartFlags') || '{}');
+      flowChartFlags[this.planId] = true;
+      localStorage.setItem('flowChartFlags', JSON.stringify(flowChartFlags));
+    }
+    
+    // Preparar datos para enviar al flowchart
+    const datosFlowChart = {
+      planId: this.planId,
+      planData: this.resumenPlan,
+      mediosYProveedores: this.periodoSeleccionado.medios.map(medio => ({
+        medio: medio.nombre,
+        proveedor: medio.proveedor,
+        proveedorId: medio.proveedorId,
+        pais: this.resumenPlan.cliente, // Usar cliente como referencia del país
+        tarifa: medio.tarifa,
+        // Sin data específica, solo la estructura
+        sinData: true
+      }))
+    };
+    
+    // Guardar en storage del flowchart
+    const flowChartStorage = JSON.parse(localStorage.getItem('flowChartData') || '[]');
+    
+    // Agregar o actualizar datos del plan actual
+    const existingIndex = flowChartStorage.findIndex((item: any) => item.planId === this.planId);
+    if (existingIndex !== -1) {
+      flowChartStorage[existingIndex] = datosFlowChart;
+    } else {
+      flowChartStorage.push(datosFlowChart);
+    }
+    
+    localStorage.setItem('flowChartData', JSON.stringify(flowChartStorage));
+    
+    // Mostrar confirmación
+    this.snackBar.open('FlowChart asociado correctamente', '', { 
+      duration: 2000,
+      horizontalPosition: 'right',
+      verticalPosition: 'bottom'
+    });
+    
+    // Navegar al flowchart
+    this.router.navigate(['/flow-chart'], { 
+      state: { 
+        planData: this.resumenPlan,
+        mediosYProveedores: datosFlowChart.mediosYProveedores,
+        fromPlanMedios: true
+      }
+    });
+  }
+
   onAprobarPlan(): void {
     if (this.resumenPlan.aprobado) {
       this.snackBar.open('Plan aprobado exitosamente', 'Cerrar', {
@@ -544,37 +608,48 @@ export class PlanMediosResumen implements OnInit {
         );
       }
       
+      // Cargar spots guardados desde localStorage
+      const spotsGuardados = respuestaPauta.datos?.spotsPorSemana || [0, 0, 0, 0, 0];
+      const totalSpotsGuardados = spotsGuardados.reduce((total: number, spots: number) => total + spots, 0);
+      
       if (mediosMap.has(claveAgrupacion)) {
         // Si el medio y proveedor ya existen, sumar los valores
         const medioExistente = mediosMap.get(claveAgrupacion)!;
-        medioExistente.salidas = 0; // Mantener en 0
+        medioExistente.salidas = Math.max(medioExistente.salidas, totalSpotsGuardados); // Usar spots guardados
         medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
         // Para semanas, hacer OR lógico (si cualquier pauta tiene true, el resultado es true)
         medioExistente.semanas = medioExistente.semanas.map((valor, index) => 
           valor || semanasBoolean[index]
         );
         // Calcular SOI promedio
-        medioExistente.soi = Math.round((medioExistente.valorNeto / Math.max(medioExistente.salidas, 1)) || 0);
-        // Mantener spots en 0
-        medioExistente.spotsPorSemana = [0, 0, 0, 0, 0];
+        medioExistente.soi = medioExistente.salidas > 0 ? Math.round(medioExistente.valorNeto / medioExistente.salidas) : 0;
+        // Cargar spots guardados
+        medioExistente.spotsPorSemana = spotsGuardados;
       } else {
         // Crear nuevo medio con proveedor
         mediosMap.set(claveAgrupacion, {
           nombre: medio,
           proveedor: proveedor,
           proveedorId: proveedorId,
-          salidas: 0, // Inicializar en 0 
+          salidas: totalSpotsGuardados, // Usar spots guardados
           valorNeto: Number(valorTotal),
-          soi: Math.round((Number(valorTotal) / Math.max(Number(totalSpots), 1)) || 0),
+          soi: totalSpotsGuardados > 0 ? Math.round(Number(valorTotal) / totalSpotsGuardados) : 0,
           semanas: semanasBoolean,
           tarifa: tarifa,
-          spotsPorSemana: [0, 0, 0, 0, 0] // Inicializar todos los spots en 0
+          spotsPorSemana: spotsGuardados // Cargar spots guardados
         });
       }
     });
 
     // Convertir map a array
     const medios = Array.from(mediosMap.values());
+    
+    // Recalcular inversiones basadas en spots cargados
+    medios.forEach(medio => {
+      if (medio.tarifa && medio.salidas > 0) {
+        medio.valorNeto = medio.salidas * medio.tarifa;
+      }
+    });
     
     // Calcular totales
     const totalInversionNeta = medios.reduce((total, medio) => total + medio.valorNeto, 0);
@@ -616,32 +691,43 @@ export class PlanMediosResumen implements OnInit {
       // Para pautas del estado, usar semanas por defecto (se pueden mejorar después)
       const semanasBoolean = [true, true, true, true, true]; // Todas las semanas activas por defecto
       
+      // Cargar spots guardados desde localStorage  
+      const spotsGuardados = pautaResumen.datos?.spotsPorSemana || [0, 0, 0, 0, 0];
+      const totalSpotsGuardados = spotsGuardados.reduce((total: number, spots: number) => total + spots, 0);
+      
       if (mediosMap.has(claveAgrupacion)) {
         // Si el medio y proveedor ya existen, sumar los valores
         const medioExistente = mediosMap.get(claveAgrupacion)!;
-        medioExistente.salidas = 0; // Mantener en 0
+        medioExistente.salidas = Math.max(medioExistente.salidas, totalSpotsGuardados); // Usar spots guardados
         medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
-        medioExistente.soi = Math.round((medioExistente.valorNeto / Math.max(medioExistente.salidas, 1)) || 0);
-        // Mantener spots en 0
-        medioExistente.spotsPorSemana = [0, 0, 0, 0, 0];
+        medioExistente.soi = medioExistente.salidas > 0 ? Math.round(medioExistente.valorNeto / medioExistente.salidas) : 0;
+        // Cargar spots guardados
+        medioExistente.spotsPorSemana = spotsGuardados;
       } else {
         // Crear nuevo medio con proveedor
         mediosMap.set(claveAgrupacion, {
           nombre: medio,
           proveedor: proveedor,
           proveedorId: proveedorId,
-          salidas: 0, // Inicializar en 0
+          salidas: totalSpotsGuardados, // Usar spots guardados
           valorNeto: Number(valorTotal),
-          soi: Math.round((Number(valorTotal) / Math.max(Number(totalSpots), 1)) || 0),
+          soi: totalSpotsGuardados > 0 ? Math.round(Number(valorTotal) / totalSpotsGuardados) : 0,
           semanas: semanasBoolean,
           tarifa: tarifa,
-          spotsPorSemana: [0, 0, 0, 0, 0] // Inicializar todos los spots en 0
+          spotsPorSemana: spotsGuardados // Cargar spots guardados
         });
       }
     });
 
     // Convertir map a array
     const medios = Array.from(mediosMap.values());
+    
+    // Recalcular inversiones basadas en spots cargados
+    medios.forEach(medio => {
+      if (medio.tarifa && medio.salidas > 0) {
+        medio.valorNeto = medio.salidas * medio.tarifa;
+      }
+    });
     
     // CORRECCIÓN: Calcular totales SIEMPRE desde la suma de medios (no usar presupuestoTotal)
     const totalInversionNeta = medios.reduce((total, medio) => {
@@ -747,6 +833,8 @@ export class PlanMediosResumen implements OnInit {
       this.periodoSeleccionado = periodosReales[0];
       this.calcularSemanasConFechas();
       this.prepararDataSource();
+      this.actualizarTotalesPeriodo(); // Asegurar que los totales se recalculen
+      console.log('✅ Resumen recargado con spots guardados:', this.periodoSeleccionado.medios);
     }
   }
 

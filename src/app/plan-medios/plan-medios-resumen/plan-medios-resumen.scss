@@ -162,6 +162,16 @@
         background-color: darken(#f3e5f5, 5%);
       }
     }
+
+    &.orange-button {
+      background-color: #ffe0b2;
+      color: #e65100;
+      border: none;
+
+      &:hover {
+        background-color: darken(#ffe0b2, 5%);
+      }
+    }
   }
 }
 

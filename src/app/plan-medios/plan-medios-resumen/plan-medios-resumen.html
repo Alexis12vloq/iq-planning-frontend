@@ -36,6 +36,10 @@
           <button mat-raised-button class="action-button green-button" (click)="onAgregarMedio()">
             <mat-icon>add_circle</mat-icon> Agregar Medio
           </button>
+          <button mat-raised-button class="action-button orange-button" (click)="onAsociarFlowChart()">
+            <mat-icon>{{ flowChartAsociado ? 'analytics' : 'link' }}</mat-icon> 
+            {{ flowChartAsociado ? 'Ir a FlowChart' : 'Asociar FlowChart' }}
+          </button>
           <button mat-raised-button class="action-button blue-button" (click)="onDescargaFlow()">
             <mat-icon>download</mat-icon> Descarga FlowChart
           </button>
