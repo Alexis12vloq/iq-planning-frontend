@@ -460,7 +460,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
 
     const dialogRef = this.dialog.open(VersionesPlanDialog, {
-      width: '1200px',
+      width: '90vw',
+      maxWidth: '700px',
       data: { versiones },
       disableClose: true,
     });
@@ -659,7 +660,7 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
   ],
   template: `
       <h2 mat-dialog-title 
-          style="font-family: 'Montserrat', 'Roboto', Arial, sans-serif; font-size:1.5rem; font-weight:700; color:#3c5977; letter-spacing:1px; text-transform:uppercase; margin-bottom:0; display: flex; justify-content: space-between; align-items: center;">
+          style="font-family: 'Montserrat', 'Roboto', Arial, sans-serif; font-size:1.5rem; font-weight:700; color:#3c5977; letter-spacing:1px; text-transform:uppercase; margin-bottom:0; display: flex; justify-content: space-between; align-items: center; padding: 24px;">
         
         <span>
           Versiones del Plan {{ data.versiones[0]?.numeroPlan || '' }}
@@ -670,78 +671,78 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
         </button>
       </h2>
 
-    <mat-dialog-content style="max-width: 1000px;">
+    <mat-dialog-content style="padding: 24px; width: 100%;">
       <!-- Filtros -->
-      <div class="filtros-container" style="margin-bottom: 16px; display: flex; gap: 16px; align-items: center;">
-        <mat-form-field appearance="outline" style="width: 200px;">
+      <div class="filtros-container" style="margin-bottom: 24px; display: flex; gap: 24px; align-items: center;">
+        <mat-form-field appearance="outline" style="width: 250px;">
           <mat-label>Buscar por versión</mat-label>
           <input matInput [(ngModel)]="filtroVersion" (input)="aplicarFiltros()" placeholder="Ej: 1">
         </mat-form-field>
         
-        <mat-form-field appearance="outline" style="width: 200px;">
+        <mat-form-field appearance="outline" style="width: 250px;">
           <mat-label>Fecha de creación</mat-label>
           <input matInput [matDatepicker]="picker" [(ngModel)]="filtroFechaCreacion" (dateChange)="aplicarFiltros()">
           <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
           <mat-datepicker #picker></mat-datepicker>
         </mat-form-field>
         
-        <button mat-raised-button color="primary" (click)="limpiarFiltros()" style="height: 40px;">
+        <button mat-raised-button color="primary" (click)="limpiarFiltros()" style="height: 48px; padding: 0 24px;">
           <mat-icon>clear</mat-icon>
           Limpiar filtros
         </button>
       </div>
 
-      <div style="overflow-x:auto; margin-bottom:24px;">
+      <div style="margin-bottom:24px;">
         <div class="mat-elevation-z8">
           <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8" style="width:100%;">
             <ng-container matColumnDef="fechaCreacion">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header style="font-weight: bold;">Fecha Creación</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="font-weight: bold;">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="font-weight: bold; padding: 12px 16px; min-width: 140px;">Fecha Creación</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="font-weight: bold; padding: 12px 16px;">
                 {{ row.fechaCreacion || 'N/A' }}
               </td>
             </ng-container>
             <ng-container matColumnDef="version">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Versión</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 100px;">Versión</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
                 {{ row.version }}
               </td>
             </ng-container>
             <ng-container matColumnDef="fechaInicio">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Inicio</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 140px;">Fecha Inicio</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
                 {{ row.fechaInicio }}
               </td>
             </ng-container>
             <ng-container matColumnDef="fechaFin">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Fin</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 140px;">Fecha Fin</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
                 {{ row.fechaFin }}
               </td>
             </ng-container>
             <ng-container matColumnDef="campania">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Campaña</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 160px;">Campaña</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
                 {{ row.campania }}
               </td>
             </ng-container>
             <ng-container matColumnDef="estado">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 140px;">Estado</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
                 {{ row.estado ? 'Aprobado' : 'Sin aprobar' }}
               </td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)"></tr>
           </table>
-          <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page"></mat-paginator>
+          <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page" style="padding: 16px;"></mat-paginator>
         </div>
       </div>
     </mat-dialog-content>
-    <mat-dialog-actions align="center" style="display:flex; flex-direction:row; gap:25px;">
-      <button mat-raised-button color="primary" (click)="copiarPlan()" [disabled]="!selectedRow">
+    <mat-dialog-actions align="center" style="display:flex; flex-direction:row; gap:32px; padding: 24px;">
+      <button mat-raised-button color="primary" (click)="copiarPlan()" [disabled]="!selectedRow" style="padding: 12px 24px; font-size: 16px;">
         <mat-icon>content_copy</mat-icon> Copiar plan
       </button>
-      <button mat-raised-button color="accent" (click)="nuevaVersion()" [disabled]="!selectedRow">
+      <button mat-raised-button color="accent" (click)="nuevaVersion()" [disabled]="!selectedRow" style="padding: 12px 24px; font-size: 16px;">
         <mat-icon>add_circle_outline</mat-icon> Generar nueva versión
       </button>
     </mat-dialog-actions>
