@@ -15,5 +15,6 @@ export interface PlanMediosLocal {
   fechaFin: string;
   estado: boolean;
   tipoIngresoPlan: string; // Nuevo campo: 'Plan de Medios' o 'Flow Chart'
+  fechaCreacion: string; // Nueva fecha de creación del plan
   // Puedes agregar más campos aquí en el futuro
 }

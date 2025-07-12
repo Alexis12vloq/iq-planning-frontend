@@ -133,7 +133,6 @@ export class PlanMediosCreate implements AfterViewInit {
     campana: new FormControl('', Validators.required),
     fechaInicio: new FormControl('', Validators.required),
     fechaFin: new FormControl('', Validators.required),
-    tipoIngresoPlan: new FormControl('Plan de Medios', Validators.required),
     estado: new FormControl(false, Validators.required)
   });
 
@@ -295,7 +294,6 @@ export class PlanMediosCreate implements AfterViewInit {
               campana: plan.campana,
               fechaInicio: plan.fechaInicio,
               fechaFin: plan.fechaFin,
-              tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
               estado: plan.estado
             });
           });
@@ -383,10 +381,11 @@ export class PlanMediosCreate implements AfterViewInit {
             marca: formValue.marca ?? '',
             producto: formValue.producto ?? '',
             campana: formValue.campana ?? '',
-            fechaInicio: formatDate(formValue.fechaInicio),
-            fechaFin: formatDate(formValue.fechaFin),
-            tipoIngresoPlan: formValue.tipoIngresoPlan ?? 'Plan de Medios',
-            estado: formValue.estado ?? false
+                          fechaInicio: formatDate(formValue.fechaInicio),
+              fechaFin: formatDate(formValue.fechaFin),
+              tipoIngresoPlan: planesGuardados[idx].tipoIngresoPlan || 'Plan de Medios', // Mantener valor existente
+              fechaCreacion: planesGuardados[idx].fechaCreacion || new Date().toISOString().slice(0, 10), // Mantener fecha de creación existente
+              estado: formValue.estado ?? false
           };
           localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
         }
@@ -409,7 +408,8 @@ export class PlanMediosCreate implements AfterViewInit {
           campana: formValue.campana ?? '',
           fechaInicio: formatDate(formValue.fechaInicio),
           fechaFin: formatDate(formValue.fechaFin),
-          tipoIngresoPlan: formValue.tipoIngresoPlan ?? 'Plan de Medios',
+          tipoIngresoPlan: 'Plan de Medios', // Valor por defecto
+          fechaCreacion: new Date().toISOString().slice(0, 10), // Fecha de creación
           estado: false 
         };
 

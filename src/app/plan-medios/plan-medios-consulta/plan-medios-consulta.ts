@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Observable, startWith, map } from 'rxjs';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
 import { CommonModule } from '@angular/common';
@@ -454,6 +454,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         fechaFin: plan.fechaFin,
         campania: plan.campana,
         tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
+        fechaCreacion: plan.fechaCreacion || new Date().toISOString().slice(0, 10), // Incluir fecha de creación
         estado: plan.estado ?? false
       }))
       .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
@@ -648,7 +649,13 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     MatButtonModule,
     MatTableModule,
     MatPaginatorModule,
-    MatIconModule
+    MatIconModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    CommonModule,
+    FormsModule
   ],
   template: `
       <h2 mat-dialog-title 
@@ -664,9 +671,35 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
       </h2>
 
     <mat-dialog-content style="max-width: 1000px;">
+      <!-- Filtros -->
+      <div class="filtros-container" style="margin-bottom: 16px; display: flex; gap: 16px; align-items: center;">
+        <mat-form-field appearance="outline" style="width: 200px;">
+          <mat-label>Buscar por versión</mat-label>
+          <input matInput [(ngModel)]="filtroVersion" (input)="aplicarFiltros()" placeholder="Ej: 1">
+        </mat-form-field>
+        
+        <mat-form-field appearance="outline" style="width: 200px;">
+          <mat-label>Fecha de creación</mat-label>
+          <input matInput [matDatepicker]="picker" [(ngModel)]="filtroFechaCreacion" (dateChange)="aplicarFiltros()">
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+        
+        <button mat-raised-button color="primary" (click)="limpiarFiltros()" style="height: 40px;">
+          <mat-icon>clear</mat-icon>
+          Limpiar filtros
+        </button>
+      </div>
+
       <div style="overflow-x:auto; margin-bottom:24px;">
         <div class="mat-elevation-z8">
           <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8" style="width:100%;">
+            <ng-container matColumnDef="fechaCreacion">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header style="font-weight: bold;">Fecha Creación</th>
+              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="font-weight: bold;">
+                {{ row.fechaCreacion || 'N/A' }}
+              </td>
+            </ng-container>
             <ng-container matColumnDef="version">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Versión</th>
               <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)">
@@ -723,10 +756,15 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
   `]
 })
 export class VersionesPlanDialog implements AfterViewInit {
-  displayedColumns = ['version', 'fechaInicio', 'fechaFin', 'campania', 'estado'];
+  displayedColumns = ['fechaCreacion', 'version', 'fechaInicio', 'fechaFin', 'campania', 'estado'];
   dataSource: MatTableDataSource<any>;
   selectedRow: any = null;
   isLoading = false;
+  
+  // Propiedades para filtros
+  filtroVersion: string = '';
+  filtroFechaCreacion: Date | null = null;
+  datosOriginales: any[] = [];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
@@ -737,6 +775,7 @@ export class VersionesPlanDialog implements AfterViewInit {
     public dialogRef: MatDialogRef<VersionesPlanDialog>,
     @Inject(MAT_DIALOG_DATA) public data: { versiones: any[] }
   ) {
+    this.datosOriginales = data.versiones; // Guardar datos originales
     this.dataSource = new MatTableDataSource<any>(data.versiones); // <-- inicializa aquí
   }
 
@@ -750,6 +789,33 @@ export class VersionesPlanDialog implements AfterViewInit {
 
   cerrar() {
     this.dialogRef.close();
+  }
+
+  aplicarFiltros() {
+    let datosFiltrados = [...this.datosOriginales];
+    
+    // Filtrar por versión
+    if (this.filtroVersion && this.filtroVersion.trim() !== '') {
+      datosFiltrados = datosFiltrados.filter(item => 
+        item.version.toString().toLowerCase().includes(this.filtroVersion.toLowerCase())
+      );
+    }
+    
+    // Filtrar por fecha de creación
+    if (this.filtroFechaCreacion) {
+      const fechaFiltro = this.filtroFechaCreacion.toISOString().slice(0, 10);
+      datosFiltrados = datosFiltrados.filter(item => 
+        item.fechaCreacion === fechaFiltro
+      );
+    }
+    
+    this.dataSource.data = datosFiltrados;
+  }
+
+  limpiarFiltros() {
+    this.filtroVersion = '';
+    this.filtroFechaCreacion = null;
+    this.dataSource.data = [...this.datosOriginales];
   }
 
   redirigir(row: Resultado) {
@@ -786,7 +852,7 @@ export class VersionesPlanDialog implements AfterViewInit {
       data: { message: msg }
     });
   }
- // --- NUEVO: Copiar plan ---
+   // --- NUEVO: Copiar plan ---
   copiarPlan() {
     if (!this.selectedRow) return;
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
@@ -813,7 +879,8 @@ export class VersionesPlanDialog implements AfterViewInit {
           ...original,
           id: Date.now().toString(),
           numeroPlan: lastNumeroPlan.toString(),
-          version: "1"
+          version: "1",
+          fechaCreacion: new Date().toISOString().slice(0, 10) // Nueva fecha de creación
         };
         planesGuardados.push(nuevoPlan);
         localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
@@ -845,7 +912,8 @@ export class VersionesPlanDialog implements AfterViewInit {
         const nuevoPlan = {
           ...original,
           id: Date.now().toString(),
-          version: nuevaVersion.toString()
+          version: nuevaVersion.toString(),
+          fechaCreacion: new Date().toISOString().slice(0, 10) // Nueva fecha de creación
         };
         planesGuardados.push(nuevoPlan);
         localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
@@ -876,11 +944,12 @@ export class VersionesPlanDialog implements AfterViewInit {
           fechaFin: plan.fechaFin,
           campania: plan.campana,
           tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
+          fechaCreacion: plan.fechaCreacion || new Date().toISOString().slice(0, 10), // Incluir fecha de creación
           estado: plan.estado ?? false
         }))
         .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
         
-      
+      this.datosOriginales = versiones; // Actualizar datos originales
       this.dataSource.data = versiones;
       this.isLoading = false;
     }, 400); // Simula carga
