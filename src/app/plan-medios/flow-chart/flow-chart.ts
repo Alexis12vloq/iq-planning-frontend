@@ -1467,10 +1467,100 @@ export class FlowChart implements OnInit {
       this.programacionItems[itemId][fechaStr] = spots;
     }
     
-    // Guardar en localStorage
+    // Guardar programación en localStorage
     this.guardarProgramacion();
     
+    // Actualizar automáticamente los datos de la pauta
+    this.actualizarDatosPautaAutomaticamente(itemId);
+    
+    // Mostrar feedback visual de guardado
+    this.mostrarFeedbackGuardado();
+    
     console.log(`📅 Spots actualizados para item ${itemId} en fecha ${fechaStr}: ${spots}`);
+  }
+
+  /**
+   * Actualiza automáticamente los datos de la pauta cuando cambian los spots
+   */
+  private actualizarDatosPautaAutomaticamente(itemId: string): void {
+    // Buscar la pauta en el localStorage
+    const respuestasPautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    const pautaIndex = respuestasPautas.findIndex((pauta: any) => pauta.id === itemId);
+    
+    if (pautaIndex === -1) return;
+    
+    const pauta = respuestasPautas[pautaIndex];
+    
+    // Calcular nuevos totales basados en la programación
+    const totalSpotsProgramados = this.contarTotalSpotsProgramados(itemId);
+    const spotsPorSemana = this.calcularSpotsPorSemana(itemId);
+    
+    // Actualizar los datos de la pauta
+    pauta.totalSpots = totalSpotsProgramados;
+    pauta.fechaModificacion = new Date().toISOString();
+    
+         // Actualizar datos internos si existen
+     if (pauta.datos) {
+       pauta.datos['totalSpots'] = totalSpotsProgramados;
+       pauta.datos['spotsPorSemana'] = spotsPorSemana;
+       pauta.datos['fechaModificacion'] = new Date().toISOString();
+     }
+    
+    // Guardar en localStorage
+    respuestasPautas[pautaIndex] = pauta;
+    localStorage.setItem('respuestasPautas', JSON.stringify(respuestasPautas));
+    
+         // Actualizar también el item local
+     const itemLocal = this.itemsPauta.find(item => item.id === itemId);
+     if (itemLocal) {
+       itemLocal.totalSpots = totalSpotsProgramados;
+       itemLocal.fechaModificacion = new Date().toISOString();
+       if (itemLocal.datos) {
+         itemLocal.datos['totalSpots'] = totalSpotsProgramados;
+         itemLocal.datos['spotsPorSemana'] = spotsPorSemana;
+       }
+     }
+    
+    console.log(`📊 Pauta ${itemId} actualizada automáticamente: ${totalSpotsProgramados} spots totales`);
+  }
+
+  /**
+   * Muestra feedback visual cuando se guardan los datos
+   */
+  private mostrarFeedbackGuardado(): void {
+    // Crear elemento de feedback visual
+    const feedbackElement = document.createElement('div');
+    feedbackElement.innerHTML = '✅ Guardado';
+    feedbackElement.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #4caf50;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    `;
+    
+    document.body.appendChild(feedbackElement);
+    
+    // Mostrar y ocultar el feedback
+    setTimeout(() => {
+      feedbackElement.style.opacity = '1';
+    }, 10);
+    
+    setTimeout(() => {
+      feedbackElement.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(feedbackElement);
+      }, 300);
+    }, 1500);
   }
 
   seleccionarTextoInput(event: Event): void {

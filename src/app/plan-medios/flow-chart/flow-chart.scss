@@ -203,7 +203,7 @@ $background-light: #f8f9fa;
       .programming-table {
         min-width: 100%;
         position: relative;
-
+        
         // Encabezado de la tabla
         .table-header {
           display: flex;
@@ -224,23 +224,29 @@ $background-light: #f8f9fa;
             border-radius: 8px 0 0 0;
 
             .header-cell {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 16px 8px;
+              font-size: 12px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              color: $text-primary;
+              background: #fafafa;
+              border-right: 1px solid $border-color;
+              text-align: center;
+
               &.action-col {
+                width: 120px;
                 min-width: 120px;
-                padding: 16px 12px;
-                font-size: 12px;
-                font-weight: 600;
-                text-align: center;
-                background: #fafafa;
-                border-right: 1px solid $border-color;
+                max-width: 120px;
               }
 
               &.proveedor-col {
-                min-width: 200px;
-                padding: 16px 16px;
-                font-size: 12px;
-                font-weight: 600;
-                background: #fafafa;
-                border-right: 1px solid $border-color;
+                width: 220px;
+                min-width: 220px;
+                max-width: 220px;
               }
             }
           }
@@ -250,14 +256,23 @@ $background-light: #f8f9fa;
             display: flex;
 
             .header-cell {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 16px 8px;
+              font-size: 12px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              color: $text-primary;
+              background: #fafafa;
+              border-right: 1px solid $border-color;
+              text-align: center;
+
               &.dynamic-col {
+                width: 140px;
                 min-width: 140px;
-                padding: 16px 12px;
-                font-size: 12px;
-                font-weight: 600;
-                text-align: center;
-                background: #fafafa;
-                border-right: 1px solid $border-color;
+                max-width: 140px;
               }
             }
           }
@@ -267,14 +282,20 @@ $background-light: #f8f9fa;
             display: flex;
 
             .header-cell {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 12px 4px;
+              font-size: 10px;
+              font-weight: 600;
+              text-align: center;
+              background: #fafafa;
+              border-right: 1px solid $border-color;
+
               &.date-col {
+                width: 80px;
                 min-width: 80px;
-                padding: 12px 8px;
-                font-size: 10px;
-                font-weight: 600;
-                text-align: center;
-                background: #fafafa;
-                border-right: 1px solid $border-color;
+                max-width: 80px;
 
                 &.weekend {
                   background: #ffe0e0;
@@ -289,6 +310,7 @@ $background-light: #f8f9fa;
                   display: flex;
                   flex-direction: column;
                   gap: 2px;
+                  align-items: center;
 
                   .date-day {
                     font-size: 14px;
@@ -314,159 +336,183 @@ $background-light: #f8f9fa;
         // Cuerpo de la tabla
         .table-body {
           .table-row {
-            &.pauta-row {
+            display: flex;
+            border-bottom: 1px solid $border-color;
+            transition: background-color 0.2s ease;
+
+            &:hover {
+              background: rgba(25, 118, 210, 0.04);
+            }
+
+            // Columnas fijas
+            .fixed-columns {
               display: flex;
-              border-bottom: 1px solid $border-color;
-              transition: background-color 0.2s ease;
+              position: sticky;
+              left: 0;
+              z-index: 9;
+              background: white;
 
-              &:hover {
-                background: rgba(25, 118, 210, 0.04);
-              }
-
-              // Columnas fijas
-              .fixed-columns {
+              .data-cell {
                 display: flex;
-                position: sticky;
-                left: 0;
-                z-index: 9;
+                align-items: center;
+                padding: 12px 8px;
                 background: white;
+                border-right: 1px solid $border-color;
 
-                .data-cell {
-                  &.action-col {
-                    min-width: 120px;
-                    padding: 12px;
-                    background: white;
-                    border-right: 1px solid $border-color;
+                &.action-col {
+                  width: 120px;
+                  min-width: 120px;
+                  max-width: 120px;
+                  justify-content: center;
 
-                    .action-buttons {
-                      display: flex;
-                      gap: 8px;
-                      justify-content: center;
+                  .action-buttons {
+                    display: flex;
+                    gap: 8px;
+                    justify-content: center;
 
-                      .action-edit-button, .action-delete-button {
-                        width: 36px;
-                        height: 36px;
-                        border-radius: 6px;
-                        
-                        mat-icon {
-                          font-size: 18px;
-                        }
-                      }
-
-                      .action-edit-button {
-                        color: $primary-color;
-                        &:hover {
-                          background: rgba(25, 118, 210, 0.1);
-                        }
-                      }
-
-                      .action-delete-button {
-                        color: $error-color;
-                        &:hover {
-                          background: rgba(244, 67, 54, 0.1);
-                        }
+                    .action-edit-button, .action-delete-button {
+                      width: 36px;
+                      height: 36px;
+                      border-radius: 6px;
+                      
+                      mat-icon {
+                        font-size: 18px;
                       }
                     }
-                  }
 
-                  &.proveedor-col {
-                    min-width: 200px;
-                    padding: 12px 16px;
-                    background: white;
-                    border-right: 1px solid $border-color;
+                    .action-edit-button {
+                      color: $primary-color;
+                      &:hover {
+                        background: rgba(25, 118, 210, 0.1);
+                      }
+                    }
 
-                    .cell-content {
-                      &.proveedor-info {
-                        .proveedor-name {
-                          font-size: 14px;
-                          font-weight: 600;
-                          color: $text-primary;
-                          margin-bottom: 4px;
-                        }
-
-                        .pauta-stats {
-                          font-size: 12px;
-                          color: $text-secondary;
-                          display: flex;
-                          gap: 8px;
-                        }
+                    .action-delete-button {
+                      color: $error-color;
+                      &:hover {
+                        background: rgba(244, 67, 54, 0.1);
                       }
                     }
                   }
                 }
-              }
 
-              // Columnas dinámicas
-              .dynamic-columns {
-                display: flex;
+                &.proveedor-col {
+                  width: 220px;
+                  min-width: 220px;
+                  max-width: 220px;
+                  justify-content: flex-start;
 
-                .data-cell {
-                  &.dynamic-col {
-                    min-width: 140px;
-                    padding: 12px;
-                    border-right: 1px solid $border-color;
-
-                    .cell-content {
-                      font-size: 13px;
-                      color: $text-primary;
-                      text-align: center;
-                    }
-                  }
-                }
-              }
-
-              // Columnas de fechas
-              .scrollable-columns {
-                display: flex;
-
-                .data-cell {
-                  &.date-col {
-                    min-width: 80px;
-                    padding: 8px 4px;
-                    border-right: 1px solid $border-color;
-
-                    &.weekend {
-                      background: #fffafa;
-                    }
-
-                    &.today {
-                      background: #f8fff8;
-                    }
-
-                    &.programmed {
-                      background: #e3f2fd;
-                    }
-
-                    .date-cell-content {
-                      display: flex;
-                      justify-content: center;
-                      align-items: center;
-
-                      .spots-input {
-                        width: 60px;
-                        height: 36px;
-                        border: 1px solid $border-color;
-                        border-radius: 6px;
-                        text-align: center;
-                        font-size: 13px;
+                  .cell-content {
+                    width: 100%;
+                    
+                    &.proveedor-info {
+                      .proveedor-name {
+                        font-size: 14px;
                         font-weight: 600;
                         color: $text-primary;
-                        background: white;
-                        transition: all 0.2s ease;
+                        margin-bottom: 4px;
+                        line-height: 1.3;
+                      }
 
-                        &:focus {
-                          outline: none;
-                          border-color: $primary-color;
-                          box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
-                        }
+                      .pauta-stats {
+                        font-size: 12px;
+                        color: $text-secondary;
+                        display: flex;
+                        gap: 8px;
+                        flex-wrap: wrap;
+                      }
+                    }
+                  }
+                }
+              }
+            }
 
-                        &:hover {
-                          border-color: lighten($primary-color, 20%);
-                        }
+            // Columnas dinámicas
+            .dynamic-columns {
+              display: flex;
 
-                        &::placeholder {
-                          color: #ccc;
-                        }
+              .data-cell {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 12px 8px;
+                border-right: 1px solid $border-color;
+
+                &.dynamic-col {
+                  width: 140px;
+                  min-width: 140px;
+                  max-width: 140px;
+
+                  .cell-content {
+                    font-size: 13px;
+                    color: $text-primary;
+                    text-align: center;
+                    line-height: 1.3;
+                    word-break: break-word;
+                  }
+                }
+              }
+            }
+
+            // Columnas de fechas
+            .scrollable-columns {
+              display: flex;
+
+              .data-cell {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 8px 4px;
+                border-right: 1px solid $border-color;
+
+                &.date-col {
+                  width: 80px;
+                  min-width: 80px;
+                  max-width: 80px;
+
+                  &.weekend {
+                    background: #fffafa;
+                  }
+
+                  &.today {
+                    background: #f8fff8;
+                  }
+
+                  &.programmed {
+                    background: #e3f2fd;
+                  }
+
+                  .date-cell-content {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    width: 100%;
+
+                    .spots-input {
+                      width: 60px;
+                      height: 36px;
+                      border: 1px solid $border-color;
+                      border-radius: 6px;
+                      text-align: center;
+                      font-size: 13px;
+                      font-weight: 600;
+                      color: $text-primary;
+                      background: white;
+                      transition: all 0.2s ease;
+                      box-sizing: border-box;
+
+                      &:focus {
+                        outline: none;
+                        border-color: $primary-color;
+                        box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+                      }
+
+                      &:hover {
+                        border-color: lighten($primary-color, 20%);
+                      }
+
+                      &::placeholder {
+                        color: #ccc;
                       }
                     }
                   }
@@ -586,6 +632,12 @@ $background-light: #f8f9fa;
       
       .add-item-btn, .action-btn {
         width: 100%;
+      }
+    }
+
+    .programming-grid-container {
+      .grid-scroll-container {
+        padding: 16px;
       }
     }
   }

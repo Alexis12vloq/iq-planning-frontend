@@ -111,8 +111,7 @@
                 <div class="dynamic-columns">
                   <div 
                     *ngFor="let campo of obtenerColumnasDinamicas(medio)"
-                    class="header-cell dynamic-col"
-                    [style.min-width.px]="120">
+                    class="header-cell dynamic-col">
                     {{ campo.label }}
                   </div>
                 </div>
@@ -137,7 +136,7 @@
               <div class="table-body">
                 <div 
                   *ngFor="let item of itemsPorMedio[medio]; let itemIndex = index; trackBy: trackByItem"
-                  class="table-row pauta-row">
+                  class="table-row">
                   
                   <!-- Columnas fijas -->
                   <div class="fixed-columns">
@@ -174,8 +173,7 @@
                   <div class="dynamic-columns">
                     <div 
                       *ngFor="let campo of obtenerColumnasDinamicas(medio)"
-                      class="data-cell dynamic-col"
-                      [style.min-width.px]="120">
+                      class="data-cell dynamic-col">
                       <div class="cell-content">
                         {{ formatearValorCampo(obtenerValorCampo(item, campo.name), campo) }}
                       </div>
