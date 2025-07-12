@@ -143,6 +143,8 @@ export class FlowChart implements OnInit {
   ) {
     const navigation = this.router.getCurrentNavigation();
     this.planData = navigation?.extras?.state?.['planData'] as PlanData;
+    const fromPlanMedios = navigation?.extras?.state?.['fromPlanMedios'];
+    const mediosYProveedores = navigation?.extras?.state?.['mediosYProveedores'];
 
     if (!this.planData) {
       this.router.navigate(['/plan-medios-resumen']);
@@ -161,6 +163,8 @@ export class FlowChart implements OnInit {
     console.log('✅ FECHAS INICIALIZADAS - Cantidad de fechas generadas:', this.fechasDelPlan.length);
     
     console.log('🆔 Plan Data final con ID:', this.planData);
+    console.log('📊 Viene desde Plan de Medios:', fromPlanMedios);
+    console.log('📊 Medios y Proveedores:', mediosYProveedores);
 
     this.seleccionForm = this.fb.group({
       medio: ['', Validators.required]
@@ -179,6 +183,12 @@ export class FlowChart implements OnInit {
     
     // Verificar si necesita inicializar plantillas
     this.verificarPlantillas();
+    
+    // Si viene desde Plan de Medios, procesar automáticamente los medios
+    if (fromPlanMedios && mediosYProveedores && mediosYProveedores.length > 0) {
+      console.log('🔄 Procesando medios desde Plan de Medios...');
+      this.procesarMediosDelPlan(mediosYProveedores);
+    }
   }
 
   ngOnInit(): void {
@@ -205,6 +215,232 @@ export class FlowChart implements OnInit {
         panelClass: ['info-snackbar']
       });
     }
+  }
+
+  // Procesar medios desde Plan de Medios y crear pautas automáticamente
+  private procesarMediosDelPlan(mediosYProveedores: any[]): void {
+    console.log('🔄 Iniciando procesamiento de medios del plan:', mediosYProveedores);
+    
+    if (!this.planData?.id) {
+      console.error('❌ No hay ID del plan para procesar medios');
+      return;
+    }
+
+    // Verificar si ya existen pautas para este plan
+    const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    const pautasDelPlan = pautasExistentes.filter((pauta: any) => pauta.planId === this.planData?.id);
+    
+    if (pautasDelPlan.length > 0) {
+      console.log('✅ Ya existen pautas para este plan, actualizando con datos del resumen');
+      this.actualizarPautasExistentes(mediosYProveedores, pautasExistentes);
+      return;
+    }
+
+    let pautasCreadas = 0;
+    
+    mediosYProveedores.forEach((medioProveedor: any) => {
+      try {
+        const medio = medioProveedor.medio;
+        const proveedor = medioProveedor.proveedor;
+        const tarifa = medioProveedor.tarifa || 0;
+        const totalSpots = medioProveedor.totalSpots || 1;
+        const valorNeto = medioProveedor.valorNeto || tarifa;
+        const spotsPorSemana = medioProveedor.spotsPorSemana || [0, 0, 0, 0, 0];
+        const semanas = medioProveedor.semanas || [false, false, false, false, false];
+        
+        console.log(`🔄 Procesando: ${medio} - ${proveedor}`);
+        
+        // Obtener plantilla para este medio
+        const plantilla = this.plantillaService.obtenerPlantillaPorMedio(medio);
+        
+        if (!plantilla) {
+          console.warn(`⚠️ No se encontró plantilla para el medio: ${medio}`);
+          return;
+        }
+        
+        // Crear pauta automática basada en la plantilla
+        const pautaAutomatica: RespuestaPauta = {
+          id: `pauta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          planId: this.planData!.id!,
+          medio: medio,
+          proveedor: proveedor,
+          proveedorId: medioProveedor.proveedorId,
+          plantillaId: plantilla.id,
+          paisFacturacion: this.planData!.cliente || 'Default', // Usar cliente como país
+          fechaCreacion: new Date().toISOString(),
+          datos: {
+            ...this.generarDatosPlantilla(plantilla, { tarifa, proveedor }),
+            spotsPorSemana: spotsPorSemana,
+            tarifa: tarifa,
+            valorTotal: valorNeto,
+            totalSpots: totalSpots
+          },
+          totalSpots: totalSpots,
+          valorTotal: valorNeto,
+          valorNeto: valorNeto,
+          semanas: semanas, // Mantener el array de booleans original
+          diasSeleccionados: []
+        };
+        
+        // Si hay spots por semana, crear programación básica
+        if (spotsPorSemana.some((spots: number) => spots > 0)) {
+          this.crearProgramacionDesdeSpotsSemanales(pautaAutomatica.id, spotsPorSemana);
+        }
+        
+        // Guardar en localStorage
+        const pautasActuales = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+        pautasActuales.push(pautaAutomatica);
+        localStorage.setItem('respuestasPautas', JSON.stringify(pautasActuales));
+        
+        pautasCreadas++;
+        console.log(`✅ Pauta creada para ${medio} - ${proveedor}`);
+        
+      } catch (error) {
+        console.error(`❌ Error procesando ${medioProveedor.medio}:`, error);
+      }
+    });
+    
+    if (pautasCreadas > 0) {
+      this.snackBar.open(`${pautasCreadas} medios agregados al FlowChart`, 'Ver', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['success-snackbar']
+      });
+      
+      // Recargar las pautas para mostrar los nuevos items
+      setTimeout(() => {
+        this.cargarPautasExistentes();
+      }, 100);
+    }
+  }
+
+  /**
+   * Actualiza las pautas existentes con los datos del resumen
+   */
+  private actualizarPautasExistentes(mediosYProveedores: any[], pautasExistentes: any[]): void {
+    console.log('🔄 Actualizando pautas existentes con datos del resumen');
+    
+    let pautasActualizadas = 0;
+    
+    mediosYProveedores.forEach((medioProveedor: any) => {
+      const pautaExistente = pautasExistentes.find((pauta: any) => 
+        pauta.planId === this.planData?.id && 
+        pauta.medio === medioProveedor.medio && 
+        pauta.proveedor === medioProveedor.proveedor
+      );
+      
+      if (pautaExistente) {
+        // Actualizar con datos del resumen
+        pautaExistente.valorTotal = medioProveedor.valorNeto || medioProveedor.tarifa || 0;
+        pautaExistente.valorNeto = medioProveedor.valorNeto || medioProveedor.tarifa || 0;
+        pautaExistente.totalSpots = medioProveedor.totalSpots || 1;
+        pautaExistente.fechaModificacion = new Date().toISOString();
+        
+        if (pautaExistente.datos) {
+          pautaExistente.datos.tarifa = medioProveedor.tarifa || 0;
+          pautaExistente.datos.spotsPorSemana = medioProveedor.spotsPorSemana || [0, 0, 0, 0, 0];
+          pautaExistente.datos.valorTotal = medioProveedor.valorNeto || medioProveedor.tarifa || 0;
+          pautaExistente.datos.totalSpots = medioProveedor.totalSpots || 1;
+        }
+        
+                 // Actualizar semanas
+         if (medioProveedor.semanas) {
+           pautaExistente.semanas = medioProveedor.semanas; // Mantener el array de booleans original
+         }
+        
+        // Actualizar programación si hay spots por semana
+        if (medioProveedor.spotsPorSemana && medioProveedor.spotsPorSemana.some((spots: number) => spots > 0)) {
+          this.crearProgramacionDesdeSpotsSemanales(pautaExistente.id, medioProveedor.spotsPorSemana);
+        }
+        
+        pautasActualizadas++;
+        console.log('✅ Pauta actualizada:', pautaExistente);
+      }
+    });
+    
+    // Guardar pautas actualizadas
+    localStorage.setItem('respuestasPautas', JSON.stringify(pautasExistentes));
+    
+    if (pautasActualizadas > 0) {
+      console.log(`✅ ${pautasActualizadas} pautas actualizadas desde Plan de Medios`);
+      this.snackBar.open(`${pautasActualizadas} medios actualizados con datos del resumen`, 'Ver', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['success-snackbar']
+      });
+      
+      // Recargar las pautas para mostrar los cambios
+      setTimeout(() => {
+        this.cargarPautasExistentes();
+      }, 100);
+    }
+  }
+
+
+
+  /**
+   * Crea programación básica desde los spots semanales
+   */
+  private crearProgramacionDesdeSpotsSemanales(pautaId: string, spotsPorSemana: number[]): void {
+    if (!this.planData?.fechaInicio) return;
+    
+    const fechaInicio = new Date(this.planData.fechaInicio);
+    const programacion: { [fecha: string]: number } = {};
+    
+    spotsPorSemana.forEach((spots, semanaIndex) => {
+      if (spots > 0) {
+        // Distribuir los spots a lo largo de la semana
+        const spotsPorDia = Math.floor(spots / 7);
+        const spotsExtra = spots % 7;
+        
+        for (let dia = 0; dia < 7; dia++) {
+          const fecha = new Date(fechaInicio);
+          fecha.setDate(fechaInicio.getDate() + (semanaIndex * 7) + dia);
+          
+          let spotsParaEsteDia = spotsPorDia;
+          if (dia < spotsExtra) {
+            spotsParaEsteDia++;
+          }
+          
+          if (spotsParaEsteDia > 0) {
+            const fechaStr = fecha.toISOString().split('T')[0];
+            programacion[fechaStr] = spotsParaEsteDia;
+          }
+        }
+      }
+    });
+    
+    // Guardar programación
+    if (Object.keys(programacion).length > 0) {
+      this.programacionItems[pautaId] = programacion;
+      this.guardarProgramacion();
+    }
+  }
+
+  // Generar datos por defecto para una plantilla
+  private generarDatosPlantilla(plantilla: PlantillaPauta, valoresExtra: any = {}): any {
+    const datos: any = {};
+    
+    plantilla.fields.forEach(campo => {
+      if (campo.name === 'tarifa' || campo.name === 'tarifa_bruta' || campo.name === 'tarifa_bruta_30') {
+        datos[campo.name] = valoresExtra.tarifa || campo.defaultValue || 0;
+      } else if (campo.name === 'proveedor' || campo.name === 'vendor') {
+        datos[campo.name] = valoresExtra.proveedor || campo.defaultValue || '';
+      } else if (campo.name === 'total_spots') {
+        datos[campo.name] = 1; // Valor por defecto para spots
+      } else {
+        datos[campo.name] = campo.defaultValue || '';
+      }
+    });
+    
+    // Campos comunes que siempre deberían estar
+    datos.total_spots = datos.total_spots || 1;
+    datos.valor_total = valoresExtra.tarifa || 0;
+    datos.valor_neto = valoresExtra.tarifa || 0;
+    
+    return datos;
   }
 
   private migrarPautasExistentes(): void {
@@ -510,17 +746,87 @@ export class FlowChart implements OnInit {
     this.snackBar.open('Funcionalidad de descarga Excel próximamente', '', { duration: 2000 });
   }
 
-  onRegresar(): void {
-    // Preparar resumen de pautas para el plan
-    const resumenPautas = this.itemsPauta.map(item => ({
-      id: item.id,
-      medio: item.medio,
-      valorTotal: item.valorTotal, // Este es el valor principal que se usa
-      totalSpots: item.totalSpots,
-      fechaCreacion: item.fechaCreacion,
-      fechaModificacion: item.fechaModificacion
-    }));
+  /**
+   * Sincroniza los datos del FlowChart con el localStorage del resumen
+   * Convierte la programación diaria en spots por semana
+   */
+  private sincronizarConResumen(): void {
+    if (!this.planData?.id) return;
 
+    console.log('🔄 Sincronizando datos de FlowChart con Resumen...');
+    
+    // Agrupar pautas por medio y proveedor
+    const pautasParaResumen = this.itemsPauta.map(item => {
+      const spotsPorSemana = this.calcularSpotsPorSemana(item.id);
+      const valorTotal = item.valorTotal || 0;
+      
+      return {
+        id: item.id,
+        medio: item.medio,
+        proveedor: item.proveedor || 'Sin proveedor',
+        // El valor tarifa será el valor total que se guardó en FlowChart
+        tarifa: valorTotal,
+        spotsPorSemana: spotsPorSemana,
+        totalSpots: spotsPorSemana.reduce((sum, spots) => sum + spots, 0),
+        inversion: valorTotal,
+        semanas: this.convertirSpotsASemanas(spotsPorSemana),
+        fechaCreacion: item.fechaCreacion,
+        fechaModificacion: new Date().toISOString()
+      };
+    });
+
+    // Guardar en localStorage del resumen
+    const clavePautas = `pautas-${this.planData.id}`;
+    localStorage.setItem(clavePautas, JSON.stringify(pautasParaResumen));
+    
+    console.log('✅ Datos sincronizados:', pautasParaResumen);
+    console.log('💾 Guardados en localStorage con clave:', clavePautas);
+  }
+
+  /**
+   * Calcula los spots por semana basándose en la programación del FlowChart
+   */
+  private calcularSpotsPorSemana(itemId: string): number[] {
+    const spotsPorSemana = [0, 0, 0, 0, 0]; // 5 semanas
+    
+    if (!this.programacionItems[itemId]) {
+      return spotsPorSemana;
+    }
+
+    const fechaInicio = new Date(this.planData?.fechaInicio || '');
+    const programacion = this.programacionItems[itemId];
+    
+    Object.keys(programacion).forEach(fechaStr => {
+      const fecha = new Date(fechaStr);
+      const spots = programacion[fechaStr];
+      
+      if (spots > 0) {
+        // Calcular a qué semana pertenece esta fecha
+        const diffTime = fecha.getTime() - fechaInicio.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const semanaIndex = Math.floor(diffDays / 7);
+        
+        if (semanaIndex >= 0 && semanaIndex < 5) {
+          spotsPorSemana[semanaIndex] += spots;
+        }
+      }
+    });
+    
+    return spotsPorSemana;
+  }
+
+  /**
+   * Convierte los spots por semana a array de boolean para el resumen
+   */
+  private convertirSpotsASemanas(spotsPorSemana: number[]): boolean[] {
+    return spotsPorSemana.map(spots => spots > 0);
+  }
+
+  onRegresar(): void {
+    // Sincronizar datos con el resumen antes de regresar
+    this.sincronizarConResumen();
+    
+    // Preparar los datos del plan para el resumen
     const planDataCompleto = {
       id: this.planData?.id,
       numeroPlan: this.planData?.numeroPlan,
@@ -530,17 +836,17 @@ export class FlowChart implements OnInit {
       campana: this.planData?.campana,
       fechaInicio: this.planData?.fechaInicio,
       fechaFin: this.planData?.fechaFin,
-      // Agregar información de las pautas creadas
-      pautas: resumenPautas,
+      fromFlowChart: true,
       totalPautas: this.itemsPauta.length,
       presupuestoTotal: this.calcularPresupuestoTotal(),
       totalSpots: this.calcularTotalSpots(),
       mediosUtilizados: [...new Set(this.itemsPauta.map(item => item.medio))]
     };
     
-    console.log('📋 Regresando a consulta con datos completos:', planDataCompleto);
+    console.log('📋 Regresando a resumen con datos sincronizados:', planDataCompleto);
     
-    this.router.navigate(['/plan-medios-consulta'], {
+    // Regresar al resumen del plan de medios
+    this.router.navigate(['/plan-medios-resumen'], {
       state: { planData: planDataCompleto }
     });
   }

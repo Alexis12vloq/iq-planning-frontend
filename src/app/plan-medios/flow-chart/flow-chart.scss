@@ -10,121 +10,87 @@ $background-light: #f8f9fa;
 
 // Estilos principales del componente
 .nueva-pauta-container {
-  padding: 16px;
+  padding: 24px;
   background: white;
   min-height: 100vh;
 
-  // Encabezado
-  .header {
+  // Información del plan en línea
+  .info-header-line {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid $border-color;
+    margin-bottom: 32px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, $primary-color 0%, lighten($primary-color, 10%) 100%);
+    color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
-    .title {
-      font-size: 24px;
-      font-weight: 600;
-      color: $text-primary;
+    .plan-title {
+      font-size: 28px;
+      font-weight: 700;
       margin: 0;
     }
 
-    .plan-version {
-      font-size: 14px;
-      color: $text-secondary;
-      margin: 0;
-    }
-  }
-
-  // Información del plan
-  .plan-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-    padding: 16px;
-    background: $background-light;
-    border-radius: 8px;
-    border: 1px solid $border-color;
-
-    .info-item {
+    .plan-info {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      gap: 32px;
 
-      .label {
-        font-size: 11px;
-        color: $text-secondary;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .value {
-        font-size: 14px;
-        font-weight: 600;
-        color: $text-primary;
-      }
-    }
-  }
-
-  // Formulario de selección
-  .selection-form {
-    margin-bottom: 20px;
-
-    .form-row {
-      display: flex;
-      gap: 16px;
-      align-items: end;
-
-      .form-field {
-        flex: 1;
-        min-width: 200px;
-      }
-
-      .form-actions {
+      .info-item {
         display: flex;
-        gap: 8px;
-        padding-bottom: 1.34375em;
-      }
-    }
-  }
+        flex-direction: column;
+        gap: 4px;
 
-  // Estadísticas de programación
-  .programming-summary {
-    margin: 16px 0;
-    padding: 16px;
-    background: $background-light;
-    border-radius: 8px;
-    border: 1px solid $border-color;
-
-    .summary-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 16px;
-      margin-bottom: 16px;
-
-      .stat-item {
-        text-align: center;
-        padding: 12px;
-        background: white;
-        border-radius: 6px;
-        border: 1px solid $border-color;
-
-        .stat-value {
-          font-size: 24px;
-          font-weight: 700;
-          color: $primary-color;
-          margin-bottom: 4px;
-        }
-
-        .stat-label {
+        .info-label {
           font-size: 11px;
-          color: $text-secondary;
+          font-weight: 500;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          opacity: 0.8;
         }
+
+        .info-value {
+          font-size: 14px;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+
+  // Sección de botones de acción
+  .add-item-section {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding: 20px;
+    background: $background-light;
+    border-radius: 12px;
+    border: 1px solid $border-color;
+    flex-wrap: wrap;
+
+    .add-item-btn {
+      min-width: 160px;
+      height: 48px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      
+      mat-icon {
+        margin-right: 8px;
+        font-size: 20px;
+      }
+    }
+
+    .action-btn {
+      min-width: 140px;
+      height: 48px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 8px;
+      
+      mat-icon {
+        margin-right: 8px;
+        font-size: 18px;
       }
     }
   }
@@ -132,39 +98,42 @@ $background-light: #f8f9fa;
   // Contenedor de la grilla de programación
   .programming-grid-container {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid $border-color;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
     // Encabezado de la grilla
     .grid-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 20px;
+      padding: 20px 24px;
       background: linear-gradient(135deg, $primary-color 0%, lighten($primary-color, 10%) 100%);
       color: white;
 
       .grid-title {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         margin: 0;
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 600;
 
         mat-icon {
-          font-size: 24px;
+          font-size: 28px;
         }
       }
 
       .grid-controls {
         display: flex;
-        gap: 8px;
+        gap: 12px;
 
         button {
           color: white;
+          width: 48px;
+          height: 48px;
+          border-radius: 8px;
           
           &:hover {
             background: rgba(255,255,255,0.1);
@@ -178,38 +147,40 @@ $background-light: #f8f9fa;
       background: #e3f2fd;
       border: 1px solid #bbdefb;
       border-radius: 8px;
-      padding: 12px 16px;
-      margin: 16px;
+      padding: 16px 20px;
+      margin: 24px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
       
       mat-icon {
         color: $primary-color;
-        font-size: 20px;
+        font-size: 24px;
       }
       
-      p {
+      span {
         margin: 0;
-        font-size: 13px;
+        font-size: 14px;
         color: #1565c0;
-        line-height: 1.4;
+        line-height: 1.5;
       }
     }
 
     // Pestañas para medios
     .medios-tabs {
-      margin: 16px;
+      margin: 0;
       
       ::ng-deep .mat-mdc-tab-header {
         border-bottom: 1px solid $border-color;
+        padding: 0 24px;
         
         .mat-mdc-tab-label {
-          padding: 8px 16px;
-          font-size: 12px;
-          font-weight: 500;
+          padding: 12px 20px;
+          font-size: 13px;
+          font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          min-width: 120px;
           
           &.mdc-tab--active {
             color: $primary-color;
@@ -218,7 +189,7 @@ $background-light: #f8f9fa;
       }
       
       ::ng-deep .mat-mdc-tab-body-wrapper {
-        padding-top: 16px;
+        padding: 0;
       }
     }
 
@@ -226,6 +197,7 @@ $background-light: #f8f9fa;
     .grid-scroll-container {
       overflow-x: auto;
       position: relative;
+      padding: 24px;
 
       // Tabla de programación
       .programming-table {
@@ -240,6 +212,7 @@ $background-light: #f8f9fa;
           position: sticky;
           top: 0;
           z-index: 10;
+          border-radius: 8px 8px 0 0;
 
           // Columnas fijas
           .fixed-columns {
@@ -248,33 +221,26 @@ $background-light: #f8f9fa;
             left: 0;
             z-index: 11;
             background: #fafafa;
-            box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+            border-radius: 8px 0 0 0;
 
             .header-cell {
-              padding: 8px 12px;
-              font-weight: 600;
-              font-size: 11px;
-              color: $text-primary;
-              border-right: 1px solid $border-color;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              text-align: center;
-              min-height: 50px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              background: #f8f9fa;
-
               &.action-col {
-                width: 80px;
-                min-width: 80px;
-                padding: 4px 8px;
+                min-width: 120px;
+                padding: 16px 12px;
+                font-size: 12px;
+                font-weight: 600;
+                text-align: center;
+                background: #fafafa;
+                border-right: 1px solid $border-color;
               }
 
               &.proveedor-col {
-                width: 200px;
                 min-width: 200px;
-                padding: 8px 12px;
+                padding: 16px 16px;
+                font-size: 12px;
+                font-weight: 600;
+                background: #fafafa;
+                border-right: 1px solid $border-color;
               }
             }
           }
@@ -282,86 +248,63 @@ $background-light: #f8f9fa;
           // Columnas dinámicas
           .dynamic-columns {
             display: flex;
-            
-            .header-cell.dynamic-col {
-              width: 120px;
-              min-width: 120px;
-              padding: 8px 12px;
-              font-weight: 600;
-              font-size: 10px;
-              color: $text-secondary;
-              border-right: 1px solid $border-color;
-              background: #f8f9fa;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              text-align: center;
-              min-height: 50px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              
-              &:last-child {
-                border-right: 2px solid $border-color;
+
+            .header-cell {
+              &.dynamic-col {
+                min-width: 140px;
+                padding: 16px 12px;
+                font-size: 12px;
+                font-weight: 600;
+                text-align: center;
+                background: #fafafa;
+                border-right: 1px solid $border-color;
               }
             }
           }
 
-          // Columnas de fechas (scrollables)
+          // Columnas de fechas
           .scrollable-columns {
             display: flex;
 
             .header-cell {
-              width: 55px;
-              min-width: 55px;
-              max-width: 55px;
-              padding: 4px 2px;
-              border-right: 1px solid $border-color;
-              background: #fafafa;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              box-sizing: border-box;
-              
-              &.weekend {
-                background: #ffe0e0;
-              }
-
-              &.today {
-                background: #e3f2fd;
-                font-weight: 700;
-                border: 2px solid #2196f3;
-              }
-
-              .date-header {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 1px;
+              &.date-col {
+                min-width: 80px;
+                padding: 12px 8px;
+                font-size: 10px;
+                font-weight: 600;
                 text-align: center;
+                background: #fafafa;
+                border-right: 1px solid $border-color;
 
-                .date-day {
-                  font-size: 12px;
-                  font-weight: 700;
-                  color: $text-primary;
-                  line-height: 1;
+                &.weekend {
+                  background: #ffe0e0;
                 }
 
-                .date-month {
-                  font-size: 8px;
-                  color: $text-secondary;
-                  text-transform: uppercase;
-                  line-height: 1;
+                &.today {
+                  background: #e8f5e8;
+                  color: $success-color;
                 }
 
-                .date-weekday {
-                  font-size: 7px;
-                  color: $text-secondary;
-                  text-transform: uppercase;
-                  line-height: 1;
+                .date-header {
+                  display: flex;
+                  flex-direction: column;
+                  gap: 2px;
+
+                  .date-day {
+                    font-size: 14px;
+                    font-weight: 700;
+                  }
+
+                  .date-month {
+                    font-size: 10px;
+                    text-transform: uppercase;
+                  }
+
+                  .date-weekday {
+                    font-size: 9px;
+                    text-transform: uppercase;
+                    opacity: 0.7;
+                  }
                 }
               }
             }
@@ -371,286 +314,278 @@ $background-light: #f8f9fa;
         // Cuerpo de la tabla
         .table-body {
           .table-row {
-            display: flex;
-            border-bottom: 1px solid $border-color;
-            position: relative;
-            background: white;
-            min-height: 50px;
-
-            &:nth-child(odd) {
-              background: #fafafa;
-            }
-
-            &:hover {
-              background: #f0f8ff;
-            }
-
-            // Columnas fijas
-            .fixed-columns {
+            &.pauta-row {
               display: flex;
-              position: sticky;
-              left: 0;
-              z-index: 5;
-              background: inherit;
-              box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+              border-bottom: 1px solid $border-color;
+              transition: background-color 0.2s ease;
 
-              .data-cell {
-                border-right: 1px solid $border-color;
+              &:hover {
+                background: rgba(25, 118, 210, 0.04);
+              }
+
+              // Columnas fijas
+              .fixed-columns {
                 display: flex;
-                align-items: center;
-                padding: 8px 12px;
-                background: inherit;
+                position: sticky;
+                left: 0;
+                z-index: 9;
+                background: white;
 
-                &.action-col {
-                  width: 80px;
-                  min-width: 80px;
-                  padding: 4px 8px;
-                  justify-content: center;
+                .data-cell {
+                  &.action-col {
+                    min-width: 120px;
+                    padding: 12px;
+                    background: white;
+                    border-right: 1px solid $border-color;
+
+                    .action-buttons {
+                      display: flex;
+                      gap: 8px;
+                      justify-content: center;
+
+                      .action-edit-button, .action-delete-button {
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 6px;
+                        
+                        mat-icon {
+                          font-size: 18px;
+                        }
+                      }
+
+                      .action-edit-button {
+                        color: $primary-color;
+                        &:hover {
+                          background: rgba(25, 118, 210, 0.1);
+                        }
+                      }
+
+                      .action-delete-button {
+                        color: $error-color;
+                        &:hover {
+                          background: rgba(244, 67, 54, 0.1);
+                        }
+                      }
+                    }
+                  }
+
+                  &.proveedor-col {
+                    min-width: 200px;
+                    padding: 12px 16px;
+                    background: white;
+                    border-right: 1px solid $border-color;
+
+                    .cell-content {
+                      &.proveedor-info {
+                        .proveedor-name {
+                          font-size: 14px;
+                          font-weight: 600;
+                          color: $text-primary;
+                          margin-bottom: 4px;
+                        }
+
+                        .pauta-stats {
+                          font-size: 12px;
+                          color: $text-secondary;
+                          display: flex;
+                          gap: 8px;
+                        }
+                      }
+                    }
+                  }
                 }
+              }
 
-                &.proveedor-col {
-                  width: 200px;
-                  min-width: 200px;
-                  padding: 8px 12px;
-                  
-                  .cell-content {
-                    width: 100%;
-                    
-                    .proveedor-info {
-                      .proveedor-name {
+              // Columnas dinámicas
+              .dynamic-columns {
+                display: flex;
+
+                .data-cell {
+                  &.dynamic-col {
+                    min-width: 140px;
+                    padding: 12px;
+                    border-right: 1px solid $border-color;
+
+                    .cell-content {
+                      font-size: 13px;
+                      color: $text-primary;
+                      text-align: center;
+                    }
+                  }
+                }
+              }
+
+              // Columnas de fechas
+              .scrollable-columns {
+                display: flex;
+
+                .data-cell {
+                  &.date-col {
+                    min-width: 80px;
+                    padding: 8px 4px;
+                    border-right: 1px solid $border-color;
+
+                    &.weekend {
+                      background: #fffafa;
+                    }
+
+                    &.today {
+                      background: #f8fff8;
+                    }
+
+                    &.programmed {
+                      background: #e3f2fd;
+                    }
+
+                    .date-cell-content {
+                      display: flex;
+                      justify-content: center;
+                      align-items: center;
+
+                      .spots-input {
+                        width: 60px;
+                        height: 36px;
+                        border: 1px solid $border-color;
+                        border-radius: 6px;
+                        text-align: center;
+                        font-size: 13px;
                         font-weight: 600;
                         color: $text-primary;
-                        font-size: 13px;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        margin-bottom: 2px;
-                      }
-                      
-                      .pauta-stats {
-                        font-size: 11px;
-                        color: $text-secondary;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
+                        background: white;
+                        transition: all 0.2s ease;
+
+                        &:focus {
+                          outline: none;
+                          border-color: $primary-color;
+                          box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+                        }
+
+                        &:hover {
+                          border-color: lighten($primary-color, 20%);
+                        }
+
+                        &::placeholder {
+                          color: #ccc;
+                        }
                       }
                     }
                   }
                 }
               }
             }
+          }
+        }
+      }
+    }
 
-            // Columnas dinámicas
-            .dynamic-columns {
-              display: flex;
-              
-              .data-cell.dynamic-col {
-                width: 120px;
-                min-width: 120px;
-                border-right: 1px solid lighten($border-color, 5%);
-                padding: 8px 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                
-                &:last-child {
-                  border-right: 2px solid $border-color;
-                }
-                
-                .cell-content {
-                  font-size: 12px;
-                  color: $text-primary;
-                  text-align: center;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                  width: 100%;
-                }
-              }
-            }
+    // Resumen de programación
+    .programming-summary {
+      padding: 24px;
+      background: $background-light;
+      border-top: 1px solid $border-color;
 
-            // Columnas scrollables (fechas)
-            .scrollable-columns {
-              display: flex;
+      .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
 
-              .data-cell {
-                width: 55px;
-                min-width: 55px;
-                max-width: 55px;
-                border-right: 1px solid $border-color;
-                padding: 4px 2px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-                box-sizing: border-box;
+        .summary-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 20px;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid $border-color;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 
-                &.weekend {
-                  background: #ffe0e0;
-                }
+          .summary-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: $text-secondary;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
 
-                &.today {
-                  background: #e3f2fd;
-                  border-left: 2px solid #2196f3;
-                  border-right: 2px solid #2196f3;
-                }
-
-                &.programmed {
-                  background: #4caf50;
-                  color: white;
-                  font-weight: 600;
-                }
-
-                .spots-input {
-                  width: 40px;
-                  height: 30px;
-                  padding: 2px 4px;
-                  border: 1px solid #ccc;
-                  border-radius: 4px;
-                  text-align: center;
-                  font-size: 11px;
-                  background: white;
-                  
-                  &:focus {
-                    outline: none;
-                    border-color: $primary-color;
-                    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
-                  }
-                  
-                  &::-webkit-outer-spin-button,
-                  &::-webkit-inner-spin-button {
-                    -webkit-appearance: none;
-                    margin: 0;
-                  }
-                  
-                  &[type=number] {
-                    -moz-appearance: textfield;
-                  }
-                }
-              }
-            }
+          .summary-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: $primary-color;
           }
         }
       }
     }
   }
 
-  // Botones de acción
-  .action-buttons {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin: 20px 0;
-    padding: 16px;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid $border-color;
+  // Estado vacío
+  .empty-state {
+    margin: 32px 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
-    .left-buttons,
-    .right-buttons {
-      display: flex;
-      gap: 8px;
-    }
+    .empty-container {
+      text-align: center;
+      padding: 48px 24px;
 
-    button {
-      font-size: 13px;
-      font-weight: 500;
-      padding: 6px 16px;
-      
-      &.primary {
-        background: $primary-color;
-        color: white;
-        
-        &:hover {
-          background: darken($primary-color, 10%);
-        }
+      .empty-icon {
+        font-size: 64px;
+        color: $text-secondary;
+        margin-bottom: 16px;
       }
-      
-      &.secondary {
-        background: #6c757d;
-        color: white;
-        
-        &:hover {
-          background: darken(#6c757d, 10%);
-        }
+
+      h3 {
+        font-size: 24px;
+        font-weight: 600;
+        color: $text-primary;
+        margin-bottom: 12px;
       }
-      
-      &.danger {
-        background: #dc3545;
-        color: white;
+
+      p {
+        font-size: 16px;
+        color: $text-secondary;
+        line-height: 1.6;
+        margin-bottom: 24px;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .empty-action-btn {
+        min-width: 180px;
+        height: 48px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 8px;
         
-        &:hover {
-          background: darken(#dc3545, 10%);
+        mat-icon {
+          margin-right: 8px;
+          font-size: 20px;
         }
       }
     }
   }
 }
 
-// Estilos para botones de acción en la tabla
-.action-buttons {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-
-  .action-edit-button,
-  .action-delete-button {
-    width: 20px !important;
-    height: 20px !important;
-    line-height: 20px !important;
-    min-width: 20px !important;
-    padding: 0 !important;
-    
-    mat-icon {
-      font-size: 14px !important;
-      width: 14px !important;
-      height: 14px !important;
-      line-height: 14px !important;
-    }
-  }
-
-  .action-edit-button {
-    color: #666;
-    
-    &:hover {
-      color: #2196f3;
-      background-color: rgba(33, 150, 243, 0.1);
-    }
-  }
-
-  .action-delete-button {
-    color: #666;
-    
-    &:hover {
-      color: #f44336;
-      background-color: rgba(244, 67, 54, 0.1);
-    }
-  }
-}
-
-// Responsive design
+// Responsividad
 @media (max-width: 1200px) {
   .nueva-pauta-container {
-    .programming-grid-container {
-      .grid-scroll-container {
-        .programming-table {
-          .table-header,
-          .table-body .table-row {
-            .fixed-columns {
-              .header-cell,
-              .data-cell {
-                &.action-col {
-                  width: 45px;
-                  min-width: 45px;
-                }
-              }
-            }
-          }
-        }
+    padding: 16px;
+
+    .info-header-line {
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+
+      .plan-info {
+        justify-content: center;
+      }
+    }
+
+    .add-item-section {
+      flex-direction: column;
+      
+      .add-item-btn, .action-btn {
+        width: 100%;
       }
     }
   }
@@ -660,74 +595,16 @@ $background-light: #f8f9fa;
   .nueva-pauta-container {
     padding: 12px;
 
-    .programming-grid-container {
-      .programming-summary .summary-stats {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .grid-scroll-container {
-        .programming-table {
-          .table-header,
-          .table-body .table-row {
-            .fixed-columns {
-              .header-cell,
-              .data-cell {
-                padding: 4px 6px;
-
-                &.action-col {
-                  width: 40px;
-                  min-width: 40px;
-                  padding: 1px;
-                  
-                  .action-buttons {
-                    gap: 1px;
-                    
-                    .action-edit-button,
-                    .action-delete-button {
-                      width: 16px !important;
-                      height: 16px !important;
-                      
-                      mat-icon {
-                        font-size: 12px !important;
-                        width: 12px !important;
-                        height: 12px !important;
-                      }
-                    }
-                  }
-                }
-
-                &.proveedor-col {
-                  width: 150px;
-                  min-width: 150px;
-                }
-              }
-            }
-
-            .scrollable-columns .header-cell,
-            .scrollable-columns .data-cell {
-              width: 45px;
-              min-width: 45px;
-              max-width: 45px;
-            }
-
-            .scrollable-columns .data-cell .spots-input {
-              width: 35px;
-              height: 25px;
-              font-size: 10px;
-            }
-          }
-        }
+    .info-header-line {
+      .plan-info {
+        flex-direction: column;
+        gap: 16px;
       }
     }
 
-    .action-buttons {
-      flex-direction: column;
-      gap: 12px;
-
-      .left-buttons,
-      .right-buttons {
-        width: 100%;
-        justify-content: space-between;
+    .programming-grid-container {
+      .grid-scroll-container {
+        padding: 16px;
       }
     }
   }

@@ -77,8 +77,25 @@ export class PlanMediosResumen implements OnInit {
       // Guardar el ID del plan
       this.planId = planData.id;
       
+      // Verificar si viene del FlowChart
+      if (planData.fromFlowChart) {
+        console.log('✅ Datos vienen del FlowChart, sincronizando...');
+        const periodosConPautas = this.cargarPeriodosConPautas(planData.id);
+        
+        this.resumenPlan = {
+          numeroPlan: planData.numeroPlan,
+          version: Number(planData.version),
+          cliente: planData.cliente,
+          producto: planData.producto,
+          campana: planData.campana,
+          fechaInicio: planData.fechaInicio,
+          fechaFin: planData.fechaFin,
+          periodos: periodosConPautas
+        };
+        this.periodos = periodosConPautas;
+      }
       // Priorizar datos que vienen del estado de navegación (más actualizados)
-      if (planData.pautas && planData.pautas.length > 0) {
+      else if (planData.pautas && planData.pautas.length > 0) {
         console.log('✅ Usando pautas del estado de navegación (más actualizadas)');
         const periodosConPautas = this.crearPeriodosConPautasDelEstado(planData);
         
@@ -365,6 +382,9 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onAsociarFlowChart(): void {
+    // Sincronizar datos del resumen con el FlowChart
+    this.sincronizarResumenConFlowChart();
+    
     // Marcar como asociado al flowchart
     this.flowChartAsociado = true;
     
@@ -385,8 +405,10 @@ export class PlanMediosResumen implements OnInit {
         proveedorId: medio.proveedorId,
         pais: this.resumenPlan.cliente, // Usar cliente como referencia del país
         tarifa: medio.tarifa,
-        // Sin data específica, solo la estructura
-        sinData: true
+        totalSpots: medio.salidas,
+        valorNeto: medio.valorNeto,
+        spotsPorSemana: medio.spotsPorSemana || [0, 0, 0, 0, 0],
+        semanas: medio.semanas
       }))
     };
     
@@ -418,6 +440,73 @@ export class PlanMediosResumen implements OnInit {
         fromPlanMedios: true
       }
     });
+  }
+
+  /**
+   * Sincroniza los datos del resumen con el localStorage del FlowChart
+   */
+  private sincronizarResumenConFlowChart(): void {
+    if (!this.planId) return;
+
+    console.log('🔄 Sincronizando datos del Resumen con FlowChart...');
+    
+    // Obtener pautas existentes del FlowChart
+    const pautasFlowChart = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    
+    // Convertir medios del resumen al formato del FlowChart
+    this.periodoSeleccionado.medios.forEach(medio => {
+      // Verificar si ya existe una pauta para este medio
+      const pautaExistente = pautasFlowChart.find((pauta: any) => 
+        pauta.planId === this.planId && 
+        pauta.medio === medio.nombre && 
+        pauta.proveedor === medio.proveedor
+      );
+      
+      if (!pautaExistente) {
+        // Crear nueva pauta del FlowChart basada en el resumen
+        const nuevaPauta = {
+          id: `pauta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          planId: this.planId,
+          medio: medio.nombre,
+          proveedor: medio.proveedor,
+          proveedorId: medio.proveedorId,
+          valorTotal: medio.valorNeto,
+          totalSpots: medio.salidas,
+          tarifa: medio.tarifa,
+          fechaCreacion: new Date().toISOString(),
+          fechaModificacion: new Date().toISOString(),
+          datos: {
+            tarifa: medio.tarifa,
+            spotsPorSemana: medio.spotsPorSemana || [0, 0, 0, 0, 0],
+            valorTotal: medio.valorNeto,
+            totalSpots: medio.salidas
+          }
+        };
+        
+        pautasFlowChart.push(nuevaPauta);
+        console.log('✅ Pauta creada desde resumen:', nuevaPauta);
+      } else {
+        // Actualizar pauta existente con datos del resumen
+        pautaExistente.valorTotal = medio.valorNeto;
+        pautaExistente.totalSpots = medio.salidas;
+        pautaExistente.tarifa = medio.tarifa;
+        pautaExistente.fechaModificacion = new Date().toISOString();
+        
+        if (pautaExistente.datos) {
+          pautaExistente.datos.tarifa = medio.tarifa;
+          pautaExistente.datos.spotsPorSemana = medio.spotsPorSemana || [0, 0, 0, 0, 0];
+          pautaExistente.datos.valorTotal = medio.valorNeto;
+          pautaExistente.datos.totalSpots = medio.salidas;
+        }
+        
+        console.log('✅ Pauta actualizada desde resumen:', pautaExistente);
+      }
+    });
+    
+    // Guardar las pautas actualizadas
+    localStorage.setItem('respuestasPautas', JSON.stringify(pautasFlowChart));
+    
+    console.log('💾 Datos sincronizados con FlowChart');
   }
 
   onAprobarPlan(): void {
