@@ -1,18 +1,10 @@
 <div class="resumen-container">
   <div class="scroll-wrapper">
     <div #content>
-      <!-- Cabecera con título y selector de período -->
+      <!-- Cabecera con título -->
       <div class="resumen-header">
       <div class="header-content">
         <h1>Resumen del Plan: {{ resumenPlan.numeroPlan }} | Versión: {{ resumenPlan.version }}</h1>
-        <mat-form-field class="periodo-selector">
-          <mat-label>Seleccionar Período</mat-label>
-          <mat-select [(ngModel)]="periodoSeleccionado" (ngModelChange)="onPeriodoChange($event)">
-            <mat-option *ngFor="let periodo of periodos" [value]="periodo">
-              {{ periodo.nombre }} {{ periodo.anio }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
       </div>
     </div>
 
@@ -30,7 +22,7 @@
         </div>
         <div class="info-item">
           <span class="info-label">PERÍODO:</span>
-          <span class="info-value">{{ periodoSeleccionado.nombre }} {{ periodoSeleccionado.anio }}</span>
+          <span class="info-value">{{ resumenPlan.fechaInicio }} - {{ resumenPlan.fechaFin }}</span>
         </div>
         <div class="info-item">
           <span class="info-label">CAMPAÑA:</span>
@@ -105,12 +97,7 @@
                   <td>{{ fila.nombre }}</td>
                   <td>{{ fila.medio?.proveedor || 'Sin proveedor' }}</td>
                   <td colspan="5">
-                    <div class="semanas-cell">
-                      <div *ngFor="let activo of fila.semanas" 
-                           class="semana-indicator"
-                           [class.activo]="activo">
-                      </div>
-                    </div>
+                    <!-- Quitar los checks, dejar en blanco -->
                   </td>
                   <td class="valor-total">{{ fila.medio?.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td class="valor-soi">{{ calcularPorcentaje(fila.medio?.valorNeto || 0) | number:'1.1-1' }}%</td>
@@ -125,10 +112,9 @@
                       type="number" 
                       class="spots-input"
                       [value]="fila.medio.spotsPorSemana && fila.medio.spotsPorSemana[semanaIndex] !== undefined ? fila.medio.spotsPorSemana[semanaIndex] : 0"
-                      (blur)="onSpotsChange(fila.medio, semanaIndex, $event)"
+                      (input)="onSpotsChange(fila.medio, semanaIndex, $event)"
                       min="0"
-                      step="1"
-                      [disabled]="!semana">
+                      step="1">
                   </td>
                   <td class="valor-total">{{ calcularTotalSpots(fila.medio) }}</td>
                   <td class="valor-soi">{{ fila.medio.soi | currency:'USD':'symbol-narrow':'1.0-0' }}</td>

@@ -547,28 +547,28 @@ export class PlanMediosResumen implements OnInit {
       if (mediosMap.has(claveAgrupacion)) {
         // Si el medio y proveedor ya existen, sumar los valores
         const medioExistente = mediosMap.get(claveAgrupacion)!;
-        medioExistente.salidas = Number(medioExistente.salidas) + Number(totalSpots);
+        medioExistente.salidas = 0; // Mantener en 0
         medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
         // Para semanas, hacer OR lógico (si cualquier pauta tiene true, el resultado es true)
         medioExistente.semanas = medioExistente.semanas.map((valor, index) => 
           valor || semanasBoolean[index]
         );
         // Calcular SOI promedio
-        medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
-        // Actualizar distribución de spots por semana
-        medioExistente.spotsPorSemana = this.distribuirSpotsEnSemanas(medioExistente.salidas, medioExistente.semanas);
+        medioExistente.soi = Math.round((medioExistente.valorNeto / Math.max(medioExistente.salidas, 1)) || 0);
+        // Mantener spots en 0
+        medioExistente.spotsPorSemana = [0, 0, 0, 0, 0];
       } else {
         // Crear nuevo medio con proveedor
         mediosMap.set(claveAgrupacion, {
           nombre: medio,
           proveedor: proveedor,
           proveedorId: proveedorId,
-          salidas: Number(totalSpots),
+          salidas: 0, // Inicializar en 0 
           valorNeto: Number(valorTotal),
-          soi: Math.round((Number(valorTotal) / Number(totalSpots)) || 0),
+          soi: Math.round((Number(valorTotal) / Math.max(Number(totalSpots), 1)) || 0),
           semanas: semanasBoolean,
           tarifa: tarifa,
-          spotsPorSemana: respuestaPauta.datos?.spotsPorSemana || this.distribuirSpotsEnSemanas(Number(totalSpots), semanasBoolean)
+          spotsPorSemana: [0, 0, 0, 0, 0] // Inicializar todos los spots en 0
         });
       }
     });
@@ -619,23 +619,23 @@ export class PlanMediosResumen implements OnInit {
       if (mediosMap.has(claveAgrupacion)) {
         // Si el medio y proveedor ya existen, sumar los valores
         const medioExistente = mediosMap.get(claveAgrupacion)!;
-        medioExistente.salidas = Number(medioExistente.salidas) + Number(totalSpots);
+        medioExistente.salidas = 0; // Mantener en 0
         medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
-        medioExistente.soi = Math.round((medioExistente.valorNeto / medioExistente.salidas) || 0);
-        // Actualizar distribución de spots por semana
-        medioExistente.spotsPorSemana = this.distribuirSpotsEnSemanas(medioExistente.salidas, medioExistente.semanas);
+        medioExistente.soi = Math.round((medioExistente.valorNeto / Math.max(medioExistente.salidas, 1)) || 0);
+        // Mantener spots en 0
+        medioExistente.spotsPorSemana = [0, 0, 0, 0, 0];
       } else {
         // Crear nuevo medio con proveedor
         mediosMap.set(claveAgrupacion, {
           nombre: medio,
           proveedor: proveedor,
           proveedorId: proveedorId,
-          salidas: Number(totalSpots),
+          salidas: 0, // Inicializar en 0
           valorNeto: Number(valorTotal),
-          soi: Math.round((Number(valorTotal) / Number(totalSpots)) || 0),
+          soi: Math.round((Number(valorTotal) / Math.max(Number(totalSpots), 1)) || 0),
           semanas: semanasBoolean,
           tarifa: tarifa,
-          spotsPorSemana: this.distribuirSpotsEnSemanas(Number(totalSpots), semanasBoolean)
+          spotsPorSemana: [0, 0, 0, 0, 0] // Inicializar todos los spots en 0
         });
       }
     });
@@ -780,6 +780,13 @@ export class PlanMediosResumen implements OnInit {
     // Guardar cambios en localStorage
     this.guardarCambiosEnLocalStorage();
     
+    // Mostrar confirmación visual
+    this.snackBar.open(`💾 Guardado: ${medio.nombre} - ${nuevoSpots} spots`, '', { 
+      duration: 1000,
+      horizontalPosition: 'right',
+      verticalPosition: 'bottom'
+    });
+    
     console.log(`✅ Spots actualizados para ${medio.nombre} semana ${semanaIndex + 1}: ${nuevoSpots}`);
     console.log(`✅ Nueva inversión total: ${medio.valorNeto}`);
   }
@@ -856,17 +863,22 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private distribuirSpotsEnSemanas(totalSpots: number, semanasBoolean: boolean[]): number[] {
-    const spotsPorSemana: number[] = [];
-    let spotsRestantes = totalSpots;
+    // Inicializar todos los spots en 0 por defecto
+    const spotsPorSemana: number[] = [0, 0, 0, 0, 0];
+    
+    // Solo distribuir si hay spots especificados y mayor a 0
+    if (totalSpots > 0) {
+      let spotsRestantes = totalSpots;
 
-    for (let i = 0; i < 5; i++) {
-      const spotsParaSemana = Math.floor(spotsRestantes / (5 - i)); // Distribuir proporcionalmente
-      spotsPorSemana.push(spotsParaSemana);
-      spotsRestantes -= spotsParaSemana;
+      for (let i = 0; i < 5; i++) {
+        const spotsParaSemana = Math.floor(spotsRestantes / (5 - i)); // Distribuir proporcionalmente
+        spotsPorSemana[i] = spotsParaSemana;
+        spotsRestantes -= spotsParaSemana;
+      }
+
+      // Asegurar que los spots restantes se distribuyan en la última semana
+      spotsPorSemana[4] += spotsRestantes;
     }
-
-    // Asegurar que los spots restantes se distribuyan en la última semana
-    spotsPorSemana[4] += spotsRestantes;
 
     return spotsPorSemana;
   }
