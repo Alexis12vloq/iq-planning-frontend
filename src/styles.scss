@@ -36,3 +36,30 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 .mat-form-field-appearance-fill .mat-form-field-infix {
   color: #000 !important;
 }
+
+/* Estilos para el modal centrado */
+.centered-modal .mat-dialog-container {
+  padding: 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
+}
+
+.centered-modal .mat-dialog-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-height: none !important;
+}
+
+/* Forzar centrado en tablas de Angular Material */
+.mat-table .mat-header-cell,
+.mat-table .mat-cell {
+  text-align: center !important;
+  justify-content: center !important;
+}
+
+.versiones-table .mat-header-cell,
+.versiones-table .mat-cell {
+  text-align: center !important;
+  justify-content: center !important;
+}

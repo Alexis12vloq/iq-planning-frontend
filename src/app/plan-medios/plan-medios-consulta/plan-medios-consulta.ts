@@ -595,12 +595,13 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
 
     const dialogRef = this.dialog.open(VersionesPlanDialog, {
-      width: '90vw',
-      maxWidth: '1200px',
-      height: '70vh',
-      maxHeight: '800px',
+      width: '85vw',
+      maxWidth: '1100px',
+      height: '75vh',
+      maxHeight: '700px',
       data: { versiones, selectedRow: row },
-      disableClose: true
+      disableClose: true,
+      panelClass: 'centered-modal'
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) {
@@ -964,171 +965,134 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     MatSortModule
   ],
   template: `
-    <h2 mat-dialog-title 
-        style="font-family: 'Montserrat', 'Roboto', Arial, sans-serif; font-size:1.5rem; font-weight:700; color:#3c5977; letter-spacing:1px; text-transform:uppercase; margin-bottom:0; display: flex; justify-content: space-between; align-items: center; padding: 16px 24px;">
-      
-      <span>
-        Versiones del Plan {{ data.versiones[0]?.numeroPlan || '' }}
-      </span>
-
-      <button mat-icon-button (click)="cerrar()" aria-label="Cerrar">
-        <mat-icon>close</mat-icon>
-      </button>
-    </h2>
-
-    <mat-dialog-content style="padding: 16px 24px; width: 100%; display: flex; flex-direction: column; overflow: hidden;">
-      <!-- Filtros -->
-      <form [formGroup]="filtroForm">
-        <div class="filtros-container" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-          <mat-form-field appearance="fill" style="width: 180px;">
+    <h2 mat-dialog-title>Versiones del Plan {{ data.versiones[0]?.numeroPlan || '' }}</h2>
+    
+    <mat-dialog-content>
+      <div style="margin-bottom: 16px;">
+        <form [formGroup]="filtroForm">
+          <mat-form-field appearance="fill" style="margin-right: 16px;">
             <mat-label>Buscar por versión</mat-label>
             <input matInput formControlName="version" placeholder="Ej: 1" />
           </mat-form-field>
           
-          <mat-form-field appearance="fill" style="width: 180px;">
+          <mat-form-field appearance="fill" style="margin-right: 16px;">
             <mat-label>Fecha de creación</mat-label>
             <input matInput [matDatepicker]="picker" formControlName="fechaCreacion" placeholder="dd/mm/yyyy" />
             <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
             <mat-datepicker #picker></mat-datepicker>
           </mat-form-field>
           
-          <button mat-raised-button color="primary" (click)="limpiarFiltros()" style="height: 40px; padding: 0 16px;">
-            <mat-icon>clear</mat-icon>
-            Limpiar filtros
-          </button>
-        </div>
-      </form>
+          <button mat-raised-button (click)="limpiarFiltros()">Limpiar</button>
+        </form>
+      </div>
 
-      <!-- Tabla sin scroll horizontal -->
-      <div style="flex: 1; overflow: hidden; min-height: 300px; max-height: 400px;">
-        <div class="mat-elevation-z8" style="height: 100%; display: flex; flex-direction: column;">
-          <div style="flex: 1; overflow: auto;">
-            <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8" style="width:100%; min-width: 100%;" (matSortChange)="sortData($event)">
-              <ng-container matColumnDef="fechaCreacion">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 130px; text-align: center;">Fecha Creación</th>
-                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
-                  {{ formatearFecha(row.fechaCreacion) }}
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="version">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 80px; text-align: center;">Versión</th>
-                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
-                  {{ row.version }}
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="fechaInicio">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 120px; text-align: center;">Fecha Inicio</th>
-                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
-                  {{ formatearFecha(row.fechaInicio) }}
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="fechaFin">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 120px; text-align: center;">Fecha Fin</th>
-                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
-                  {{ formatearFecha(row.fechaFin) }}
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="campania">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 150px; text-align: center;">Campaña</th>
-                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
-                  {{ row.campania || 'N/A' }}
-                </td>
-              </ng-container>
-              <ng-container matColumnDef="estado">
-                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 110px; text-align: center;">Estado</th>
-                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
-                  {{ row.estado ? 'Aprobado' : 'Sin aprobar' }}
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)"></tr>
-            </table>
-          </div>
-          <mat-paginator [pageSizeOptions]="[5, 10, 15]" [pageSize]="5" showFirstLastButtons aria-label="Select page" style="border-top: 1px solid #e0e0e0;"></mat-paginator>
-        </div>
+      <div class="mat-elevation-z8">
+        <table mat-table [dataSource]="dataSource" matSort>
+          <ng-container matColumnDef="fechaCreacion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Creación</th>
+            <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)">
+              {{ formatearFecha(row.fechaCreacion) }}
+            </td>
+          </ng-container>
+          
+          <ng-container matColumnDef="version">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Versión</th>
+            <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)">
+              {{ row.version }}
+            </td>
+          </ng-container>
+          
+          <ng-container matColumnDef="fechaInicio">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Inicio</th>
+            <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)">
+              {{ formatearFecha(row.fechaInicio) }}
+            </td>
+          </ng-container>
+          
+          <ng-container matColumnDef="fechaFin">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Fin</th>
+            <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)">
+              {{ formatearFecha(row.fechaFin) }}
+            </td>
+          </ng-container>
+          
+          <ng-container matColumnDef="campania">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Campaña</th>
+            <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)">
+              {{ row.campania || 'N/A' }}
+            </td>
+          </ng-container>
+          
+          <ng-container matColumnDef="estado">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+            <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)">
+              {{ row.estado ? 'Aprobado' : 'Sin aprobar' }}
+            </td>
+          </ng-container>
+          
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)"></tr>
+        </table>
+        
+        <mat-paginator [pageSizeOptions]="[5, 10, 15]" [pageSize]="5" showFirstLastButtons></mat-paginator>
       </div>
     </mat-dialog-content>
-    <mat-dialog-actions align="center" style="display:flex; flex-direction:row; gap:12px; padding: 12px 24px; border-top: 1px solid #e0e0e0;">
-      <button mat-raised-button color="primary" (click)="copiarPlan()" [disabled]="!selectedRow" style="padding: 6px 12px; font-size: 0.9rem;">
-        <mat-icon style="font-size: 16px;">content_copy</mat-icon> Copiar plan
+    
+    <mat-dialog-actions align="end">
+      <button mat-button (click)="cerrar()">Cerrar</button>
+      <button mat-raised-button color="primary" (click)="copiarPlan()" [disabled]="!selectedRow">
+        Copiar plan
       </button>
-      <button mat-raised-button color="accent" (click)="nuevaVersion()" [disabled]="!selectedRow" style="padding: 6px 12px; font-size: 0.9rem;">
-        <mat-icon style="font-size: 16px;">add_circle_outline</mat-icon> Nueva versión
+      <button mat-raised-button color="accent" (click)="nuevaVersion()" [disabled]="!selectedRow">
+        Nueva versión
       </button>
-      <button mat-raised-button color="accent" (click)="editarPlan()" [disabled]="!selectedRow" style="padding: 6px 12px; font-size: 0.9rem;">
-        <mat-icon style="font-size: 16px;">edit</mat-icon>Editar
+      <button mat-raised-button color="accent" (click)="editarPlan()" [disabled]="!selectedRow">
+        Editar
       </button>
     </mat-dialog-actions>
   `,
   styles: [`
     .selected-row {
-      background: #e3f2fd !important;
+      background-color: #e3f2fd !important;
     }
-    table { 
-      width: 100%; 
-      table-layout: fixed;
+    
+    table {
+      width: 100%;
     }
-    td, th { 
-      cursor: pointer; 
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-size: 0.9rem;
-      padding: 8px 12px !important;
+    
+    td {
+      cursor: pointer;
+      text-align: center !important;
     }
+    
     th {
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-    mat-dialog-actions { 
-      margin-top: 0; 
-      padding: 12px 24px;
-    }
-    mat-dialog-content {
-      max-height: none !important;
-      overflow: hidden !important;
-      padding: 16px 24px !important;
-    }
-    .filtros-container mat-form-field {
-      margin-bottom: 0;
-    }
-    .filtros-container {
-      margin-bottom: 12px !important;
-    }
-        mat-paginator {
-      font-size: 0.85rem;
+      text-align: center !important;
     }
     
-    /* Estilos específicos para el modal */
-    .filtros-container {
-      background: #f8f9fa;
-      padding: 12px;
-      border-radius: 4px;
-      margin-bottom: 16px;
+    .mat-dialog-content {
+      max-height: 500px;
+      overflow-y: auto;
     }
     
-    .filtros-container mat-form-field {
-      background: white;
-      border-radius: 4px;
+    /* Forzar centrado de todas las columnas */
+    :host ::ng-deep .mat-header-cell {
+      text-align: center !important;
+      justify-content: center !important;
     }
     
-    /* Arreglar color del texto en campos de fecha */
-    :host ::ng-deep .mat-form-field-invalid .mat-input-element {
-      color: #000 !important;
+    :host ::ng-deep .mat-cell {
+      text-align: center !important;
+      justify-content: center !important;
     }
     
-    :host ::ng-deep .mat-form-field.mat-form-field-invalid .mat-input-element {
-      color: #000 !important;
+    :host ::ng-deep .mat-header-row .mat-header-cell {
+      text-align: center !important;
     }
     
-    :host ::ng-deep .mat-input-element {
-      color: #000 !important;
+    :host ::ng-deep .mat-row .mat-cell {
+      text-align: center !important;
     }
-    
-    :host ::ng-deep .mat-form-field-appearance-fill .mat-form-field-infix {
-      color: #000 !important;
-    }
-    `]
+  `]
 })
 export class VersionesPlanDialog implements AfterViewInit {
   displayedColumns = ['fechaCreacion', 'version', 'fechaInicio', 'fechaFin', 'campania', 'estado'];
@@ -1412,6 +1376,5 @@ export class VersionesPlanDialog implements AfterViewInit {
       this.isLoading = false;
     }, 400); // Simula carga
   }
-
 
 }
