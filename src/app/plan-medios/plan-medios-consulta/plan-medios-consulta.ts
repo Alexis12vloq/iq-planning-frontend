@@ -987,7 +987,7 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
           
           <mat-form-field appearance="outline" style="width: 180px;">
             <mat-label>Fecha de creación</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="fechaCreacion" readonly>
+            <input matInput [matDatepicker]="picker" formControlName="fechaCreacion">
             <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
             <mat-datepicker #picker></mat-datepicker>
           </mat-form-field>
@@ -1097,6 +1097,23 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     }
     mat-paginator {
       font-size: 0.85rem;
+    }
+    
+    /* Estilos específicos para arreglar el datepicker en modal */
+    :host ::ng-deep .mat-datepicker-popup {
+      z-index: 9999 !important;
+    }
+    
+    :host ::ng-deep .cdk-overlay-container {
+      z-index: 9999 !important;
+    }
+    
+    :host ::ng-deep .mat-datepicker-content {
+      z-index: 9999 !important;
+    }
+    
+    :host ::ng-deep .cdk-overlay-backdrop {
+      z-index: 9998 !important;
     }
   `]
 })
