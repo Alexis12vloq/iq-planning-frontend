@@ -473,6 +473,15 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       this.dataSource.paginator = this.paginator;
       this.dataSource.sort = this.sortMat;
       
+      // Establecer ordenamiento por defecto descendente por número de plan
+      if (this.sortMat) {
+        this.sortMat.sort({
+          id: 'numeroPlan',
+          start: 'desc',
+          disableClear: false
+        });
+      }
+      
       // Configurar ordenamiento personalizado para fechas y números
       this.dataSource.sortingDataAccessor = (item: any, property: string) => {
         const value = item[property];
@@ -793,6 +802,12 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
           setTimeout(() => {
             if (this.sortMat && this.dataSource) {
               this.dataSource.sort = this.sortMat;
+              // Establecer ordenamiento por defecto descendente por número de plan
+              this.sortMat.sort({
+                id: 'numeroPlan',
+                start: 'desc',
+                disableClear: false
+              });
             }
           }, 100);
           
@@ -855,8 +870,12 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
     }
 
-    // Ordenar por fecha de creación descendente (más reciente primero) por defecto
-    filtrados = filtrados.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+    // Ordenar por número de plan descendente (más reciente primero) por defecto
+    filtrados = filtrados.sort((a, b) => {
+      const numPlanA = parseInt(a.numeroPlan, 10);
+      const numPlanB = parseInt(b.numeroPlan, 10);
+      return numPlanB - numPlanA; // Orden descendente
+    });
     
     // Actualizar la tabla con los resultados filtrados
     this.dataSource.data = filtrados;
@@ -1058,6 +1077,12 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     
     table {
       width: 100%;
+      margin: 0 auto;
+    }
+    
+    .mat-elevation-z8 {
+      margin: 0 auto;
+      max-width: 100%;
     }
     
     td {
@@ -1091,6 +1116,22 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     
     :host ::ng-deep .mat-row .mat-cell {
       text-align: center !important;
+    }
+    
+    /* Espaciado uniforme de columnas */
+    :host ::ng-deep .mat-header-cell,
+    :host ::ng-deep .mat-cell {
+      padding: 8px 16px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    
+    /* Centrar contenido del modal */
+    .mat-dialog-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
   `]
 })

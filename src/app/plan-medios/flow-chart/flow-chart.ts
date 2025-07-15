@@ -1716,33 +1716,40 @@ export class FlowChart implements OnInit {
     return totalSpotsProgramados / diasProgramados;
   }
 
-  calcularPresupuestoTotal(): number {
-    return this.itemsPauta.reduce((total, item) => total + (item.valorTotal || 0), 0);
+  calcularPresupuestoTotal(medio?: string): number {
+    const items = medio ? this.itemsPorMedio[medio] || [] : this.itemsPauta;
+    return items.reduce((total, item) => total + (item.valorTotal || 0), 0);
   }
 
-  contarDiasConProgramacion(): number {
+  contarDiasConProgramacion(medio?: string): number {
     const todasLasFechas = new Set<string>();
+    const items = medio ? this.itemsPorMedio[medio] || [] : this.itemsPauta;
     
-    Object.values(this.programacionItems).forEach(programacion => {
-      Object.keys(programacion).forEach(fecha => {
-        if (programacion[fecha] > 0) {
-          todasLasFechas.add(fecha);
-        }
-      });
+    items.forEach(item => {
+      const programacion = this.programacionItems[item.id];
+      if (programacion) {
+        Object.keys(programacion).forEach(fecha => {
+          if (programacion[fecha] > 0) {
+            todasLasFechas.add(fecha);
+          }
+        });
+      }
     });
     
     return todasLasFechas.size;
   }
 
-  calcularTotalSpots(): number {
-    return this.itemsPauta.reduce((total, item) => {
+  calcularTotalSpots(medio?: string): number {
+    const items = medio ? this.itemsPorMedio[medio] || [] : this.itemsPauta;
+    return items.reduce((total, item) => {
       const spotsProgramados = this.contarTotalSpotsProgramados(item.id);
       return total + spotsProgramados;
     }, 0);
   }
 
-  calcularTotalSpotsOriginales(): number {
-    return this.itemsPauta.reduce((total, item) => total + (item.totalSpots || 0), 0);
+  calcularTotalSpotsOriginales(medio?: string): number {
+    const items = medio ? this.itemsPorMedio[medio] || [] : this.itemsPauta;
+    return items.reduce((total, item) => total + (item.totalSpots || 0), 0);
   }
 
   // Funciones de acciones

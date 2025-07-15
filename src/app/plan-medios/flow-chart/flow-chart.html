@@ -72,30 +72,12 @@
 
   <!-- Grilla Principal con Pestañas por Medio -->
   <div class="programming-grid-container" *ngIf="itemsPauta.length > 0">
-    <div class="grid-header">
-      <h2 class="grid-title">
-        <mat-icon>calendar_view_month</mat-icon>
-        Programación de Medios ({{ itemsPauta.length }} items)
-      </h2>
-      <div class="grid-controls">
-        <button mat-icon-button color="accent" (click)="exportarProgramacion()" matTooltip="Exportar">
-          <mat-icon>download</mat-icon>
-        </button>
-      </div>
-    </div>
-
-    <!-- Mensaje informativo -->
-    <div class="info-message" *ngIf="mediosActivos.length > 0">
-      <mat-icon>info</mat-icon>
-      <span>Los items están organizados por pestañas según el medio. Cada pestaña muestra todos los campos específicos del medio y las fechas de programación.</span>
-    </div>
-
     <!-- Pestañas por Medio -->
     <mat-tab-group class="medios-tabs" *ngIf="mediosActivos.length > 0">
       <mat-tab *ngFor="let medio of mediosActivos" [label]="medio + ' (' + itemsPorMedio[medio].length + ')'">
         <ng-template matTabContent>
           
-          <!-- Contenedor con scroll horizontal para cada medio -->
+          <!-- Contenedor con scroll horizontal y vertical para cada medio -->
           <div class="grid-scroll-container">
             <div class="programming-table">
               
@@ -208,31 +190,31 @@
               </div>
             </div>
           </div>
+
+          <!-- Resumen de programación por medio -->
+          <div class="programming-summary">
+            <div class="summary-stats">
+              <div class="summary-item">
+                <span class="summary-label">Total Items:</span>
+                <span class="summary-value">{{ itemsPorMedio[medio].length }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Presupuesto Total:</span>
+                <span class="summary-value">{{ calcularPresupuestoTotal(medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Días con Programación:</span>
+                <span class="summary-value">{{ contarDiasConProgramacion(medio) }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Spots Programados:</span>
+                <span class="summary-value">{{ calcularTotalSpots(medio) }} / {{ calcularTotalSpotsOriginales(medio) }}</span>
+              </div>
+            </div>
+          </div>
         </ng-template>
       </mat-tab>
     </mat-tab-group>
-
-    <!-- Resumen de programación -->
-    <div class="programming-summary">
-      <div class="summary-stats">
-        <div class="summary-item">
-          <span class="summary-label">Total Items:</span>
-          <span class="summary-value">{{ itemsPauta.length }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Presupuesto Total:</span>
-          <span class="summary-value">{{ calcularPresupuestoTotal() | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Días con Programación:</span>
-          <span class="summary-value">{{ contarDiasConProgramacion() }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Spots Programados:</span>
-          <span class="summary-value">{{ calcularTotalSpots() }} / {{ calcularTotalSpotsOriginales() }}</span>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Mensaje cuando no hay items -->
