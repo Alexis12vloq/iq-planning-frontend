@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { Observable, startWith, map, retry, catchError, of } from 'rxjs';
+import { Observable, startWith, map, retry, catchError, of, BehaviorSubject, combineLatest } from 'rxjs';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
 import { PlanMediosService } from '../services/plan-medios.service';
 import { PlanMediosQuery, PlanMediosFilter, PlanMediosListDto, TablaParametro, ParametroFiltro } from '../models/plan-medios-dto.model';
@@ -73,10 +73,15 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   marcasBackend: ParametroFiltro[] = [];
   productosBackend: ParametroFiltro[] = [];
 
-  // Opciones dinámicas dependientes
-  clientesOptions: string[] = [];
-  marcasOptions: string[] = [];
-  productosOptions: string[] = [];
+  // Opciones dinámicas dependientes (usando BehaviorSubject para reactividad)
+  private clientesOptionsSubject = new BehaviorSubject<string[]>([]);
+  private marcasOptionsSubject = new BehaviorSubject<string[]>([]);
+  private productosOptionsSubject = new BehaviorSubject<string[]>([]);
+
+  // Exponer como observables
+  clientesOptions$ = this.clientesOptionsSubject.asObservable();
+  marcasOptions$ = this.marcasOptionsSubject.asObservable();
+  productosOptions$ = this.productosOptionsSubject.asObservable();
 
   filtroForm = new FormGroup({
     anunciante: new FormControl(''),
@@ -89,10 +94,10 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     fechaFin: new FormControl('')
   });
 
-  filteredAnunciantes!: Observable<string[]>;
-  filteredClientes!: Observable<string[]>;
-  filteredMarcas!: Observable<string[]>;
-  filteredProductos!: Observable<string[]>;
+  filteredAnunciantes: Observable<string[]> = of([]);
+  filteredClientes: Observable<string[]> = of([]);
+  filteredMarcas: Observable<string[]> = of([]);
+  filteredProductos: Observable<string[]> = of([]);
 
   // Datos de ejemplo para la tabla
   resultados: Resultado[] = [];
@@ -140,29 +145,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   estadoConexion: 'conectado' | 'error' | 'verificando' = 'verificando';
 
   constructor(private router: Router, private dialog: MatDialog, private snackBar: MatSnackBar, private planMediosService: PlanMediosService) {
-    // Inicializar observables para autocomplete
-    this.filteredAnunciantes = this.filtroForm.get('anunciante')!.valueChanges.pipe(
-      startWith(''),
-      map(value => this._filter(value || '', this.anunciantesBackend.map(a => a.nombre)))
-    );
-
-    this.filteredClientes = this.filtroForm.get('cliente')!.valueChanges.pipe(
-      startWith(''),
-      map(value => this._filter(value || '', this.clientesOptions))
-    );
-
-    this.filteredMarcas = this.filtroForm.get('marca')!.valueChanges.pipe(
-      startWith(''),
-      map(value => this._filter(value || '', this.marcasOptions))
-    );
-
-    this.filteredProductos = this.filtroForm.get('producto')!.valueChanges.pipe(
-      startWith(''),
-      map(value => this._filter(value || '', this.productosOptions))
-    );
-
-    // Configurar los listeners después de cargar los datos
-    this.configurarListeners();
+    // Los observables se inicializarán después de cargar los datos del backend
 
     // Lógica de fechas igual que en creación
     this.filtroForm.get('fechaInicio')!.valueChanges.subscribe((fechaInicioRaw: any) => {
@@ -210,14 +193,15 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     this.filtroForm.get('anunciante')!.valueChanges.subscribe((anunciante: string | null) => {
       const anuncianteObj = this.anunciantesBackend.find(a => a.nombre === anunciante);
       if (anuncianteObj) {
-        this.clientesOptions = this.clientesBackend
+        const clientesOptions = this.clientesBackend
           .filter(c => c.padreId === anuncianteObj.id)
           .map(c => c.nombre);
+        this.clientesOptionsSubject.next(clientesOptions);
       } else {
-        this.clientesOptions = [];
+        this.clientesOptionsSubject.next([]);
       }
-      this.marcasOptions = [];
-      this.productosOptions = [];
+      this.marcasOptionsSubject.next([]);
+      this.productosOptionsSubject.next([]);
       this.filtroForm.get('cliente')!.setValue('');
       this.filtroForm.get('marca')!.setValue('');
       this.filtroForm.get('producto')!.setValue('');
@@ -227,13 +211,14 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     this.filtroForm.get('cliente')!.valueChanges.subscribe((cliente: string | null) => {
       const clienteObj = this.clientesBackend.find(c => c.nombre === cliente);
       if (clienteObj) {
-        this.marcasOptions = this.marcasBackend
+        const marcasOptions = this.marcasBackend
           .filter(m => m.padreId === clienteObj.id)
           .map(m => m.nombre);
+        this.marcasOptionsSubject.next(marcasOptions);
       } else {
-        this.marcasOptions = [];
+        this.marcasOptionsSubject.next([]);
       }
-      this.productosOptions = [];
+      this.productosOptionsSubject.next([]);
       this.filtroForm.get('marca')!.setValue('');
       this.filtroForm.get('producto')!.setValue('');
     });
@@ -242,11 +227,12 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     this.filtroForm.get('marca')!.valueChanges.subscribe((marca: string | null) => {
       const marcaObj = this.marcasBackend.find(m => m.nombre === marca);
       if (marcaObj) {
-        this.productosOptions = this.productosBackend
+        const productosOptions = this.productosBackend
           .filter(p => p.padreId === marcaObj.id)
           .map(p => p.nombre);
+        this.productosOptionsSubject.next(productosOptions);
       } else {
-        this.productosOptions = [];
+        this.productosOptionsSubject.next([]);
       }
       this.filtroForm.get('producto')!.setValue('');
     });
@@ -271,8 +257,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       )
       .subscribe((parametros: TablaParametro[]) => {
         this.procesarParametros(parametros);
-        this.isLoading = false;
-        this.estadoConexion = 'conectado';
+        // Después de cargar parámetros, cargar los datos del backend
+        this.consultarBackend();
       });
   }
 
@@ -328,6 +314,46 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       marcas: this.marcasBackend.length,
       productos: this.productosBackend.length
     });
+
+    // Inicializar observables después de cargar los datos
+    this.inicializarObservables();
+    // Configurar los listeners después de tener los datos
+    this.configurarListeners();
+  }
+
+  /**
+   * Inicializar observables del autocomplete con los datos cargados
+   */
+  private inicializarObservables(): void {
+    // Autocomplete para anunciantes
+    this.filteredAnunciantes = this.filtroForm.get('anunciante')!.valueChanges.pipe(
+      startWith(''),
+      map(value => this._filter(value || '', this.anunciantesBackend.map(a => a.nombre)))
+    );
+
+    // Autocomplete para clientes (dependiente de anunciante)
+    this.filteredClientes = combineLatest([
+      this.filtroForm.get('cliente')!.valueChanges.pipe(startWith('')),
+      this.clientesOptions$
+    ]).pipe(
+      map(([value, options]) => this._filter(value || '', options))
+    );
+
+    // Autocomplete para marcas (dependiente de cliente)
+    this.filteredMarcas = combineLatest([
+      this.filtroForm.get('marca')!.valueChanges.pipe(startWith('')),
+      this.marcasOptions$
+    ]).pipe(
+      map(([value, options]) => this._filter(value || '', options))
+    );
+
+    // Autocomplete para productos (dependiente de marca)
+    this.filteredProductos = combineLatest([
+      this.filtroForm.get('producto')!.valueChanges.pipe(startWith('')),
+      this.productosOptions$
+    ]).pipe(
+      map(([value, options]) => this._filter(value || '', options))
+    );
   }
 
   buscar() {
@@ -385,9 +411,9 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   borrarFiltros() {
     this.filtroForm.reset();
-    this.clientesOptions = [];
-    this.marcasOptions = [];
-    this.productosOptions = [];
+    this.clientesOptionsSubject.next([]);
+    this.marcasOptionsSubject.next([]);
+    this.productosOptionsSubject.next([]);
     // Mostrar todos los datos del backend sin filtros
     this.aplicarFiltrosLocalmente();
   }
@@ -399,7 +425,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   ngOnInit() {
     // Cargar parámetros primero, luego los datos del backend
     this.cargarParametrosBackend();
-    this.consultarBackend();
+    // Los datos del backend se cargarán automáticamente después de cargar parámetros
   }
 
   // Método original de ngOnInit (renombrado para mantener funcionalidad)
@@ -659,8 +685,11 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
    * Consulta paginada al backend
    */
   consultarBackend(pageNumber: number = 1, pageSize: number = 1000): void {
-    this.isLoading = true;
-    this.estadoConexion = 'verificando';
+    // Solo poner isLoading = true si no está ya cargando
+    if (!this.isLoading) {
+      this.isLoading = true;
+      this.estadoConexion = 'verificando';
+    }
     
     // Ya no enviamos filtros al backend, solo paginación
     this.planMediosService.consultarPaginado(pageNumber, pageSize)
