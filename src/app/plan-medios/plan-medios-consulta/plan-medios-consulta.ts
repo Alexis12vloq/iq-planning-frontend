@@ -600,7 +600,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       height: '70vh',
       maxHeight: '800px',
       data: { versiones, selectedRow: row },
-      disableClose: true,
+      disableClose: true
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) {
@@ -979,15 +979,15 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     <mat-dialog-content style="padding: 16px 24px; width: 100%; display: flex; flex-direction: column; overflow: hidden;">
       <!-- Filtros -->
       <form [formGroup]="filtroForm">
-        <div class="filtros-container" style="margin-bottom: 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-          <mat-form-field appearance="outline" style="width: 180px;">
+        <div class="filtros-container" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          <mat-form-field appearance="fill" style="width: 180px;">
             <mat-label>Buscar por versión</mat-label>
-            <input matInput formControlName="version" placeholder="Ej: 1">
+            <input matInput formControlName="version" placeholder="Ej: 1" />
           </mat-form-field>
           
-          <mat-form-field appearance="outline" style="width: 180px;">
+          <mat-form-field appearance="fill" style="width: 180px;">
             <mat-label>Fecha de creación</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="fechaCreacion">
+            <input matInput [matDatepicker]="picker" formControlName="fechaCreacion" placeholder="dd/mm/yyyy" />
             <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
             <mat-datepicker #picker></mat-datepicker>
           </mat-form-field>
@@ -1095,27 +1095,40 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     .filtros-container {
       margin-bottom: 12px !important;
     }
-    mat-paginator {
+        mat-paginator {
       font-size: 0.85rem;
     }
     
-    /* Estilos específicos para arreglar el datepicker en modal */
-    :host ::ng-deep .mat-datepicker-popup {
-      z-index: 9999 !important;
+    /* Estilos específicos para el modal */
+    .filtros-container {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
     }
     
-    :host ::ng-deep .cdk-overlay-container {
-      z-index: 9999 !important;
+    .filtros-container mat-form-field {
+      background: white;
+      border-radius: 4px;
     }
     
-    :host ::ng-deep .mat-datepicker-content {
-      z-index: 9999 !important;
+    /* Arreglar color del texto en campos de fecha */
+    :host ::ng-deep .mat-form-field-invalid .mat-input-element {
+      color: #000 !important;
     }
     
-    :host ::ng-deep .cdk-overlay-backdrop {
-      z-index: 9998 !important;
+    :host ::ng-deep .mat-form-field.mat-form-field-invalid .mat-input-element {
+      color: #000 !important;
     }
-  `]
+    
+    :host ::ng-deep .mat-input-element {
+      color: #000 !important;
+    }
+    
+    :host ::ng-deep .mat-form-field-appearance-fill .mat-form-field-infix {
+      color: #000 !important;
+    }
+    `]
 })
 export class VersionesPlanDialog implements AfterViewInit {
   displayedColumns = ['fechaCreacion', 'version', 'fechaInicio', 'fechaFin', 'campania', 'estado'];
@@ -1126,7 +1139,7 @@ export class VersionesPlanDialog implements AfterViewInit {
   // Propiedades para filtros
   filtroForm = new FormGroup({
     version: new FormControl(''),
-    fechaCreacion: new FormControl('')
+    fechaCreacion: new FormControl('', { validators: [] })
   });
   datosOriginales: any[] = [];
 

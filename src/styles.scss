@@ -2,3 +2,37 @@
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* Estilos globales para arreglar datepicker en modales */
+.cdk-overlay-container .mat-datepicker-popup {
+  z-index: 9999 !important;
+}
+
+.cdk-overlay-container .mat-datepicker-content {
+  z-index: 9999 !important;
+}
+
+.cdk-overlay-container .mat-datepicker-content .mat-calendar {
+  z-index: 9999 !important;
+}
+
+.cdk-overlay-pane[style*="z-index"] {
+  z-index: 9999 !important;
+}
+
+/* Arreglar color del texto en campos de formulario */
+.mat-input-element {
+  color: #000 !important;
+}
+
+.mat-form-field-invalid .mat-input-element {
+  color: #000 !important;
+}
+
+.mat-form-field.mat-form-field-invalid .mat-input-element {
+  color: #000 !important;
+}
+
+.mat-form-field-appearance-fill .mat-form-field-infix {
+  color: #000 !important;
+}
