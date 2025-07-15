@@ -308,9 +308,10 @@ export class PlanMediosResumen implements OnInit {
     }
     
     let contadorSemana = 1;
+    const maxSemanas = 5; // Limitar a máximo 5 semanas
     
-    // Generar semanas hasta cubrir todo el período
-    while (inicioSemana <= fechaFin) {
+    // Generar semanas hasta cubrir todo el período (máximo 5 semanas)
+    while (inicioSemana <= fechaFin && contadorSemana <= maxSemanas) {
       const finSemana = new Date(inicioSemana);
       finSemana.setDate(inicioSemana.getDate() + 6); // Domingo de la misma semana
       
