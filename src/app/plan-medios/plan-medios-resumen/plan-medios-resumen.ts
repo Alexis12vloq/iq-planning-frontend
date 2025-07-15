@@ -55,7 +55,7 @@ export class PlanMediosResumen implements OnInit {
   periodoSeleccionado: PeriodoPlan;
   resumenPlan: ResumenPlan = this.crearPlanEjemplo(); // Inicializar con plan de ejemplo
   displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
-  semanasColumnas: string[] = ['L1', 'L7', 'L14', 'L21', 'L28'];
+  semanasColumnas: string[] = []; // Ahora será dinámico
   semanasConFechas: Array<{nombre: string, fechaInicio: string, fechaFin: string}> = [];
   dataSource: FilaMedio[] = [];
   planId: string | undefined; // Almacenar el ID del plan
@@ -277,37 +277,94 @@ export class PlanMediosResumen implements OnInit {
 
   calcularSemanasConFechas(): void {
     this.semanasConFechas = [];
+    this.semanasColumnas = [];
+    
     const fechaInicio = new Date(this.periodoSeleccionado.fechaInicio);
     const fechaFin = new Date(this.periodoSeleccionado.fechaFin);
     
-    // Calcular 5 semanas desde la fecha de inicio
-    for (let i = 0; i < 5; i++) {
-      const inicioSemana = new Date(fechaInicio);
-      inicioSemana.setDate(fechaInicio.getDate() + (i * 7));
-      
+    // Asegurar que las fechas se parseen correctamente
+    fechaInicio.setHours(0, 0, 0, 0);
+    fechaFin.setHours(23, 59, 59, 999);
+    
+    console.log('📅 Calculando semanas para período:', {
+      fechaInicio: fechaInicio.toISOString(),
+      fechaFin: fechaFin.toISOString()
+    });
+    
+    // Encontrar el primer lunes de la semana que contiene la fecha de inicio
+    let inicioSemana = new Date(fechaInicio);
+    
+    // Si la fecha de inicio no es lunes, ajustar al lunes de esa semana
+    const diaSemana = inicioSemana.getDay(); // 0=domingo, 1=lunes, etc.
+    if (diaSemana !== 1) {
+      // Calcular días hasta el lunes anterior
+      let diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1; // Si es domingo (0), retroceder 6 días
+      inicioSemana.setDate(inicioSemana.getDate() - diasHastaLunes);
+    }
+    
+    // Si el lunes calculado es anterior a la fecha de inicio del plan, usar la fecha de inicio
+    if (inicioSemana < fechaInicio) {
+      inicioSemana = new Date(fechaInicio);
+    }
+    
+    let contadorSemana = 1;
+    
+    // Generar semanas hasta cubrir todo el período
+    while (inicioSemana <= fechaFin) {
       const finSemana = new Date(inicioSemana);
-      finSemana.setDate(inicioSemana.getDate() + 6);
+      finSemana.setDate(inicioSemana.getDate() + 6); // Domingo de la misma semana
       
       // Si la fecha fin de la semana supera la fecha fin del período, ajustarla
       if (finSemana > fechaFin) {
         finSemana.setTime(fechaFin.getTime());
       }
       
-      // Solo agregar si la fecha de inicio está dentro del rango del período
-      if (inicioSemana <= fechaFin) {
+      // Solo agregar si hay intersección con el período del plan
+      if (inicioSemana <= fechaFin && finSemana >= fechaInicio) {
+        // Ajustar fechas para que no salgan del rango del plan
+        const fechaInicioReal = inicioSemana < fechaInicio ? fechaInicio : inicioSemana;
+        const fechaFinReal = finSemana > fechaFin ? fechaFin : finSemana;
+        
         this.semanasConFechas.push({
-          nombre: `S${i + 1}`,
-          fechaInicio: this.formatearFecha(inicioSemana),
-          fechaFin: this.formatearFecha(finSemana)
+          nombre: `S${contadorSemana}`,
+          fechaInicio: this.formatearFecha(fechaInicioReal),
+          fechaFin: this.formatearFecha(fechaFinReal)
         });
+        
+        this.semanasColumnas.push(`S${contadorSemana}`);
+        
+        console.log(`📅 Semana ${contadorSemana}: ${this.formatearFecha(fechaInicioReal)} - ${this.formatearFecha(fechaFinReal)}`);
+        
+        contadorSemana++;
       }
+      
+      // Avanzar al próximo lunes
+      inicioSemana.setDate(inicioSemana.getDate() + 7);
     }
+    
+    console.log('📅 Semanas calculadas:', this.semanasConFechas);
+    console.log('📅 Columnas de semanas:', this.semanasColumnas);
   }
 
   formatearFecha(fecha: Date): string {
     const dia = fecha.getDate().toString().padStart(2, '0');
     const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
-    return `${dia}/${mes}`;
+    const año = fecha.getFullYear();
+    return `${dia}/${mes}/${año}`;
+  }
+
+  /**
+   * Genera un array de spots por semana inicializado en 0
+   */
+  private generarSpotsPorSemana(): number[] {
+    return new Array(this.semanasColumnas.length).fill(0);
+  }
+
+  /**
+   * Genera un array de semanas boolean inicializado en false
+   */
+  private generarSemanasBoolean(): boolean[] {
+    return new Array(this.semanasColumnas.length).fill(false);
   }
 
   onNuevaPauta(): void {
@@ -369,7 +426,10 @@ export class PlanMediosResumen implements OnInit {
     
     const dialogRef = this.dialog.open(ModalAgregarMedioComponent, {
       width: '600px',
-      data: { planData },
+      data: { 
+        planData,
+        numSemanas: this.semanasColumnas.length
+      },
       disableClose: true
     });
 
@@ -669,7 +729,7 @@ export class PlanMediosResumen implements OnInit {
       const tarifa = Number(respuestaPauta.datos?.tarifa) || (valorTotal / totalSpots) || 0;
       
       // Calcular semanas basado en días seleccionados del calendario
-      let semanasBoolean = [false, false, false, false, false]; // L1, L7, L14, L21, L28
+      let semanasBoolean = this.generarSemanasBoolean(); // Dinámico basado en número de semanas
       
       if (respuestaPauta.diasSeleccionados && respuestaPauta.diasSeleccionados.length > 0) {
         // Si tiene días específicos seleccionados, calcular las semanas correspondientes
@@ -681,24 +741,24 @@ export class PlanMediosResumen implements OnInit {
           const diferenciaDias = Math.floor((fechaDia.getTime() - fechaInicioPlan.getTime()) / (1000 * 60 * 60 * 24));
           const semanaIndex = Math.floor(diferenciaDias / 7);
           
-          // Mapear a las semanas disponibles (L1=0, L7=1, L14=2, L21=3, L28=4)
-          if (semanaIndex >= 0 && semanaIndex < 5) {
+          // Mapear a las semanas disponibles
+          if (semanaIndex >= 0 && semanaIndex < semanasBoolean.length) {
             semanasBoolean[semanaIndex] = true;
-          } else if (semanaIndex >= 5) {
+          } else if (semanaIndex >= semanasBoolean.length) {
             // Para semanas posteriores, marcar la última disponible
-            semanasBoolean[4] = true;
+            semanasBoolean[semanasBoolean.length - 1] = true;
           }
         });
       } else if (respuestaPauta.semanas) {
         // Fallback al sistema anterior de semanas
         const semanas = respuestaPauta.semanas || [];
-        semanasBoolean = ['L1', 'L7', 'L14', 'L21', 'L28'].map(codigo => 
+        semanasBoolean = this.semanasColumnas.map(codigo => 
           semanas.includes(codigo)
         );
       }
       
       // Cargar spots guardados desde localStorage
-      const spotsGuardados = respuestaPauta.datos?.spotsPorSemana || [0, 0, 0, 0, 0];
+      const spotsGuardados = respuestaPauta.datos?.spotsPorSemana || this.generarSpotsPorSemana();
       const totalSpotsGuardados = spotsGuardados.reduce((total: number, spots: number) => total + spots, 0);
       
       if (mediosMap.has(claveAgrupacion)) {
@@ -778,10 +838,10 @@ export class PlanMediosResumen implements OnInit {
       const tarifa = Number(pautaResumen.datos?.tarifa) || (valorTotal / totalSpots) || 0;
       
       // Para pautas del estado, usar semanas por defecto (se pueden mejorar después)
-      const semanasBoolean = [true, true, true, true, true]; // Todas las semanas activas por defecto
+      const semanasBoolean = this.generarSemanasBoolean().map(() => true); // Todas las semanas activas por defecto
       
       // Cargar spots guardados desde localStorage  
-      const spotsGuardados = pautaResumen.datos?.spotsPorSemana || [0, 0, 0, 0, 0];
+      const spotsGuardados = pautaResumen.datos?.spotsPorSemana || this.generarSpotsPorSemana();
       const totalSpotsGuardados = spotsGuardados.reduce((total: number, spots: number) => total + spots, 0);
       
       if (mediosMap.has(claveAgrupacion)) {
@@ -934,7 +994,7 @@ export class PlanMediosResumen implements OnInit {
     
     // Inicializar spotsPorSemana si no existe
     if (!medio.spotsPorSemana) {
-      medio.spotsPorSemana = [0, 0, 0, 0, 0];
+      medio.spotsPorSemana = this.generarSpotsPorSemana();
     }
     
     // Actualizar spots de la semana específica
@@ -1041,20 +1101,23 @@ export class PlanMediosResumen implements OnInit {
 
   private distribuirSpotsEnSemanas(totalSpots: number, semanasBoolean: boolean[]): number[] {
     // Inicializar todos los spots en 0 por defecto
-    const spotsPorSemana: number[] = [0, 0, 0, 0, 0];
+    const spotsPorSemana: number[] = this.generarSpotsPorSemana();
     
     // Solo distribuir si hay spots especificados y mayor a 0
     if (totalSpots > 0) {
       let spotsRestantes = totalSpots;
+      const numSemanas = semanasBoolean.length;
 
-      for (let i = 0; i < 5; i++) {
-        const spotsParaSemana = Math.floor(spotsRestantes / (5 - i)); // Distribuir proporcionalmente
+      for (let i = 0; i < numSemanas; i++) {
+        const spotsParaSemana = Math.floor(spotsRestantes / (numSemanas - i)); // Distribuir proporcionalmente
         spotsPorSemana[i] = spotsParaSemana;
         spotsRestantes -= spotsParaSemana;
       }
 
       // Asegurar que los spots restantes se distribuyan en la última semana
-      spotsPorSemana[4] += spotsRestantes;
+      if (numSemanas > 0) {
+        spotsPorSemana[numSemanas - 1] += spotsRestantes;
+      }
     }
 
     return spotsPorSemana;
@@ -1104,6 +1167,15 @@ export class PlanMediosResumen implements OnInit {
         </div>
       </div>
 
+      <!-- Alerta de medios existentes -->
+      <div class="medios-existentes" *ngIf="mediosExistentes.length > 0">
+        <h4>Medios ya agregados al plan:</h4>
+        <div class="medio-existente" *ngFor="let medioExistente of mediosExistentes">
+          <mat-icon>info</mat-icon>
+          <span>{{ medioExistente.medio }} - {{ medioExistente.proveedor }} (Tarifa: {{ medioExistente.tarifa | currency:'USD':'symbol':'1.2-2' }})</span>
+        </div>
+      </div>
+
       <!-- Formulario Simplificado -->
       <mat-card class="form-card">
         <mat-card-header>
@@ -1123,16 +1195,25 @@ export class PlanMediosResumen implements OnInit {
             <mat-form-field class="full-width" *ngIf="medioForm.get('medio')?.value">
               <mat-label>Seleccionar Proveedor</mat-label>
               <mat-select formControlName="proveedor">
-                <mat-option *ngFor="let proveedor of proveedoresDisponibles" [value]="proveedor.id">
+                <mat-option *ngFor="let proveedor of proveedoresFiltrados" [value]="proveedor.id">
                   {{ proveedor.VENDOR }}
                 </mat-option>
               </mat-select>
+              <mat-hint *ngIf="proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0">
+                Todos los proveedores de este medio ya están agregados
+              </mat-hint>
             </mat-form-field>
 
             <mat-form-field class="full-width">
               <mat-label>Tarifa</mat-label>
               <input matInput type="number" formControlName="tarifa" step="0.01">
             </mat-form-field>
+
+            <!-- Mensaje de validación de duplicado -->
+            <div class="validation-message" *ngIf="existeCombinacion">
+              <mat-icon color="warn">warning</mat-icon>
+              <span>Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan</span>
+            </div>
           </form>
         </mat-card-content>
       </mat-card>
@@ -1143,7 +1224,7 @@ export class PlanMediosResumen implements OnInit {
       <button 
         mat-raised-button 
         color="primary" 
-        [disabled]="!medioForm.valid"
+        [disabled]="!medioForm.valid || existeCombinacion"
         (click)="guardarMedio()">
         <mat-icon>save</mat-icon>
         Guardar Medio
@@ -1200,6 +1281,37 @@ export class PlanMediosResumen implements OnInit {
       color: #333;
     }
 
+    .medios-existentes {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #e3f2fd;
+      border-radius: 4px;
+      border-left: 4px solid #2196f3;
+    }
+
+    .medios-existentes h4 {
+      font-size: 14px;
+      font-weight: 500;
+      margin: 0 0 8px 0;
+      color: #1976d2;
+    }
+
+    .medio-existente {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .medio-existente mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #2196f3;
+    }
+
     .form-card {
       margin-bottom: 16px;
     }
@@ -1207,6 +1319,21 @@ export class PlanMediosResumen implements OnInit {
     .full-width {
       width: 100%;
       margin-bottom: 16px;
+    }
+
+    .validation-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f44336;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .validation-message mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
     .modal-actions {
@@ -1222,6 +1349,10 @@ export class ModalAgregarMedioComponent implements OnInit {
   medioForm!: FormGroup;
   mediosDisponibles = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
   proveedoresDisponibles: any[] = [];
+  proveedoresFiltrados: any[] = [];
+  mediosExistentes: any[] = [];
+  existeCombinacion: boolean = false;
+  numSemanas: number = 5; // Por defecto 5 semanas
 
   constructor(
     private fb: FormBuilder,
@@ -1238,32 +1369,123 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Inicialización del modal
+    // Inicializar número de semanas desde los datos recibidos
+    if (this.data.numSemanas) {
+      this.numSemanas = this.data.numSemanas;
+    }
+    
+    // Cargar medios existentes del plan
+    this.cargarMediosExistentes();
+    
+    // Suscribirse a cambios en el formulario para validar duplicados
+    this.medioForm.valueChanges.subscribe(() => {
+      this.validarCombinacionDuplicada();
+    });
+  }
+
+  /**
+   * Genera un array de spots por semana inicializado en 0
+   */
+  private generarSpotsPorSemana(): number[] {
+    return new Array(this.numSemanas).fill(0);
+  }
+
+  private cargarMediosExistentes(): void {
+    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    this.mediosExistentes = pautas
+      .filter((pauta: any) => pauta.planId === this.data.planData.id)
+      .map((pauta: any) => ({
+        medio: pauta.medio,
+        proveedor: pauta.proveedor,
+        tarifa: pauta.datos?.tarifa || 0
+      }));
+    
+    console.log('📋 Medios existentes cargados:', this.mediosExistentes);
   }
 
   onMedioChange(medio: string): void {
     if (medio) {
       this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
-      this.medioForm.patchValue({ proveedor: '' });
+      this.filtrarProveedoresDisponibles(medio);
+      this.medioForm.patchValue({ proveedor: '', tarifa: 0 });
+    }
+  }
+
+  private filtrarProveedoresDisponibles(medio: string): void {
+    // Obtener proveedores ya usados para este medio
+    const proveedoresUsados = this.mediosExistentes
+      .filter(me => me.medio === medio)
+      .map(me => me.proveedor);
+    
+    // Filtrar proveedores disponibles excluyendo los ya usados
+    this.proveedoresFiltrados = this.proveedoresDisponibles.filter(proveedor => 
+      !proveedoresUsados.includes(proveedor.VENDOR)
+    );
+    
+    console.log('🔍 Proveedores filtrados para', medio, ':', this.proveedoresFiltrados);
+  }
+
+  private validarCombinacionDuplicada(): void {
+    const valores = this.medioForm.value;
+    
+    if (valores.medio && valores.proveedor && valores.tarifa > 0) {
+      const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+      
+      if (proveedorSeleccionado) {
+        // Verificar si existe la combinación exacta
+        this.existeCombinacion = this.mediosExistentes.some(me => 
+          me.medio === valores.medio && 
+          me.proveedor === proveedorSeleccionado.VENDOR && 
+          Math.abs(me.tarifa - valores.tarifa) < 0.01 // Comparación con tolerancia para decimales
+        );
+        
+        console.log('🔍 Validando combinación:', {
+          medio: valores.medio,
+          proveedor: proveedorSeleccionado.VENDOR,
+          tarifa: valores.tarifa,
+          existe: this.existeCombinacion
+        });
+      }
+    } else {
+      this.existeCombinacion = false;
     }
   }
 
   guardarMedio(): void {
-    if (this.medioForm.valid) {
+    if (this.medioForm.valid && !this.existeCombinacion) {
       const valores = this.medioForm.value;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
       
+      // Verificar una vez más antes de guardar
+      const combinacionExiste = this.mediosExistentes.some(me => 
+        me.medio === valores.medio && 
+        me.proveedor === proveedorSeleccionado?.VENDOR && 
+        Math.abs(me.tarifa - valores.tarifa) < 0.01
+      );
+      
+      if (combinacionExiste) {
+        this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe', '', { 
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+        return;
+      }
+      
       // Crear una pauta simple para almacenar el medio
       const nuevaPauta: RespuestaPauta = {
-        id: Date.now().toString(),
+        id: `pauta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         planId: this.data.planData.id,
         plantillaId: 'simple',
         paisFacturacion: 'Perú',
         medio: valores.medio,
         proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
         proveedorId: valores.proveedor,
-        datos: { tarifa: Number(valores.tarifa) },
+        datos: { 
+          tarifa: Number(valores.tarifa),
+          spotsPorSemana: this.generarSpotsPorSemana() // Inicializar spots por semana dinámicamente
+        },
         fechaCreacion: new Date().toISOString(),
+        fechaModificacion: new Date().toISOString(),
         valorTotal: Number(valores.tarifa), // Inicialmente el valor es igual a la tarifa (1 spot)
         valorNeto: Number(valores.tarifa),
         totalSpots: 1, // Inicialmente 1 spot
@@ -1276,8 +1498,18 @@ export class ModalAgregarMedioComponent implements OnInit {
       pautas.push(nuevaPauta);
       localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
 
-      this.snackBar.open('Medio agregado correctamente', '', { duration: 2000 });
+      this.snackBar.open('✅ Medio agregado correctamente', '', { 
+        duration: 2000,
+        panelClass: ['success-snackbar']
+      });
+      
+      console.log('✅ Nuevo medio guardado:', nuevaPauta);
       this.dialogRef.close({ shouldRefresh: true });
+    } else if (this.existeCombinacion) {
+      this.snackBar.open('❌ Esta combinación ya existe en el plan', '', { 
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
     }
   }
 } 
