@@ -664,7 +664,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       .subscribe({
         next: (response) => {
           // Convertir los datos del backend al formato local
-          const resultadosBackend = response.items.map(item => ({
+          const resultadosBackend = response.items.map((item :any) => ({
             id: item.idPlan.toString(),
             numeroPlan: item.numeroPlan?.toString() || '',
             version: item.version.toString(),
