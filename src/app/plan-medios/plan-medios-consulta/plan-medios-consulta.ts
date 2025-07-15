@@ -590,10 +590,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     }, 400); // Simula carga
   }
 
-  editarPlan() {
-    if (!this.selectedRow) return;
-    this.router.navigate(['/plan-medios-editar', this.selectedRow.id]);
-  }
+  
 
   // Añade esta función utilitaria:
   private filtrarUltimaVersionPorNumeroPlan(resultados: Resultado[]): Resultado[] {
@@ -744,6 +741,9 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
       </button>
       <button mat-raised-button color="accent" (click)="nuevaVersion()" [disabled]="!selectedRow" style="padding: 12px 24px; font-size: 16px;">
         <mat-icon>add_circle_outline</mat-icon> Generar nueva versión
+      </button>
+       <button mat-raised-button color="accent" (click)="editarPlan()" [disabled]="!selectedRow">
+        <mat-icon>edit</mat-icon>Editar
       </button>
     </mat-dialog-actions>
   `,
@@ -925,6 +925,11 @@ export class VersionesPlanDialog implements AfterViewInit {
     }); 
   }
 
+  editarPlan() {
+    if (!this.selectedRow) return;
+    this.dialogRef.close(true);
+    this.router.navigate(['/plan-medios-editar', this.selectedRow.id]);
+  }
    recargarTabla(id: string) {
     console.log(id);
     this.isLoading = true;

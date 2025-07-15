@@ -14,6 +14,8 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
 import { Router, ActivatedRoute } from '@angular/router';
+import { PlanMediosService } from '../services/plan-medios.service';
+import { TablaParametrosService } from '../services/table-parametros'; // Asegúrate de tener este servicio
 
 @Component({
   selector: 'app-plan-medios-create',
@@ -36,8 +38,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 })
 export class PlanMediosCreate implements AfterViewInit {
   // Opciones fijas
-  paises: string[] = ['Perú', 'Colombia', 'Argentina', 'Chile', 'México'];
-  tiposCompra: string[] = ['Directo', 'Programático', 'RTB'];
+  paises: string[] = [];
+  tiposCompra: string[] = [];
 
   // Simulación de respuesta del backend (estructura anidada)
   clientesBackend = [
@@ -67,51 +69,6 @@ export class PlanMediosCreate implements AfterViewInit {
           ]
         }
       ]
-    },
-    {
-      nombre: 'Nestlé',
-      clientesFacturacion: [
-        {
-          nombre: 'Nestlé Chile',
-          marcas: [
-            {
-              nombre: 'Nescafé',
-              productos: ['Nescafé Tradición', 'Nescafé Gold']
-            },
-            {
-              nombre: 'Milo',
-              productos: ['Milo Polvo', 'Milo Bebida']
-            }
-          ]
-        }
-      ]
-    },
-    {
-      nombre: 'Unilever',
-      clientesFacturacion: [
-        {
-          nombre: 'Unilever Argentina',
-          marcas: [
-            {
-              nombre: 'Axe',
-              productos: ['Axe Dark Temptation', 'Axe Apollo']
-            },
-            {
-              nombre: 'Rexona',
-              productos: ['Rexona Men', 'Rexona Women']
-            }
-          ]
-        },
-        {
-          nombre: 'Unilever Colombia',
-          marcas: [
-            {
-              nombre: 'Sedal',
-              productos: ['Sedal Rizos', 'Sedal Liso']
-            }
-          ]
-        }
-      ]
     }
   ];
 
@@ -132,8 +89,7 @@ export class PlanMediosCreate implements AfterViewInit {
     producto: new FormControl('', Validators.required),
     campana: new FormControl('', Validators.required),
     fechaInicio: new FormControl('', Validators.required),
-    fechaFin: new FormControl('', Validators.required),
-    estado: new FormControl(false, Validators.required)
+    fechaFin: new FormControl('', Validators.required)
   });
 
   // Observables para autocompletes
@@ -150,11 +106,62 @@ export class PlanMediosCreate implements AfterViewInit {
   editMode = false;
   editId: string | null = null;
 
+  // NUEVO: Parámetros dinámicos
+  tablaParametros: any[] = [];
+
   constructor(
     private snackBar: MatSnackBar,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private planMediosService: PlanMediosService,
+    private tablaParametrosService: TablaParametrosService // Inyecta el servicio real
   ) {
+    // Llama al servicio real y luego inicializa la lógica del formulario
+    this.tablaParametrosService.getAll().subscribe(parametros => {
+      this.tablaParametros = parametros;
+      this.mapearParametros();
+      this.initFormLogic();
+    });
+  }
+
+  // NUEVO: Mapea los parámetros a las estructuras usadas en el formulario
+  mapearParametros() {
+    // Paises
+    this.paises = this.tablaParametros
+      .filter(p => p.tabla === 'Paises' && p.campo_Est)
+      .map(p => p.campo_Val);
+
+    // Tipos de compra
+    this.tiposCompra = this.tablaParametros
+      .filter(p => p.tabla === 'TipoCompra' && p.campo_Est)
+      .map(p => p.campo_Val);
+
+    // Clientes y estructura anidada
+    const clientesAnunciante = this.tablaParametros.filter(p => p.tabla === 'ClientesAnunciante' && p.campo_Est);
+    const clientesFacturacion = this.tablaParametros.filter(p => p.tabla === 'ClientesFacturacion' && p.campo_Est);
+    const marcas = this.tablaParametros.filter(p => p.tabla === 'Marcas' && p.campo_Est);
+    const productos = this.tablaParametros.filter(p => p.tabla === 'Productos' && p.campo_Est);
+
+    this.clientesBackend = clientesAnunciante.map(ca => ({
+      nombre: ca.campo_Val,
+      clientesFacturacion: clientesFacturacion
+        .filter(cf => cf.campo_Padre_Id === ca.campo_Id)
+        .map(cf => ({
+          nombre: cf.campo_Val,
+          marcas: marcas
+            .filter(m => m.campo_Padre_Id === cf.campo_Id)
+            .map(m => ({
+              nombre: m.campo_Val,
+              productos: productos
+                .filter(p => p.campo_Padre_Id === m.campo_Id)
+                .map(p => p.campo_Val)
+            }))
+        }))
+    }));
+  }
+
+  // NUEVO: Inicializa la lógica del formulario (lo que estaba en el constructor)
+  initFormLogic() {
     // 1. Autocomplete: País Facturación
     this.filteredPaisesFacturacion = this.planMediosForm.get('paisFacturacion')!.valueChanges.pipe(
       startWith(''),
@@ -293,8 +300,7 @@ export class PlanMediosCreate implements AfterViewInit {
               producto: plan.producto,
               campana: plan.campana,
               fechaInicio: plan.fechaInicio,
-              fechaFin: plan.fechaFin,
-              estado: plan.estado
+              fechaFin: plan.fechaFin
             });
           });
 
@@ -345,8 +351,41 @@ export class PlanMediosCreate implements AfterViewInit {
     if (this.planMediosForm.valid) {
       this.snackBar.open(this.editMode ? 'Actualizando plan de medios...' : 'Creando plan de medios...', '', { duration: 1200 });
 
-      const planesGuardados: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+      const formValue = this.planMediosForm.getRawValue();
+
+      // Obtener los IDs reales de los selects (simulación: índice + 1)
+      const paisFacturacionIdx = this.paises.findIndex(p => p === formValue.paisFacturacion);
+      const idPaisFacturacion = paisFacturacionIdx !== -1 ? paisFacturacionIdx + 1 : null;
+
+      const clienteAnuncianteIdx = this.clientesBackend.findIndex(c => c.nombre === formValue.clienteAnunciante);
+      const idClienteAnunciante = clienteAnuncianteIdx !== -1 ? clienteAnuncianteIdx + 1 : null;
+
+      const clienteFacturacionArr = clienteAnuncianteIdx !== -1 ? this.clientesBackend[clienteAnuncianteIdx].clientesFacturacion : [];
+      const clienteFacturacionIdx = clienteFacturacionArr.findIndex(cf => cf.nombre === formValue.clienteFueActuacion);
+      const idClienteFacturacion = clienteFacturacionIdx !== -1 ? clienteFacturacionIdx + 1 : null;
+
+      const marcaArr = clienteFacturacionIdx !== -1 ? clienteFacturacionArr[clienteFacturacionIdx].marcas : [];
+      const marcaIdx = marcaArr.findIndex(m => m.nombre === formValue.marca);
+      const idMarca = marcaIdx !== -1 ? marcaIdx + 1 : null;
+
+      const productoArr = marcaIdx !== -1 ? marcaArr[marcaIdx].productos : [];
+      const productoIdx = productoArr.findIndex(p => p === formValue.producto);
+      const idProducto = productoIdx !== -1 ? productoIdx + 1 : null;
+
+      // Formatea fechas a Date
+      const parseDate = (date: any): Date => {
+        if (!date) return new Date();
+        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return new Date(date);
+        if (date instanceof Date) return date;
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? new Date() : d;
+      };
+
+      // Construye el body para el backend con NumeroPlan
       let lastNumeroPlan = 1000;
+
+      const planesGuardados: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+
       if (!this.editMode && planesGuardados.length > 0) {
         const max = Math.max(
           ...planesGuardados
@@ -356,7 +395,21 @@ export class PlanMediosCreate implements AfterViewInit {
         if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
       }
 
-      const formValue = this.planMediosForm.getRawValue();
+      const body = {
+        NumeroPlan: lastNumeroPlan,
+        IdPaisFacturacion: idPaisFacturacion,
+        PaisesPauta: (formValue.paisesPauta || []).join(','),
+        IdClienteAnunciante: idClienteAnunciante,
+        IdClienteFacturacion: idClienteFacturacion,
+        IdMarca: idMarca,
+        IdProducto: idProducto,
+        Campania: formValue.campana ?? '',
+        FechaInicio: parseDate(formValue.fechaInicio),
+        FechaFin: parseDate(formValue.fechaFin),
+        IdUsuarioCreador: 0 // Ajusta según tu lógica de usuario
+      };
+
+    
 
       // Formatea fechas a 'YYYY-MM-DD'
       const formatDate = (date: any) => {
@@ -368,12 +421,11 @@ export class PlanMediosCreate implements AfterViewInit {
       };
 
       if (this.editMode && this.editId) {
-        // --- Modo edición: actualiza el plan existente ---
+        // --- Modo edición: primero actualiza en localStorage ---
         const idx = planesGuardados.findIndex(p => p.id === this.editId);
         if (idx !== -1) {
           planesGuardados[idx] = {
             ...planesGuardados[idx],
-            // Solo actualiza los campos editables, mantiene id, numeroPlan y version
             paisFacturacion: formValue.paisFacturacion ?? '',
             paisesPauta: formValue.paisesPauta ?? [],
             clienteAnunciante: formValue.clienteAnunciante ?? '',
@@ -381,20 +433,23 @@ export class PlanMediosCreate implements AfterViewInit {
             marca: formValue.marca ?? '',
             producto: formValue.producto ?? '',
             campana: formValue.campana ?? '',
-                          fechaInicio: formatDate(formValue.fechaInicio),
-              fechaFin: formatDate(formValue.fechaFin),
-              tipoIngresoPlan: planesGuardados[idx].tipoIngresoPlan || 'Plan de Medios', // Mantener valor existente
-              fechaCreacion: planesGuardados[idx].fechaCreacion || new Date().toISOString().slice(0, 10), // Mantener fecha de creación existente
-              estado: formValue.estado ?? false
+            fechaInicio: formatDate(formValue.fechaInicio),
+            fechaFin: formatDate(formValue.fechaFin)
           };
           localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
         }
-        setTimeout(() => {
-          this.snackBar.open('Plan de medios actualizado correctamente', '', { duration: 2000 });
-          this.router.navigate(['/plan-medios-consulta']);
-        }, 1200);
+        // Luego manda la solicitud al backend
+        this.planMediosService.crearPlanMedios(body).subscribe({
+          next: (resp) => {
+            this.snackBar.open('Plan de medios actualizado correctamente', '', { duration: 2000 });
+            this.router.navigate(['/plan-medios-consulta']);
+          },
+          error: (err) => {
+            this.snackBar.open('Error al actualizar el plan de medios en backend', '', { duration: 3000 });
+          }
+        });
       } else {
-        // --- Modo creación ---
+        // --- Modo creación: primero guarda en localStorage ---
         const nuevoPlan: PlanMediosLocal = {
           id: Date.now().toString(),
           numeroPlan: lastNumeroPlan.toString(),
@@ -408,18 +463,22 @@ export class PlanMediosCreate implements AfterViewInit {
           campana: formValue.campana ?? '',
           fechaInicio: formatDate(formValue.fechaInicio),
           fechaFin: formatDate(formValue.fechaFin),
-          tipoIngresoPlan: 'Plan de Medios', // Valor por defecto
-          fechaCreacion: new Date().toISOString().slice(0, 10), // Fecha de creación
-          estado: false 
+          estado : true, // Asumiendo que el estado es siempre true al crear
+          tipoIngresoPlan: '', // Nuevo campo: 'Plan de Medios' o 'Flow Chart'
+          fechaCreacion: Date.now().toString() 
         };
-
         planesGuardados.push(nuevoPlan);
         localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
-
-        setTimeout(() => {
-          this.snackBar.open('Plan de medios creado correctamente', '', { duration: 2000 });
-          this.router.navigate(['/plan-medios-consulta']);
-        }, 1200);
+        // Luego manda la solicitud al backend
+        this.planMediosService.crearPlanMedios(body).subscribe({
+          next: (resp) => {
+            this.snackBar.open('Plan de medios creado correctamente', '', { duration: 2000 });
+            this.router.navigate(['/plan-medios-consulta']);
+          },
+          error: (err) => {
+            this.snackBar.open('Error al crear el plan de medios en backend', '', { duration: 3000 });
+          }
+        });
       }
     } else {
       console.log('Formulario inválido:', this.planMediosForm.errors, this.planMediosForm.status, this.planMediosForm.value);
@@ -437,4 +496,7 @@ export class PlanMediosCreate implements AfterViewInit {
   cancelar() {
     this.router.navigate(['/plan-medios-consulta']);
   }
+
+ 
 }
+
