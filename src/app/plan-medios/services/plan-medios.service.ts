@@ -52,6 +52,15 @@ export class PlanMediosService {
   }
 
   /**
+   * Consultar planes con detalles completos
+   */
+  consultarPlanesConDetalles(): Observable<any> {
+    const url = `${this.config.apiUrl}/api/PlanMedios/with-details`;
+    console.log(`Consultando planes con detalles: ${url}`);
+    return this.http.get<any>(url);
+  }
+
+  /**
    * Cargar todos (usando pageSize grande)
    */
   cargarTodos(): Observable<any> {

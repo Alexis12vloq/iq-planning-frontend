@@ -83,18 +83,16 @@
         <span style="margin-left:24px;font-size:1.25rem;color:#3c5977;font-family:'Montserrat','Roboto',Arial,sans-serif;">Actualizando lista...</span>
       </div>
       <div class="mat-elevation-z8" *ngIf="!isLoading">
-        <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8">
+        <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8" (matSortChange)="sortData($event)">
           <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header (click)="selectColumn(column)">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>
               {{ getColumnLabel(column) }}
             </th>
             <td mat-cell *matCellDef="let row"
                 (click)="rowClick(row, $event)"
                 (dblclick)="onRowDoubleClick(row)"
-                [class.selected-row]="selectedRow === row"
-                [ngClass]="{'selected-column': selectedColumn === column}">
-              <span *ngIf="column === 'estado'">{{ row.estado ? 'Aprobado' : 'Sin aprobar' }}</span>
-                          <span *ngIf="column !== 'estado'">{{ row[column] }}</span>
+                [class.selected-row]="selectedRow === row">
+              {{ getDisplayValue(row, column) }}
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="selectColumns"></tr>

@@ -3,7 +3,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, FormsModule } from '@angul
 import { Observable, startWith, map, retry, catchError, of, BehaviorSubject, combineLatest } from 'rxjs';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
 import { PlanMediosService } from '../services/plan-medios.service';
-import { PlanMediosQuery, PlanMediosFilter, PlanMediosListDto, TablaParametro, ParametroFiltro } from '../models/plan-medios-dto.model';
+import { PlanMediosQuery, PlanMediosFilter, PlanMediosListDto, TablaParametro, ParametroFiltro, PlanMediosConDetalles } from '../models/plan-medios-dto.model';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 // Angular Material imports
@@ -37,8 +37,15 @@ type Resultado = {
   fechaInicio: string;
   fechaFin: string;
   campania: string;
-  tipoIngresoPlan: string;
-  estado: boolean;
+  fechaCreacion: string;
+  estado: string;
+  // IDs para filtros
+  idPaisFacturacion: number;
+  idClienteAnunciante: number;
+  idClienteFacturacion: number;
+  idMarca: number;
+  idProducto: number;
+  idEstadoRegistro: number;
   [key: string]: string | boolean | number; // <-- permite acceso dinámico por string
 };
 
@@ -103,16 +110,15 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   resultados: Resultado[] = [];
 
   displayedColumns: string[] = [
-    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'tipoIngresoPlan', 'estado'
+    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'fechaCreacion', 'estado'
   ];
 
   selectColumns: string[] = [
-    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'tipoIngresoPlan', 'estado'
+    'numeroPlan', 'version', 'pais', 'anunciante', 'cliente', 'marca', 'producto', 'fechaInicio', 'fechaFin', 'campania', 'fechaCreacion', 'estado'
   ];
 
   sort: Sort = {active: '', direction: ''};
   selectedRow: Resultado | null = null;
-  selectedColumn: string | null = null;
 
   dataSource = new MatTableDataSource<Resultado>([]);
   selection = new SelectionModel<Resultado>(false, []);
@@ -129,7 +135,6 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     numeroPlan: 'Número de Plan',
     version: 'Versión',
     pais: 'País',
-    tipoCompra: 'Tipo de Compra',
     anunciante: 'Anunciante',
     cliente: 'Cliente',
     marca: 'Marca',
@@ -137,7 +142,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     fechaInicio: 'Fecha Inicio',
     fechaFin: 'Fecha Fin',
     campania: 'Campaña',
-    tipoIngresoPlan: 'Tipo de Ingreso',
+    fechaCreacion: 'Fecha Creación',
     estado: 'Estado'
   };
 
@@ -183,6 +188,30 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   private _filter(value: string, options: string[]): string[] {
     const filterValue = value.toLowerCase();
     return options.filter(option => option.toLowerCase().includes(filterValue));
+  }
+
+  /**
+   * Obtener nombre del cliente por ID
+   */
+  private obtenerNombreCliente(id: number): string {
+    const cliente = this.clientesBackend.find(c => c.id === id);
+    return cliente ? cliente.nombre : 'Sin definir';
+  }
+
+  /**
+   * Obtener nombre de la marca por ID
+   */
+  private obtenerNombreMarca(id: number): string {
+    const marca = this.marcasBackend.find(m => m.id === id);
+    return marca ? marca.nombre : 'Sin definir';
+  }
+
+  /**
+   * Obtener nombre del producto por ID
+   */
+  private obtenerNombreProducto(id: number): string {
+    const producto = this.productosBackend.find(p => p.id === id);
+    return producto ? producto.nombre : 'Sin definir';
   }
 
   /**
@@ -372,9 +401,6 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       if (filtros.numeroPlan) {
         filtrados = filtrados.filter(r => r.numeroPlan.includes(filtros.numeroPlan as string));
       }
-      if (filtros.version) {
-        filtrados = filtrados.filter(r => r.version.includes(filtros.version as string));
-      }
       if (filtros.anunciante) {
         filtrados = filtrados.filter(r => r.anunciante.toLowerCase().includes((filtros.anunciante as string).toLowerCase()));
       }
@@ -394,8 +420,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
       }
 
-      // Al final, asegúrate de mostrar solo la última versión por número de plan
-      filtrados = this.filtrarUltimaVersionPorNumeroPlan(filtrados);
+      // Ordenar por fecha de creación descendente (más reciente primero)
+      filtrados = filtrados.sort((a: any, b: any) => new Date(b.fechaCreacion || b.id).getTime() - new Date(a.fechaCreacion || a.id).getTime());
       this.dataSource.data = filtrados;
       this.isLoading = false;
     }, 400); // Simula carga visual
@@ -416,6 +442,13 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     this.productosOptionsSubject.next([]);
     // Mostrar todos los datos del backend sin filtros
     this.aplicarFiltrosLocalmente();
+    
+    // Mantener el ordenamiento después de limpiar filtros
+    setTimeout(() => {
+      if (this.sortMat && this.dataSource) {
+        this.dataSource.sort = this.sortMat;
+      }
+    }, 100);
   }
 
   get tieneFiltrosActivos(): boolean {
@@ -430,47 +463,72 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   // Método original de ngOnInit (renombrado para mantener funcionalidad)
   cargarDatosLocales() {
-    this.isLoading = true;
-    this.estadoConexion = 'verificando';
-    setTimeout(() => {
-      // Cargar planes guardados en localStorage
-      const planesLocal: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-      const planesLocalAsResultados = planesLocal.map(plan => ({
-        id: plan.id,
-        numeroPlan: plan.numeroPlan,
-        version: plan.version,
-        pais: plan.paisFacturacion,
-        anunciante: plan.clienteAnunciante,
-        cliente: plan.clienteFueActuacion,
-        marca: plan.marca,
-        producto: plan.producto,
-        fechaInicio: plan.fechaInicio,
-        fechaFin: plan.fechaFin,
-        campania: plan.campana,
-        tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
-        estado: plan.estado ?? false // si no existe, por defecto false
-      }));
-      // Solo la última versión por número de plan
-      this.allResultados = this.filtrarUltimaVersionPorNumeroPlan(planesLocalAsResultados);
-      this.dataSource = new MatTableDataSource<Resultado>(this.allResultados);
-      this.isLoading = false;
-      this.estadoConexion = 'conectado'; // Datos locales cargados
-    }, 400); // Simula carga
+    // Temporalmente deshabilitado para enfocar en integración del backend
+    console.log('Carga de datos locales temporalmente deshabilitada');
   }
 
   ngAfterViewInit() {
-    this.isLoading = true;
     setTimeout(() => {
-      // Ordena los registros por id (timestamp) descendente: más reciente primero
-      this.dataSource.data = [...this.dataSource.data].sort((a, b) => Number(b.id) - Number(a.id));
+      // Configurar paginación y ordenamiento
       this.dataSource.paginator = this.paginator;
       this.dataSource.sort = this.sortMat;
-      this.isLoading = false;
-    }, 400); // Simula carga
+      
+      // Configurar ordenamiento personalizado para fechas y números
+      this.dataSource.sortingDataAccessor = (item: any, property: string) => {
+        const value = item[property];
+        
+        switch (property) {
+          case 'fechaInicio':
+          case 'fechaFin':
+          case 'fechaCreacion':
+            // Convertir fecha a timestamp para ordenamiento
+            if (!value) return 0;
+            const date = new Date(value);
+            return isNaN(date.getTime()) ? 0 : date.getTime();
+          
+          case 'numeroPlan':
+          case 'version':
+            // Convertir a número para ordenamiento numérico
+            const num = Number(value);
+            return isNaN(num) ? 0 : num;
+          
+          case 'pais':
+          case 'anunciante':
+          case 'cliente':
+          case 'marca':
+          case 'producto':
+          case 'campania':
+          case 'estado':
+            // Ordenamiento alfabético para strings
+            return value ? value.toString().toLowerCase() : '';
+          
+          default:
+            return value || '';
+        }
+      };
+      
+      // Configurar filtrado personalizado si es necesario
+      this.dataSource.filterPredicate = (data: any, filter: string) => {
+        const searchStr = Object.keys(data).reduce((currentTerm: string, key: string) => {
+          return currentTerm + (data as any)[key] + '◬';
+        }, '').toLowerCase();
+        
+        const transformedFilter = filter.trim().toLowerCase();
+        return searchStr.indexOf(transformedFilter) !== -1;
+      };
+    }, 100);
   }
 
   sortData(sort: Sort) {
-    // No es necesario implementar nada aquí, MatTableDataSource maneja el ordenamiento automáticamente
+    console.log('Ordenando por:', sort.active, 'dirección:', sort.direction);
+    
+    // Forzar actualización del ordenamiento
+    this.dataSource.sort = this.sortMat;
+    
+    // Disparar ordenamiento manual si es necesario
+    if (sort.active && sort.direction !== '') {
+      this.dataSource.data = this.dataSource.data.slice();
+    }
   }
 
   seleccionarFila(resultado: Resultado) {
@@ -506,9 +564,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     this.selectedRow = row;
   }
 
-  selectColumn(column: string) {
-    this.selectedColumn = column;
-  }
+  // Método removido - ya no se usa selectColumn
 
   onRowDoubleClick(row: Resultado) {
     // Busca todas las versiones para ese número de plan
@@ -528,8 +584,9 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         fechaFin: plan.fechaFin,
         campania: plan.campana,
         tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
-        fechaCreacion: plan.fechaCreacion || new Date().toISOString().slice(0, 10), // Incluir fecha de creación
-        estado: plan.estado ?? false
+                  fechaCreacion: plan.fechaCreacion || new Date().toISOString().slice(0, 10), // Incluir fecha de creación
+          estado: plan.estado ?? false
+          // tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios', // Temporalmente comentado
       }))
       .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
 
@@ -554,6 +611,9 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   getDisplayValue(row: any, column: string): string {
     const value = row[column];
+    if (column === 'estado') {
+      return value || 'Sin definir';
+    }
     if (typeof value === 'boolean') {
       return value ? 'Aprobado' : 'Sin aprobar';
     }
@@ -637,105 +697,82 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     });
   }
 
-  // --- NUEVO: Recargar tabla después de cambios ---
+    // --- NUEVO: Recargar tabla después de cambios ---
   recargarTabla() {
-    this.isLoading = true;
-    setTimeout(() => {
-      const planesLocal: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-      const planesLocalAsResultados = planesLocal.map(plan => ({
-        id: plan.id,
-        numeroPlan: plan.numeroPlan,
-        version: plan.version,
-        pais: plan.paisFacturacion,
-        anunciante: plan.clienteAnunciante,
-        cliente: plan.clienteFueActuacion,
-        marca: plan.marca,
-        producto: plan.producto,
-        fechaInicio: plan.fechaInicio,
-        fechaFin: plan.fechaFin,
-        campania: plan.campana,
-        tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
-        estado: plan.estado ?? false // si no existe, por defecto false
-      }));
-      // Solo la última versión por número de plan
-      this.allResultados = this.filtrarUltimaVersionPorNumeroPlan(planesLocalAsResultados).sort((a, b) => Number(b.id) - Number(a.id));
-      this.dataSource.data = this.allResultados;
-      this.isLoading = false;
-    }, 400); // Simula carga
+    // Temporalmente deshabilitado para enfocar en integración del backend
+    console.log('Recarga de tabla temporalmente deshabilitada');
+    // En lugar de cargar datos locales, recargamos datos del backend
+    this.consultarBackend();
   }
 
   
 
-  // Añade esta función utilitaria:
-  private filtrarUltimaVersionPorNumeroPlan(resultados: Resultado[]): Resultado[] {
-    const map = new Map<string, Resultado>();
-    for (const r of resultados) {
-      const numPlan = r.numeroPlan;
-      const versionNum = parseInt(r.version, 10);
-      if (!map.has(numPlan) || versionNum > parseInt(map.get(numPlan)!.version, 10)) {
-        map.set(numPlan, r);
-      }
-    }
-    return Array.from(map.values());
-  }
+
 
   // --- MÉTODOS PARA INTEGRACIÓN CON BACKEND ---
   
   /**
-   * Consulta paginada al backend
+   * Consulta planes con detalles del backend
    */
-  consultarBackend(pageNumber: number = 1, pageSize: number = 1000): void {
+  consultarBackend(): void {
     // Solo poner isLoading = true si no está ya cargando
     if (!this.isLoading) {
       this.isLoading = true;
       this.estadoConexion = 'verificando';
     }
     
-    // Ya no enviamos filtros al backend, solo paginación
-    this.planMediosService.consultarPaginado(pageNumber, pageSize)
+    // Usar el nuevo servicio para obtener planes con detalles
+    this.planMediosService.consultarPlanesConDetalles()
       .pipe(
         retry(2), // Reintentar 2 veces en caso de error
-                 catchError((error) => {
-           console.error('Error al consultar backend después de reintentos:', error);
-           
-           this.estadoConexion = 'error';
-           
-           // Mostrar mensaje de error específico
-           let mensajeError = 'Error al cargar datos del backend';
-           if (error.status === 0) {
-             mensajeError = 'No se pudo conectar al backend. Verificar que esté ejecutándose.';
-           } else if (error.status === 404) {
-             mensajeError = 'Endpoint no encontrado. Verificar la URL del backend.';
-           } else if (error.status === 500) {
-             mensajeError = 'Error interno del servidor backend.';
-           }
-           
-           this.snackBar.open(mensajeError, '', { duration: 5000 });
-           
-           // Ofrecer cargar datos locales como fallback
-           this.mostrarOpcionFallback();
-           
-           // Retornar observable vacío para completar el flujo
-           return of({ items: [], totalCount: 0, pageNumber: 1, pageSize: 10, totalPages: 0, hasPreviousPage: false, hasNextPage: false });
-         })
+        catchError((error) => {
+          console.error('Error al consultar backend después de reintentos:', error);
+          
+          this.estadoConexion = 'error';
+          
+          // Mostrar mensaje de error específico
+          let mensajeError = 'Error al cargar datos del backend';
+          if (error.status === 0) {
+            mensajeError = 'No se pudo conectar al backend. Verificar que esté ejecutándose.';
+          } else if (error.status === 404) {
+            mensajeError = 'Endpoint no encontrado. Verificar la URL del backend.';
+          } else if (error.status === 500) {
+            mensajeError = 'Error interno del servidor backend.';
+          }
+          
+          this.snackBar.open(mensajeError, '', { duration: 5000 });
+          
+          // Ofrecer cargar datos locales como fallback
+          this.mostrarOpcionFallback();
+          
+          // Retornar observable vacío para completar el flujo
+          return of([]);
+        })
       )
       .subscribe({
-        next: (response) => {
+        next: (response: PlanMediosConDetalles[]) => {
           // Convertir los datos del backend al formato local
-          const resultadosBackend = response.items.map((item :any) => ({
+          const resultadosBackend = response.map((item: PlanMediosConDetalles) => ({
             id: item.idPlan.toString(),
-            numeroPlan: item.numeroPlan?.toString() || '',
+            numeroPlan: item.numeroPlan,
             version: item.version.toString(),
-            pais: item.pais,
-            anunciante: item.anunciante,
-            cliente: item.cliente,
-            marca: item.marca,
-            producto: item.producto,
-            fechaInicio: typeof item.fechaInicio === 'string' ? item.fechaInicio : item.fechaInicio.toISOString().slice(0, 10),
-            fechaFin: typeof item.fechaFin === 'string' ? item.fechaFin : item.fechaFin.toISOString().slice(0, 10),
+            pais: item.paisFacturacionDescripcion,
+            anunciante: item.clienteAnuncianteDescripcion,
+            cliente: item.clienteFacturacionDescripcion || this.obtenerNombreCliente(item.idClienteFacturacion),
+            marca: item.marcaDescripcion || this.obtenerNombreMarca(item.idMarca),
+            producto: item.productoDescripcion || this.obtenerNombreProducto(item.idProducto),
+            fechaInicio: typeof item.fechaInicio === 'string' ? item.fechaInicio.slice(0, 10) : item.fechaInicio,
+            fechaFin: typeof item.fechaFin === 'string' ? item.fechaFin.slice(0, 10) : item.fechaFin,
             campania: item.campania,
-            tipoIngresoPlan: item.tipoIngreso,
-            estado: item.estado === 'Activo'
+            fechaCreacion: typeof item.fechaCreacion === 'string' ? item.fechaCreacion.slice(0, 10) : item.fechaCreacion,
+            estado: item.idEstadoRegistro === 1 ? 'Activo' : 'Inactivo',
+            // IDs para filtros
+            idPaisFacturacion: item.idPaisFacturacion,
+            idClienteAnunciante: item.idClienteAnunciante,
+            idClienteFacturacion: item.idClienteFacturacion,
+            idMarca: item.idMarca,
+            idProducto: item.idProducto,
+            idEstadoRegistro: item.idEstadoRegistro
           }));
           
           // Almacenar todos los datos del backend para filtrado local
@@ -747,8 +784,15 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
           this.isLoading = false;
           this.estadoConexion = 'conectado';
           
-          if (response.totalCount > 0) {
-            this.snackBar.open(`Se cargaron ${response.totalCount} registros del backend`, '', { duration: 2000 });
+          // Asegurar que el ordenamiento esté configurado después de cargar datos
+          setTimeout(() => {
+            if (this.sortMat && this.dataSource) {
+              this.dataSource.sort = this.sortMat;
+            }
+          }, 100);
+          
+          if (response.length > 0) {
+            this.snackBar.open(`Se cargaron ${response.length} registros del backend`, '', { duration: 2000 });
           } else {
             this.snackBar.open('No se encontraron registros en el backend', '', { duration: 2000 });
           }
@@ -776,16 +820,28 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       filtrados = filtrados.filter(r => r.version.includes(filtros.version as string));
     }
     if (filtros.anunciante) {
-      filtrados = filtrados.filter(r => r.anunciante.toLowerCase().includes((filtros.anunciante as string).toLowerCase()));
+      const anuncianteObj = this.anunciantesBackend.find(a => a.nombre === filtros.anunciante);
+      if (anuncianteObj) {
+        filtrados = filtrados.filter(r => r.idClienteAnunciante === anuncianteObj.id);
+      }
     }
     if (filtros.cliente) {
-      filtrados = filtrados.filter(r => r.cliente.toLowerCase().includes((filtros.cliente as string).toLowerCase()));
+      const clienteObj = this.clientesBackend.find(c => c.nombre === filtros.cliente);
+      if (clienteObj) {
+        filtrados = filtrados.filter(r => r.idClienteFacturacion === clienteObj.id);
+      }
     }
     if (filtros.marca) {
-      filtrados = filtrados.filter(r => r.marca.toLowerCase().includes((filtros.marca as string).toLowerCase()));
+      const marcaObj = this.marcasBackend.find(m => m.nombre === filtros.marca);
+      if (marcaObj) {
+        filtrados = filtrados.filter(r => r.idMarca === marcaObj.id);
+      }
     }
     if (filtros.producto) {
-      filtrados = filtrados.filter(r => r.producto.toLowerCase().includes((filtros.producto as string).toLowerCase()));
+      const productoObj = this.productosBackend.find(p => p.nombre === filtros.producto);
+      if (productoObj) {
+        filtrados = filtrados.filter(r => r.idProducto === productoObj.id);
+      }
     }
     if (filtros.fechaInicio) {
       filtrados = filtrados.filter(r => r.fechaInicio === this.formatDate(filtros.fechaInicio));
@@ -794,11 +850,16 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
     }
 
-    // Filtrar última versión por número de plan
-    filtrados = this.filtrarUltimaVersionPorNumeroPlan(filtrados);
+    // Ordenar por fecha de creación descendente (más reciente primero) por defecto
+    filtrados = filtrados.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
     
     // Actualizar la tabla con los resultados filtrados
     this.dataSource.data = filtrados;
+    
+    // Forzar actualización del ordenamiento después de filtrar
+    if (this.sortMat) {
+      this.dataSource.sort = this.sortMat;
+    }
   }
 
   /**
@@ -1064,26 +1125,20 @@ export class VersionesPlanDialog implements AfterViewInit {
     const planData = {
       id: row.id,
       numeroPlan: row.numeroPlan,
-      version: row.version,
+      // version: row.version, // Temporalmente comentado
       cliente: row.cliente,
       producto: row.producto,
       campana: row.campania,
       fechaInicio: row.fechaInicio,
       fechaFin: row.fechaFin,
-      tipoIngresoPlan: row.tipoIngresoPlan
+      // tipoIngresoPlan: row.tipoIngresoPlan // Temporalmente comentado
     };
     
     // Validar el tipo de plan para redirigir a la ruta correcta
-    if (row.tipoIngresoPlan === 'Plan de Medios') {
-      this.router.navigate(['/plan-medios-resumen'], { 
-        state: { planData } 
-      });
-    } else {
-      // Si no es Plan de Medios, redirigir al flow chart
-      this.router.navigate(['/flow-chart'], { 
-        state: { planData } 
-      });
-    }
+    // Temporalmente deshabilitado - redirigir siempre al resumen
+    this.router.navigate(['/plan-medios-resumen'], { 
+      state: { planData } 
+    });
     
     this.dialogRef.close();
   }

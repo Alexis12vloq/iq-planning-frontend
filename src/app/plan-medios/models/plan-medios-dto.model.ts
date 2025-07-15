@@ -73,3 +73,28 @@ export interface ParametroFiltro {
   padreId?: number;
   activo: boolean;
 }
+
+export interface PlanMediosConDetalles {
+  idPlan: number;
+  numeroPlan: string;
+  version: number;
+  idPaisFacturacion: number;
+  paisesPauta: string;
+  idClienteAnunciante: number;
+  idClienteFacturacion: number;
+  idMarca: number;
+  idProducto: number;
+  campania: string;
+  fechaInicio: string;
+  fechaFin: string;
+  fechaCreacion: string;
+  idUsuarioCreador: number;
+  fechaModificacion: string | null;
+  idUsuarioModificador: number | null;
+  idEstadoRegistro: number;
+  paisFacturacionDescripcion: string;
+  clienteAnuncianteDescripcion: string;
+  clienteFacturacionDescripcion: string;
+  marcaDescripcion: string;
+  productoDescripcion: string;
+}
