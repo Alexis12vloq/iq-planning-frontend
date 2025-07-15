@@ -567,33 +567,39 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   // Método removido - ya no se usa selectColumn
 
   onRowDoubleClick(row: Resultado) {
-    // Busca todas las versiones para ese número de plan
-    const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-    const versiones = planesGuardados
-      .filter(p => p.numeroPlan === row.numeroPlan)
+    // Busca todas las versiones para ese número de plan en los datos actuales de la grilla
+    const versiones = this.dataSource.data
+      .filter(r => r.numeroPlan === row.numeroPlan)
       .map(plan => ({
         id: plan.id,
         numeroPlan: plan.numeroPlan,
         version: plan.version,
-        pais: plan.paisFacturacion,
-        anunciante: plan.clienteAnunciante,
-        cliente: plan.clienteFueActuacion,
+        pais: plan.pais,
+        anunciante: plan.anunciante,
+        cliente: plan.cliente,
         marca: plan.marca,
         producto: plan.producto,
         fechaInicio: plan.fechaInicio,
         fechaFin: plan.fechaFin,
-        campania: plan.campana,
-        tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
-                  fechaCreacion: plan.fechaCreacion || new Date().toISOString().slice(0, 10), // Incluir fecha de creación
-          estado: plan.estado ?? false
-          // tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios', // Temporalmente comentado
+        campania: plan.campania,
+        fechaCreacion: plan.fechaCreacion,
+        estado: plan.estado,
+        // IDs para mantener consistencia
+        idPaisFacturacion: plan.idPaisFacturacion,
+        idClienteAnunciante: plan.idClienteAnunciante,
+        idClienteFacturacion: plan.idClienteFacturacion,
+        idMarca: plan.idMarca,
+        idProducto: plan.idProducto,
+        idEstadoRegistro: plan.idEstadoRegistro
       }))
       .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
 
     const dialogRef = this.dialog.open(VersionesPlanDialog, {
       width: '90vw',
-      maxWidth: '700px',
-      data: { versiones },
+      maxWidth: '1200px',
+      height: '70vh',
+      maxHeight: '800px',
+      data: { versiones, selectedRow: row },
       disableClose: true,
     });
     dialogRef.afterClosed().subscribe(result => {
@@ -699,9 +705,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
     // --- NUEVO: Recargar tabla después de cambios ---
   recargarTabla() {
-    // Temporalmente deshabilitado para enfocar en integración del backend
-    console.log('Recarga de tabla temporalmente deshabilitada');
-    // En lugar de cargar datos locales, recargamos datos del backend
+    // Recargar datos del backend para mantener consistencia
     this.consultarBackend();
   }
 
@@ -955,97 +959,104 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     MatDatepickerModule,
     MatNativeDateModule,
     CommonModule,
-    FormsModule
+    ReactiveFormsModule,
+    FormsModule,
+    MatSortModule
   ],
   template: `
-      <h2 mat-dialog-title 
-          style="font-family: 'Montserrat', 'Roboto', Arial, sans-serif; font-size:1.5rem; font-weight:700; color:#3c5977; letter-spacing:1px; text-transform:uppercase; margin-bottom:0; display: flex; justify-content: space-between; align-items: center; padding: 24px;">
-        
-        <span>
-          Versiones del Plan {{ data.versiones[0]?.numeroPlan || '' }}
-        </span>
+    <h2 mat-dialog-title 
+        style="font-family: 'Montserrat', 'Roboto', Arial, sans-serif; font-size:1.5rem; font-weight:700; color:#3c5977; letter-spacing:1px; text-transform:uppercase; margin-bottom:0; display: flex; justify-content: space-between; align-items: center; padding: 16px 24px;">
+      
+      <span>
+        Versiones del Plan {{ data.versiones[0]?.numeroPlan || '' }}
+      </span>
 
-        <button mat-icon-button  (click)="cerrar()" aria-label="Cerrar">
-          <mat-icon>close</mat-icon>
-        </button>
-      </h2>
+      <button mat-icon-button (click)="cerrar()" aria-label="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </h2>
 
-    <mat-dialog-content style="padding: 24px; width: 100%;">
+    <mat-dialog-content style="padding: 16px 24px; width: 100%; display: flex; flex-direction: column; overflow: hidden;">
       <!-- Filtros -->
-      <div class="filtros-container" style="margin-bottom: 24px; display: flex; gap: 24px; align-items: center;">
-        <mat-form-field appearance="outline" style="width: 250px;">
-          <mat-label>Buscar por versión</mat-label>
-          <input matInput [(ngModel)]="filtroVersion" (input)="aplicarFiltros()" placeholder="Ej: 1">
-        </mat-form-field>
-        
-        <mat-form-field appearance="outline" style="width: 250px;">
-          <mat-label>Fecha de creación</mat-label>
-          <input matInput [matDatepicker]="picker" [(ngModel)]="filtroFechaCreacion" (dateChange)="aplicarFiltros()">
-          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-          <mat-datepicker #picker></mat-datepicker>
-        </mat-form-field>
-        
-        <button mat-raised-button color="primary" (click)="limpiarFiltros()" style="height: 48px; padding: 0 24px;">
-          <mat-icon>clear</mat-icon>
-          Limpiar filtros
-        </button>
-      </div>
+      <form [formGroup]="filtroForm">
+        <div class="filtros-container" style="margin-bottom: 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          <mat-form-field appearance="outline" style="width: 180px;">
+            <mat-label>Buscar por versión</mat-label>
+            <input matInput formControlName="version" placeholder="Ej: 1">
+          </mat-form-field>
+          
+          <mat-form-field appearance="outline" style="width: 180px;">
+            <mat-label>Fecha de creación</mat-label>
+            <input matInput [matDatepicker]="picker" formControlName="fechaCreacion" readonly>
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+          
+          <button mat-raised-button color="primary" (click)="limpiarFiltros()" style="height: 40px; padding: 0 16px;">
+            <mat-icon>clear</mat-icon>
+            Limpiar filtros
+          </button>
+        </div>
+      </form>
 
-      <div style="margin-bottom:24px;">
-        <div class="mat-elevation-z8">
-          <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8" style="width:100%;">
-            <ng-container matColumnDef="fechaCreacion">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header style="font-weight: bold; padding: 12px 16px; min-width: 140px;">Fecha Creación</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="font-weight: bold; padding: 12px 16px;">
-                {{ row.fechaCreacion || 'N/A' }}
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="version">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 100px;">Versión</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
-                {{ row.version }}
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="fechaInicio">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 140px;">Fecha Inicio</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
-                {{ row.fechaInicio }}
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="fechaFin">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 140px;">Fecha Fin</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
-                {{ row.fechaFin }}
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="campania">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 160px;">Campaña</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
-                {{ row.campania }}
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="estado">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header style="padding: 12px 16px; min-width: 140px;">Estado</th>
-              <td mat-cell *matCellDef="let row" (dblclick)="redirigir(row)" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" style="padding: 12px 16px;">
-                {{ row.estado ? 'Aprobado' : 'Sin aprobar' }}
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)"></tr>
-          </table>
-          <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page" style="padding: 16px;"></mat-paginator>
+      <!-- Tabla sin scroll horizontal -->
+      <div style="flex: 1; overflow: hidden; min-height: 300px; max-height: 400px;">
+        <div class="mat-elevation-z8" style="height: 100%; display: flex; flex-direction: column;">
+          <div style="flex: 1; overflow: auto;">
+            <table mat-table [dataSource]="dataSource" matSort class="mat-elevation-z8" style="width:100%; min-width: 100%;" (matSortChange)="sortData($event)">
+              <ng-container matColumnDef="fechaCreacion">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 130px; text-align: center;">Fecha Creación</th>
+                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
+                  {{ formatearFecha(row.fechaCreacion) }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="version">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 80px; text-align: center;">Versión</th>
+                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
+                  {{ row.version }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="fechaInicio">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 120px; text-align: center;">Fecha Inicio</th>
+                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
+                  {{ formatearFecha(row.fechaInicio) }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="fechaFin">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 120px; text-align: center;">Fecha Fin</th>
+                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
+                  {{ formatearFecha(row.fechaFin) }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="campania">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 150px; text-align: center;">Campaña</th>
+                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
+                  {{ row.campania || 'N/A' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef mat-sort-header style="width: 110px; text-align: center;">Estado</th>
+                <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)" style="text-align: center; cursor: pointer;">
+                  {{ row.estado ? 'Aprobado' : 'Sin aprobar' }}
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)"></tr>
+            </table>
+          </div>
+          <mat-paginator [pageSizeOptions]="[5, 10, 15]" [pageSize]="5" showFirstLastButtons aria-label="Select page" style="border-top: 1px solid #e0e0e0;"></mat-paginator>
         </div>
       </div>
     </mat-dialog-content>
-    <mat-dialog-actions align="center" style="display:flex; flex-direction:row; gap:32px; padding: 24px;">
-      <button mat-raised-button color="primary" (click)="copiarPlan()" [disabled]="!selectedRow" style="padding: 12px 24px; font-size: 16px;">
-        <mat-icon>content_copy</mat-icon> Copiar plan
+    <mat-dialog-actions align="center" style="display:flex; flex-direction:row; gap:12px; padding: 12px 24px; border-top: 1px solid #e0e0e0;">
+      <button mat-raised-button color="primary" (click)="copiarPlan()" [disabled]="!selectedRow" style="padding: 6px 12px; font-size: 0.9rem;">
+        <mat-icon style="font-size: 16px;">content_copy</mat-icon> Copiar plan
       </button>
-      <button mat-raised-button color="accent" (click)="nuevaVersion()" [disabled]="!selectedRow" style="padding: 12px 24px; font-size: 16px;">
-        <mat-icon>add_circle_outline</mat-icon> Generar nueva versión
+      <button mat-raised-button color="accent" (click)="nuevaVersion()" [disabled]="!selectedRow" style="padding: 6px 12px; font-size: 0.9rem;">
+        <mat-icon style="font-size: 16px;">add_circle_outline</mat-icon> Nueva versión
       </button>
-       <button mat-raised-button color="accent" (click)="editarPlan()" [disabled]="!selectedRow">
-        <mat-icon>edit</mat-icon>Editar
+      <button mat-raised-button color="accent" (click)="editarPlan()" [disabled]="!selectedRow" style="padding: 6px 12px; font-size: 0.9rem;">
+        <mat-icon style="font-size: 16px;">edit</mat-icon>Editar
       </button>
     </mat-dialog-actions>
   `,
@@ -1053,9 +1064,40 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     .selected-row {
       background: #e3f2fd !important;
     }
-    table { width: 100%; }
-    td, th { cursor: pointer; }
-    mat-dialog-actions { margin-top: 16px; }
+    table { 
+      width: 100%; 
+      table-layout: fixed;
+    }
+    td, th { 
+      cursor: pointer; 
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.9rem;
+      padding: 8px 12px !important;
+    }
+    th {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    mat-dialog-actions { 
+      margin-top: 0; 
+      padding: 12px 24px;
+    }
+    mat-dialog-content {
+      max-height: none !important;
+      overflow: hidden !important;
+      padding: 16px 24px !important;
+    }
+    .filtros-container mat-form-field {
+      margin-bottom: 0;
+    }
+    .filtros-container {
+      margin-bottom: 12px !important;
+    }
+    mat-paginator {
+      font-size: 0.85rem;
+    }
   `]
 })
 export class VersionesPlanDialog implements AfterViewInit {
@@ -1065,25 +1107,99 @@ export class VersionesPlanDialog implements AfterViewInit {
   isLoading = false;
   
   // Propiedades para filtros
-  filtroVersion: string = '';
-  filtroFechaCreacion: Date | null = null;
+  filtroForm = new FormGroup({
+    version: new FormControl(''),
+    fechaCreacion: new FormControl('')
+  });
   datosOriginales: any[] = [];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
 
   constructor(
     private router: Router, 
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     public dialogRef: MatDialogRef<VersionesPlanDialog>,
-    @Inject(MAT_DIALOG_DATA) public data: { versiones: any[] }
+    @Inject(MAT_DIALOG_DATA) public data: { versiones: any[], selectedRow?: any }
   ) {
     this.datosOriginales = data.versiones; // Guardar datos originales
     this.dataSource = new MatTableDataSource<any>(data.versiones); // <-- inicializa aquí
+    
+    // Seleccionar automáticamente el registro correspondiente al de la grilla principal
+    if (data.selectedRow) {
+      const foundRow = data.versiones.find(v => v.id === data.selectedRow.id);
+      if (foundRow) {
+        this.selectedRow = foundRow;
+      }
+    }
+    
+    // Configurar listeners para filtros automáticos con debounce
+    this.filtroForm.get('version')!.valueChanges.pipe(
+      startWith(''),
+      map(value => value || '')
+    ).subscribe(() => {
+      setTimeout(() => this.aplicarFiltros(), 100);
+    });
+    
+    this.filtroForm.get('fechaCreacion')!.valueChanges.subscribe(() => {
+      setTimeout(() => this.aplicarFiltros(), 100);
+    });
   }
 
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+    
+    // Configurar ordenamiento personalizado
+    this.dataSource.sortingDataAccessor = (item: any, property: string) => {
+      const value = item[property];
+      
+      switch (property) {
+        case 'fechaCreacion':
+        case 'fechaInicio':
+        case 'fechaFin':
+          if (!value) return 0;
+          const date = new Date(value);
+          return isNaN(date.getTime()) ? 0 : date.getTime();
+        
+        case 'version':
+          const num = Number(value);
+          return isNaN(num) ? 0 : num;
+        
+        default:
+          return value ? value.toString().toLowerCase() : '';
+      }
+    };
+  }
+
+  /**
+   * Método para manejar el ordenamiento
+   */
+  sortData(sort: Sort) {
+    if (sort.active && sort.direction !== '') {
+      this.dataSource.data = this.dataSource.data.slice();
+    }
+  }
+
+  /**
+   * Método para formatear fechas
+   */
+  formatearFecha(fecha: string | Date): string {
+    if (!fecha) return 'N/A';
+    
+    try {
+      const date = typeof fecha === 'string' ? new Date(fecha) : fecha;
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
   }
 
   selectRow(row: any) {
@@ -1097,16 +1213,18 @@ export class VersionesPlanDialog implements AfterViewInit {
   aplicarFiltros() {
     let datosFiltrados = [...this.datosOriginales];
     
+    const filtros = this.filtroForm.value;
+    
     // Filtrar por versión
-    if (this.filtroVersion && this.filtroVersion.trim() !== '') {
+    if (filtros.version && typeof filtros.version === 'string' && filtros.version.trim() !== '') {
       datosFiltrados = datosFiltrados.filter(item => 
-        item.version.toString().toLowerCase().includes(this.filtroVersion.toLowerCase())
+        item.version.toString().toLowerCase().includes(filtros.version!.toLowerCase())
       );
     }
     
     // Filtrar por fecha de creación
-    if (this.filtroFechaCreacion) {
-      const fechaFiltro = this.filtroFechaCreacion.toISOString().slice(0, 10);
+    if (filtros.fechaCreacion) {
+      const fechaFiltro = this.formatDate(filtros.fechaCreacion);
       datosFiltrados = datosFiltrados.filter(item => 
         item.fechaCreacion === fechaFiltro
       );
@@ -1116,9 +1234,16 @@ export class VersionesPlanDialog implements AfterViewInit {
   }
 
   limpiarFiltros() {
-    this.filtroVersion = '';
-    this.filtroFechaCreacion = null;
+    this.filtroForm.reset();
     this.dataSource.data = [...this.datosOriginales];
+  }
+
+  private formatDate(date: any): string {
+    if (!date) return '';
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
   }
 
   redirigir(row: Resultado) {
@@ -1230,6 +1355,8 @@ export class VersionesPlanDialog implements AfterViewInit {
     console.log(id);
     this.isLoading = true;
     setTimeout(() => {
+      // Recargar desde el servicio backend en lugar de localStorage
+      // Por ahora mantenemos la misma lógica, pero debería conectarse al backend
       const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
       const versiones = planesGuardados
         .filter(p => p.numeroPlan === id)
@@ -1245,8 +1372,7 @@ export class VersionesPlanDialog implements AfterViewInit {
           fechaInicio: plan.fechaInicio,
           fechaFin: plan.fechaFin,
           campania: plan.campana,
-          tipoIngresoPlan: plan.tipoIngresoPlan || 'Plan de Medios',
-          fechaCreacion: plan.fechaCreacion || new Date().toISOString().slice(0, 10), // Incluir fecha de creación
+          fechaCreacion: plan.fechaCreacion || new Date().toISOString().slice(0, 10),
           estado: plan.estado ?? false
         }))
         .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
