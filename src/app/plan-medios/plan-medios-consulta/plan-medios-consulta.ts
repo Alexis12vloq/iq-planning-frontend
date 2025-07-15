@@ -3,7 +3,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, FormsModule } from '@angul
 import { Observable, startWith, map, retry, catchError, of } from 'rxjs';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
 import { PlanMediosService } from '../services/plan-medios.service';
-import { PlanMediosQuery, PlanMediosFilter, PlanMediosListDto } from '../models/plan-medios-dto.model';
+import { PlanMediosQuery, PlanMediosFilter, PlanMediosListDto, TablaParametro, ParametroFiltro } from '../models/plan-medios-dto.model';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 // Angular Material imports
@@ -67,81 +67,11 @@ type Resultado = {
   styleUrls: ['./plan-medios-consulta.scss']
 })
 export class PlanMediosConsulta implements OnInit, AfterViewInit {
-  // Simulación de respuesta del backend (estructura anidada)
-  anunciantesBackend = [
-    {
-      nombre: 'Coca-Cola',
-      clientes: [
-        {
-          nombre: 'Coca-Cola Perú',
-          marcas: [
-            {
-              nombre: 'Coca-Cola',
-              productos: ['Coca-Cola Original', 'Coca-Cola Zero', 'Coca-Cola Light']
-            },
-            {
-              nombre: 'Fanta',
-              productos: ['Fanta Naranja', 'Fanta Uva']
-            }
-          ]
-        },
-        {
-          nombre: 'Coca-Cola México',
-          marcas: [
-            {
-              nombre: 'Sprite',
-              productos: ['Sprite Regular', 'Sprite Sin Azúcar']
-            }
-          ]
-        }
-      ]
-    },
-    {
-      nombre: 'Nestlé',
-      clientes: [
-        {
-          nombre: 'Nestlé Chile',
-          marcas: [
-            {
-              nombre: 'Nescafé',
-              productos: ['Nescafé Tradición', 'Nescafé Gold']
-            },
-            {
-              nombre: 'Milo',
-              productos: ['Milo Polvo', 'Milo Bebida']
-            }
-          ]
-        }
-      ]
-    },
-    {
-      nombre: 'Unilever',
-      clientes: [
-        {
-          nombre: 'Unilever Argentina',
-          marcas: [
-            {
-              nombre: 'Axe',
-              productos: ['Axe Dark Temptation', 'Axe Apollo']
-            },
-            {
-              nombre: 'Rexona',
-              productos: ['Rexona Men', 'Rexona Women']
-            }
-          ]
-        },
-        {
-          nombre: 'Unilever Colombia',
-          marcas: [
-            {
-              nombre: 'Sedal',
-              productos: ['Sedal Rizos', 'Sedal Liso']
-            }
-          ]
-        }
-      ]
-    }
-  ];
+  // Datos del backend
+  anunciantesBackend: ParametroFiltro[] = [];
+  clientesBackend: ParametroFiltro[] = [];
+  marcasBackend: ParametroFiltro[] = [];
+  productosBackend: ParametroFiltro[] = [];
 
   // Opciones dinámicas dependientes
   clientesOptions: string[] = [];
@@ -210,59 +140,29 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   estadoConexion: 'conectado' | 'error' | 'verificando' = 'verificando';
 
   constructor(private router: Router, private dialog: MatDialog, private snackBar: MatSnackBar, private planMediosService: PlanMediosService) {
-    // Autocomplete: Anunciante
+    // Inicializar observables para autocomplete
     this.filteredAnunciantes = this.filtroForm.get('anunciante')!.valueChanges.pipe(
       startWith(''),
       map(value => this._filter(value || '', this.anunciantesBackend.map(a => a.nombre)))
     );
 
-    // Cuando cambia anunciante, actualizar clientes y limpiar dependientes
-    this.filtroForm.get('anunciante')!.valueChanges.subscribe((anunciante: string | null) => {
-      const anuncianteObj = this.anunciantesBackend.find(a => a.nombre === anunciante);
-      this.clientesOptions = anuncianteObj ? anuncianteObj.clientes.map(c => c.nombre) : [];
-      this.marcasOptions = [];
-      this.productosOptions = [];
-      this.filtroForm.get('cliente')!.setValue('');
-      this.filtroForm.get('marca')!.setValue('');
-      this.filtroForm.get('producto')!.setValue('');
-    });
-
-    // Autocomplete: Cliente (dependiente de anunciante)
     this.filteredClientes = this.filtroForm.get('cliente')!.valueChanges.pipe(
       startWith(''),
       map(value => this._filter(value || '', this.clientesOptions))
     );
 
-    // Cuando cambia cliente, actualizar marcas y limpiar dependientes
-    this.filtroForm.get('cliente')!.valueChanges.subscribe((cliente: string | null) => {
-      const anuncianteObj = this.anunciantesBackend.find(a => a.nombre === this.filtroForm.get('anunciante')!.value);
-      const clienteObj = anuncianteObj?.clientes.find(c => c.nombre === cliente);
-      this.marcasOptions = clienteObj ? clienteObj.marcas.map(m => m.nombre) : [];
-      this.productosOptions = [];
-      this.filtroForm.get('marca')!.setValue('');
-      this.filtroForm.get('producto')!.setValue('');
-    });
-
-    // Autocomplete: Marca (dependiente de cliente)
     this.filteredMarcas = this.filtroForm.get('marca')!.valueChanges.pipe(
       startWith(''),
       map(value => this._filter(value || '', this.marcasOptions))
     );
 
-    // Cuando cambia marca, actualizar productos
-    this.filtroForm.get('marca')!.valueChanges.subscribe((marca: string | null) => {
-      const anuncianteObj = this.anunciantesBackend.find(a => a.nombre === this.filtroForm.get('anunciante')!.value);
-      const clienteObj = anuncianteObj?.clientes.find(c => c.nombre === this.filtroForm.get('cliente')!.value);
-      const marcaObj = clienteObj?.marcas.find(m => m.nombre === marca);
-      this.productosOptions = marcaObj ? marcaObj.productos : [];
-      this.filtroForm.get('producto')!.setValue('');
-    });
-
-    // Autocomplete: Producto (dependiente de marca)
     this.filteredProductos = this.filtroForm.get('producto')!.valueChanges.pipe(
       startWith(''),
       map(value => this._filter(value || '', this.productosOptions))
     );
+
+    // Configurar los listeners después de cargar los datos
+    this.configurarListeners();
 
     // Lógica de fechas igual que en creación
     this.filtroForm.get('fechaInicio')!.valueChanges.subscribe((fechaInicioRaw: any) => {
@@ -300,6 +200,134 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   private _filter(value: string, options: string[]): string[] {
     const filterValue = value.toLowerCase();
     return options.filter(option => option.toLowerCase().includes(filterValue));
+  }
+
+  /**
+   * Configura los listeners para los cambios en los campos de filtro
+   */
+  private configurarListeners(): void {
+    // Cuando cambia anunciante, actualizar clientes y limpiar dependientes
+    this.filtroForm.get('anunciante')!.valueChanges.subscribe((anunciante: string | null) => {
+      const anuncianteObj = this.anunciantesBackend.find(a => a.nombre === anunciante);
+      if (anuncianteObj) {
+        this.clientesOptions = this.clientesBackend
+          .filter(c => c.padreId === anuncianteObj.id)
+          .map(c => c.nombre);
+      } else {
+        this.clientesOptions = [];
+      }
+      this.marcasOptions = [];
+      this.productosOptions = [];
+      this.filtroForm.get('cliente')!.setValue('');
+      this.filtroForm.get('marca')!.setValue('');
+      this.filtroForm.get('producto')!.setValue('');
+    });
+
+    // Cuando cambia cliente, actualizar marcas y limpiar dependientes
+    this.filtroForm.get('cliente')!.valueChanges.subscribe((cliente: string | null) => {
+      const clienteObj = this.clientesBackend.find(c => c.nombre === cliente);
+      if (clienteObj) {
+        this.marcasOptions = this.marcasBackend
+          .filter(m => m.padreId === clienteObj.id)
+          .map(m => m.nombre);
+      } else {
+        this.marcasOptions = [];
+      }
+      this.productosOptions = [];
+      this.filtroForm.get('marca')!.setValue('');
+      this.filtroForm.get('producto')!.setValue('');
+    });
+
+    // Cuando cambia marca, actualizar productos
+    this.filtroForm.get('marca')!.valueChanges.subscribe((marca: string | null) => {
+      const marcaObj = this.marcasBackend.find(m => m.nombre === marca);
+      if (marcaObj) {
+        this.productosOptions = this.productosBackend
+          .filter(p => p.padreId === marcaObj.id)
+          .map(p => p.nombre);
+      } else {
+        this.productosOptions = [];
+      }
+      this.filtroForm.get('producto')!.setValue('');
+    });
+  }
+
+  /**
+   * Cargar datos de parámetros del backend
+   */
+  private cargarParametrosBackend(): void {
+    this.isLoading = true;
+    this.estadoConexion = 'verificando';
+
+    this.planMediosService.obtenerTodosParametros()
+      .pipe(
+        retry(2),
+        catchError((error) => {
+          console.error('Error al cargar parámetros:', error);
+          this.estadoConexion = 'error';
+          this.snackBar.open('Error al cargar parámetros del backend', '', { duration: 3000 });
+          return of([]);
+        })
+      )
+      .subscribe((parametros: TablaParametro[]) => {
+        this.procesarParametros(parametros);
+        this.isLoading = false;
+        this.estadoConexion = 'conectado';
+      });
+  }
+
+  /**
+   * Procesar parámetros del backend y organizarlos por tabla
+   */
+  private procesarParametros(parametros: TablaParametro[]): void {
+    // Filtrar solo parámetros activos
+    const parametrosActivos = parametros.filter(p => p.campo_Est);
+
+    // Separar por tabla
+    const anunciantes = parametrosActivos.filter(p => p.tabla === 'ClientesAnunciante');
+    const clientes = parametrosActivos.filter(p => p.tabla === 'ClientesFacturacion');
+    const marcas = parametrosActivos.filter(p => p.tabla === 'Marcas');
+    const productos = parametrosActivos.filter(p => p.tabla === 'Productos');
+
+    // Convertir a estructura ParametroFiltro
+    this.anunciantesBackend = anunciantes.map(a => ({
+      id: a.campo_Id,
+      nombre: a.campo_Val,
+      descripcion: a.descripcion,
+      padreId: a.campo_Padre_Id,
+      activo: a.campo_Est
+    }));
+
+    this.clientesBackend = clientes.map(c => ({
+      id: c.campo_Id,
+      nombre: c.campo_Val,
+      descripcion: c.descripcion,
+      padreId: c.campo_Padre_Id,
+      activo: c.campo_Est
+    }));
+
+    this.marcasBackend = marcas.map(m => ({
+      id: m.campo_Id,
+      nombre: m.campo_Val,
+      descripcion: m.descripcion,
+      padreId: m.campo_Padre_Id,
+      activo: m.campo_Est
+    }));
+
+    this.productosBackend = productos.map(p => ({
+      id: p.campo_Id,
+      nombre: p.campo_Val,
+      descripcion: p.descripcion,
+      padreId: p.campo_Padre_Id,
+      activo: p.campo_Est
+    }));
+
+    console.log('Parámetros cargados:', {
+      anunciantes: this.anunciantesBackend.length,
+      clientes: this.clientesBackend.length,
+      marcas: this.marcasBackend.length,
+      productos: this.productosBackend.length
+    });
   }
 
   buscar() {
@@ -369,7 +397,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
-    // Cargar datos del backend al iniciar
+    // Cargar parámetros primero, luego los datos del backend
+    this.cargarParametrosBackend();
     this.consultarBackend();
   }
 

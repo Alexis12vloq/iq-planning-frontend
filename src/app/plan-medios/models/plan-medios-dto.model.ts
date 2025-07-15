@@ -54,3 +54,22 @@ export interface PlanMediosListDto {
   tipoIngreso: string;    // "Plan de Medios"
   estado: string;         // "Activo" / "Inactivo"
 } 
+
+export interface TablaParametro {
+  idPar: number;
+  tabla: string;
+  campo_Id: number;
+  campo_Val: string;
+  descripcion: string;
+  campo_Est: boolean;
+  fechaCreacion: Date;
+  campo_Padre_Id: number;
+}
+
+export interface ParametroFiltro {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  padreId?: number;
+  activo: boolean;
+}

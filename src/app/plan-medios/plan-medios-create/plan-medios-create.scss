@@ -16,7 +16,7 @@ mat-card {
   text-align: center;
   display: flex;
   justify-content: center;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
 }
 mat-card-title {
   font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
@@ -29,13 +29,13 @@ mat-card-title {
   margin-bottom: 0;
 }
 mat-form-field{
-  margin: 10px;
+  margin: 5px;
 }
 /* Cada fila usará Flexbox para alinear sus columnas */
 .form-row {
   display: flex;
   gap: 0px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   flex-wrap: wrap; /* Permite que los campos bajen si no hay espacio */
   justify-content: center;
 }
@@ -52,7 +52,7 @@ mat-form-field{
   flex: 1 1 22%;
   max-width: 22%;
   min-width: 180px;
-  margin: 10px;
+  margin: 5px;
 }
 
 /* Específico para los campos de fecha */
@@ -82,7 +82,7 @@ body, .form-container, mat-card, mat-form-field, input, button {
   font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
 }
 .form-actions{
-  padding-top: 100px;
+  padding-top: 30px;
   width: 100%;
   display: flex;
   justify-content: center;

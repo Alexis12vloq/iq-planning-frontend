@@ -64,33 +64,7 @@
           <mat-datepicker #pickerFin></mat-datepicker>
         </mat-form-field>
       </div>
-      <div class="form-row" style="justify-content: space-between; align-items: center;">
-        <div>
-          <button mat-raised-button color="primary" type="button" id="calendarioBtn" style="background:#26c6da;color:#252525;">
-            <mat-icon>calendar_month</mat-icon> Calendario
-          </button>
-          
-          <!-- Selector de Backend -->
-          <mat-form-field appearance="outline" style="width: 200px; margin-left: 16px;">
-            <mat-label>Backend</mat-label>
-            <mat-select [value]="getBackendIndex()" (selectionChange)="cambiarBackendUrl($event.value)">
-              <mat-option [value]="0">Puerto 7223 (HTTPS)</mat-option>
-              <mat-option [value]="1">Puerto 5000</mat-option>
-              <mat-option [value]="2">Puerto 5001</mat-option>
-              <mat-option [value]="3">Puerto 7000</mat-option>
-            </mat-select>
-          </mat-form-field>
-          
-          <!-- Indicador de Estado -->
-          <div style="margin-left: 16px; display: flex; align-items: center;">
-            <mat-icon [style.color]="estadoConexion === 'conectado' ? 'green' : estadoConexion === 'error' ? 'red' : 'orange'">
-              {{ estadoConexion === 'conectado' ? 'wifi' : estadoConexion === 'error' ? 'wifi_off' : 'wifi_find' }}
-            </mat-icon>
-            <span style="margin-left: 8px; font-size: 14px;">
-              {{ estadoConexion === 'conectado' ? 'Conectado' : estadoConexion === 'error' ? 'Sin conexión' : 'Verificando...' }}
-            </span>
-          </div>
-        </div>
+      <div class="form-row" style="justify-content: flex-end; align-items: center;">
         <div>
           <button mat-raised-button color="primary" type="submit" id="buscarBtn">
             <mat-icon>search</mat-icon> Buscar

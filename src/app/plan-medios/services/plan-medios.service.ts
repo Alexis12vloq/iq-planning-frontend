@@ -57,4 +57,18 @@ export class PlanMediosService {
   cargarTodos(): Observable<any> {
     return this.consultarPaginado(1, 1000);
   }
+
+  /**
+   * Obtener parámetros de tabla específica
+   */
+  obtenerParametrosTabla(tabla: string): Observable<any> {
+    return this.http.get(`${this.config.apiUrl}/api/TablaParametros/by-tabla/${tabla}`);
+  }
+
+  /**
+   * Obtener todos los parámetros de todas las tablas
+   */
+  obtenerTodosParametros(): Observable<any> {
+    return this.http.get(`${this.config.apiUrl}/api/TablaParametros`);
+  }
 }
