@@ -7,14 +7,54 @@ import { APP_CONFIG, AppConfig } from '../../shared/app-config';
   providedIn: 'root'
 })
 export class PlanMediosService {
+  private readonly backendUrls = [
+    'https://localhost:7223/api/planmedios/consultar',
+    'http://localhost:5000/api/planmedios/consultar',
+    'http://localhost:5001/api/planmedios/consultar',
+    'http://localhost:7000/api/planmedios/consultar'
+  ];
+
+  private apiUrl = this.backendUrls[0];
+
   constructor(
     private http: HttpClient,
     @Inject(APP_CONFIG) private config: AppConfig
   ) {}
 
+  /**
+   * Cambiar la URL del backend (si decides usar URLs alternas)
+   */
+  setBackendUrl(index: number): void {
+    if (index >= 0 && index < this.backendUrls.length) {
+      this.apiUrl = this.backendUrls[index];
+      console.log(`Backend URL cambiada a: ${this.apiUrl}`);
+    }
+  }
+
+  getCurrentUrl(): string {
+    return this.apiUrl;
+  }
+
+  /**
+   * Crear plan de medios
+   */
   crearPlanMedios(body: any): Observable<any> {
     return this.http.post(`${this.config.apiUrl}/api/PlanMedios`, body);
   }
 
-  // Puedes agregar más métodos aquí (consultar, editar, eliminar, etc.)
+  /**
+   * Consultar paginado
+   */
+  consultarPaginado(pageNumber: number = 1, pageSize: number = 1000): Observable<any> {
+    const query = { pagination: { pageNumber, pageSize } };
+    console.log(`Consultando: ${this.apiUrl}`);
+    return this.http.post<any>(this.apiUrl, query);
+  }
+
+  /**
+   * Cargar todos (usando pageSize grande)
+   */
+  cargarTodos(): Observable<any> {
+    return this.consultarPaginado(1, 1000);
+  }
 }

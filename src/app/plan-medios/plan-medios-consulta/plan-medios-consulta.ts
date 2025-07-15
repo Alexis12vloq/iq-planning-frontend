@@ -1,7 +1,9 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { Observable, startWith, map } from 'rxjs';
+import { Observable, startWith, map, retry, catchError, of } from 'rxjs';
 import { PlanMediosLocal } from '../models/plan-medios-local.model';
+import { PlanMediosService } from '../services/plan-medios.service';
+import { PlanMediosQuery, PlanMediosFilter, PlanMediosListDto } from '../models/plan-medios-dto.model';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 // Angular Material imports
@@ -185,7 +187,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   minFechaFin: Date | null = null; // <-- agrega esta propiedad
 
-  allResultados: Resultado[] = []; // almacena todos los resultados para filtrar
+  allResultados: Resultado[] = []; // almacena todos los resultados para filtrar (local)
+  allResultadosBackend: Resultado[] = []; // almacena todos los resultados del backend para filtrar
 
   columnLabels: { [key: string]: string } = {
     numeroPlan: 'Número de Plan',
@@ -204,8 +207,9 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   };
 
   isLoading = false;
+  estadoConexion: 'conectado' | 'error' | 'verificando' = 'verificando';
 
-  constructor(private router: Router, private dialog: MatDialog, private snackBar: MatSnackBar) {
+  constructor(private router: Router, private dialog: MatDialog, private snackBar: MatSnackBar, private planMediosService: PlanMediosService) {
     // Autocomplete: Anunciante
     this.filteredAnunciantes = this.filtroForm.get('anunciante')!.valueChanges.pipe(
       startWith(''),
@@ -299,6 +303,12 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   buscar() {
+    // Aplicar filtros localmente sobre los datos del backend
+    this.aplicarFiltrosLocalmente();
+  }
+
+  // Método original de búsqueda local (renombrado para mantener funcionalidad)
+  buscarLocal() {
     this.isLoading = true;
     setTimeout(() => {
       // Filtra la data según los valores del formulario
@@ -350,7 +360,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     this.clientesOptions = [];
     this.marcasOptions = [];
     this.productosOptions = [];
-    this.dataSource.data = this.allResultados; // restablece la tabla al quitar filtros
+    // Mostrar todos los datos del backend sin filtros
+    this.aplicarFiltrosLocalmente();
   }
 
   get tieneFiltrosActivos(): boolean {
@@ -358,7 +369,14 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   }
 
   ngOnInit() {
+    // Cargar datos del backend al iniciar
+    this.consultarBackend();
+  }
+
+  // Método original de ngOnInit (renombrado para mantener funcionalidad)
+  cargarDatosLocales() {
     this.isLoading = true;
+    this.estadoConexion = 'verificando';
     setTimeout(() => {
       // Cargar planes guardados en localStorage
       const planesLocal: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
@@ -381,6 +399,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       this.allResultados = this.filtrarUltimaVersionPorNumeroPlan(planesLocalAsResultados);
       this.dataSource = new MatTableDataSource<Resultado>(this.allResultados);
       this.isLoading = false;
+      this.estadoConexion = 'conectado'; // Datos locales cargados
     }, 400); // Simula carga
   }
 
@@ -603,6 +622,170 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       }
     }
     return Array.from(map.values());
+  }
+
+  // --- MÉTODOS PARA INTEGRACIÓN CON BACKEND ---
+  
+  /**
+   * Consulta paginada al backend
+   */
+  consultarBackend(pageNumber: number = 1, pageSize: number = 1000): void {
+    this.isLoading = true;
+    this.estadoConexion = 'verificando';
+    
+    // Ya no enviamos filtros al backend, solo paginación
+    this.planMediosService.consultarPaginado(pageNumber, pageSize)
+      .pipe(
+        retry(2), // Reintentar 2 veces en caso de error
+                 catchError((error) => {
+           console.error('Error al consultar backend después de reintentos:', error);
+           
+           this.estadoConexion = 'error';
+           
+           // Mostrar mensaje de error específico
+           let mensajeError = 'Error al cargar datos del backend';
+           if (error.status === 0) {
+             mensajeError = 'No se pudo conectar al backend. Verificar que esté ejecutándose.';
+           } else if (error.status === 404) {
+             mensajeError = 'Endpoint no encontrado. Verificar la URL del backend.';
+           } else if (error.status === 500) {
+             mensajeError = 'Error interno del servidor backend.';
+           }
+           
+           this.snackBar.open(mensajeError, '', { duration: 5000 });
+           
+           // Ofrecer cargar datos locales como fallback
+           this.mostrarOpcionFallback();
+           
+           // Retornar observable vacío para completar el flujo
+           return of({ items: [], totalCount: 0, pageNumber: 1, pageSize: 10, totalPages: 0, hasPreviousPage: false, hasNextPage: false });
+         })
+      )
+      .subscribe({
+        next: (response) => {
+          // Convertir los datos del backend al formato local
+          const resultadosBackend = response.items.map(item => ({
+            id: item.idPlan.toString(),
+            numeroPlan: item.numeroPlan?.toString() || '',
+            version: item.version.toString(),
+            pais: item.pais,
+            anunciante: item.anunciante,
+            cliente: item.cliente,
+            marca: item.marca,
+            producto: item.producto,
+            fechaInicio: typeof item.fechaInicio === 'string' ? item.fechaInicio : item.fechaInicio.toISOString().slice(0, 10),
+            fechaFin: typeof item.fechaFin === 'string' ? item.fechaFin : item.fechaFin.toISOString().slice(0, 10),
+            campania: item.campania,
+            tipoIngresoPlan: item.tipoIngreso,
+            estado: item.estado === 'Activo'
+          }));
+          
+          // Almacenar todos los datos del backend para filtrado local
+          this.allResultadosBackend = resultadosBackend;
+          
+          // Aplicar filtros localmente
+          this.aplicarFiltrosLocalmente();
+          
+          this.isLoading = false;
+          this.estadoConexion = 'conectado';
+          
+          if (response.totalCount > 0) {
+            this.snackBar.open(`Se cargaron ${response.totalCount} registros del backend`, '', { duration: 2000 });
+          } else {
+            this.snackBar.open('No se encontraron registros en el backend', '', { duration: 2000 });
+          }
+        },
+        error: (error) => {
+          // Este caso no debería ocurrir por el catchError, pero por seguridad
+          console.error('Error no manejado:', error);
+          this.isLoading = false;
+        }
+      });
+  }
+
+  /**
+   * Aplica filtros localmente sobre los datos cargados del backend
+   */
+  private aplicarFiltrosLocalmente(): void {
+    const filtros = this.filtroForm.value;
+    let filtrados = this.allResultadosBackend;
+
+    // Aplicar filtros según los valores del formulario
+    if (filtros.numeroPlan) {
+      filtrados = filtrados.filter(r => r.numeroPlan.includes(filtros.numeroPlan as string));
+    }
+    if (filtros.version) {
+      filtrados = filtrados.filter(r => r.version.includes(filtros.version as string));
+    }
+    if (filtros.anunciante) {
+      filtrados = filtrados.filter(r => r.anunciante.toLowerCase().includes((filtros.anunciante as string).toLowerCase()));
+    }
+    if (filtros.cliente) {
+      filtrados = filtrados.filter(r => r.cliente.toLowerCase().includes((filtros.cliente as string).toLowerCase()));
+    }
+    if (filtros.marca) {
+      filtrados = filtrados.filter(r => r.marca.toLowerCase().includes((filtros.marca as string).toLowerCase()));
+    }
+    if (filtros.producto) {
+      filtrados = filtrados.filter(r => r.producto.toLowerCase().includes((filtros.producto as string).toLowerCase()));
+    }
+    if (filtros.fechaInicio) {
+      filtrados = filtrados.filter(r => r.fechaInicio === this.formatDate(filtros.fechaInicio));
+    }
+    if (filtros.fechaFin) {
+      filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
+    }
+
+    // Filtrar última versión por número de plan
+    filtrados = this.filtrarUltimaVersionPorNumeroPlan(filtrados);
+    
+    // Actualizar la tabla con los resultados filtrados
+    this.dataSource.data = filtrados;
+  }
+
+  /**
+   * Método para buscar en backend con filtros
+   */
+  buscarEnBackend(): void {
+    this.consultarBackend();
+  }
+
+  /**
+   * Cambiar la URL del backend
+   * @param index 0 = puerto 7223 (HTTPS), 1 = puerto 5000, 2 = puerto 5001, 3 = puerto 7000
+   */
+  cambiarBackendUrl(index: number): void {
+    this.planMediosService.setBackendUrl(index);
+    this.snackBar.open(`Backend cambiado a: ${this.planMediosService.getCurrentUrl()}`, '', { duration: 3000 });
+    // Recargar todos los datos del nuevo backend
+    this.consultarBackend();
+  }
+
+  /**
+   * Obtener el índice del backend actual
+   */
+  getBackendIndex(): number {
+    const currentUrl = this.planMediosService.getCurrentUrl();
+    if (currentUrl.includes(':7223')) return 0;
+    if (currentUrl.includes(':5000')) return 1;
+    if (currentUrl.includes(':5001')) return 2;
+    if (currentUrl.includes(':7000')) return 3;
+    return 0; // Por defecto puerto 7223
+  }
+
+  /**
+   * Mostrar opción de fallback para cargar datos locales
+   */
+  mostrarOpcionFallback(): void {
+    const snackBarRef = this.snackBar.open(
+      'Backend no disponible. ¿Cargar datos locales?', 
+      'Cargar Local', 
+      { duration: 8000 }
+    );
+    
+    snackBarRef.onAction().subscribe(() => {
+      this.cargarDatosLocales();
+    });
   }
 }
 
