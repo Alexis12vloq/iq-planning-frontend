@@ -42,6 +42,9 @@ export class PlanMediosService {
     return this.http.post(`${this.config.apiUrl}/api/PlanMedios`, body);
   }
 
+  updatePlanMedios(body: any): Observable<any> {
+    return this.http.post(`${this.config.apiUrl}/api/PlanMedios/update`, body);
+  }
   /**
    * Consultar paginado
    */
@@ -86,6 +89,11 @@ export class PlanMediosService {
    */
   consultarPaginadoWithDetails(page: number = 1, pageSize: number = 10): Observable<any> {
     const url = `${this.config.apiUrl}/api/PlanMedios/with-details?page=${page}&pageSize=${pageSize}`;
+    return this.http.get<any>(url);
+  }
+
+  consultarPlanDeMedios(id: number = 1): Observable<any> {
+    const url = `${this.config.apiUrl}/api/PlanMedios/${id}`;
     return this.http.get<any>(url);
   }
 }

@@ -2,7 +2,7 @@
   <mat-card-header id="title">
     <mat-card-title>
       <!-- Cambia el título dinámicamente según modo edición -->
-      {{ editMode ? ('Editar Plan: ' + (planMediosForm.get('campana')?.value || '') ) : 'Crear Plan de Medios' }}
+      {{ editMode ? ('Editar Plan: ' + (planMediosForm.get('numeroPlan')?.value || '') ) : 'Crear Plan de Medios' }}
     </mat-card-title>
   </mat-card-header>
   <mat-card-content>

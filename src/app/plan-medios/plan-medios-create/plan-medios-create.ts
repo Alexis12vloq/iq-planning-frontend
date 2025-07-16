@@ -1,6 +1,6 @@
 import { Component, AfterViewInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, startWith, map } from 'rxjs';
+import { Observable, startWith, map, retry, catchError, of } from 'rxjs';
 import { CommonModule } from '@angular/common';
 // Angular Material imports
 import { MatCardModule } from '@angular/material/card';
@@ -160,6 +160,16 @@ export class PlanMediosCreate implements AfterViewInit {
         }))
     }));
   }
+    obtenerNombresPaises(idsPaises: string): string[] {
+      console.log(`IDs de países: ${idsPaises}`);
+      if (!idsPaises) return [];
+
+      return idsPaises
+        .split(',')                             // ["4", "3"]
+        .map(id => Number(id.trim()))           // [4, 3]
+        .map(id => this.tablaParametros.find(p => p.campo_Id === id)?.campo_Val)
+        .filter((val): val is string => !!val); // Type guard para asegurar que no hay undefined
+    }
 
   // NUEVO: Inicializa la lógica del formulario (lo que estaba en el constructor)
   initFormLogic() {
@@ -223,6 +233,7 @@ export class PlanMediosCreate implements AfterViewInit {
       map(value => this._filter(value || '', this.productosOptions))
     );
 
+    
     // 9. Restricción de fechas
     this.planMediosForm.get('fechaInicio')!.valueChanges.subscribe((fechaInicioRaw: any) => {
       let fechaInicio: Date | null = null;
@@ -269,14 +280,27 @@ export class PlanMediosCreate implements AfterViewInit {
     // --- Lógica de edición ---
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
+      console.log(id);
       if (id) {
         this.editMode = true;
         this.editId = id;
-        const planesGuardados: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-        const plan = planesGuardados.find(p => p.id === id);
+        this.planMediosService.consultarPlanDeMedios(Number(id))
+        .pipe(
+          retry(2), // Reintentar 2 veces en caso de error
+          catchError((error) => {
+            return of([]);
+          })
+        )
+        .subscribe({
+          next: (response: any) => {
+            // Convertir los datos del backend al formato local
+            console.log(response)
+            const planesGuardados: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        const plan = response;
         if (plan) {
           // --- Lógica para poblar selects dependientes en edición ---
           // 1. Actualiza clientesFacturacionOptions según clienteAnunciante
+          console.log(this.clientesBackend);
           const clienteObj = this.clientesBackend.find(c => c.nombre === plan.clienteAnunciante);
           this.clientesFacturacionOptions = clienteObj ? clienteObj.clientesFacturacion.map(cf => cf.nombre) : [];
 
@@ -288,18 +312,20 @@ export class PlanMediosCreate implements AfterViewInit {
           const marcaObj = facturacionObj?.marcas.find(m => m.nombre === plan.marca);
           this.productosOptions = marcaObj ? marcaObj.productos : [];
 
+          console.log(this.obtenerNombresPaises(plan.idsPaisesPauta))
+          
           // Ahora sí, setea los valores del formulario (asegúrate de hacerlo después de poblar las opciones)
           setTimeout(() => {
             this.planMediosForm.patchValue({
               numeroPlan: plan.numeroPlan,
               version: plan.version,
-              paisFacturacion: plan.paisFacturacion,
-              paisesPauta: plan.paisesPauta,
-              clienteAnunciante: plan.clienteAnunciante,
-              clienteFueActuacion: plan.clienteFueActuacion,
-              marca: plan.marca,
-              producto: plan.producto,
-              campana: plan.campana,
+              paisFacturacion: this.tablaParametros.find(m => m.campo_Id ===  plan.idPaisFacturacion)?.campo_Val || '',
+              paisesPauta: this.obtenerNombresPaises(plan.paisesPauta),
+              clienteAnunciante: this.tablaParametros.find(m => m.campo_Id ===  plan.idClienteAnunciante)?.campo_Val || '',
+              clienteFueActuacion:this.tablaParametros.find(m => m.campo_Id ===  plan.idClienteFacturacion)?.campo_Val || '',
+              marca: this.tablaParametros.find(m => m.campo_Id ===  plan.idMarca)?.campo_Val || '',
+              producto: this.tablaParametros.find(m => m.campo_Id ===  plan.idProducto)?.campo_Val || '',
+              campana: plan.campania,
               fechaInicio: plan.fechaInicio,
               fechaFin: plan.fechaFin
             });
@@ -319,6 +345,12 @@ export class PlanMediosCreate implements AfterViewInit {
           this.planMediosForm.get('fechaInicio')?.enable();
           this.planMediosForm.get('fechaFin')?.enable();
         }
+          },
+          error: (error) => {
+            console.error('Error no manejado:', error);
+          }
+        });
+        
       } else {
         // En modo creación, asegúrate de que todos los campos estén habilitados según corresponda
         this.planMediosForm.get('numeroPlan')?.disable();
@@ -422,24 +454,17 @@ export class PlanMediosCreate implements AfterViewInit {
 
       // --- Modo edición: primero actualiza en localStorage ---
       if (this.editMode && this.editId) {
-        const idx = planesGuardados.findIndex(p => p.id === this.editId);
-        if (idx !== -1) {
-          planesGuardados[idx] = {
-            ...planesGuardados[idx],
-            paisFacturacion: formValue.paisFacturacion ?? '',
-            paisesPauta: formValue.paisesPauta ?? [],
-            clienteAnunciante: formValue.clienteAnunciante ?? '',
-            clienteFueActuacion: formValue.clienteFueActuacion ?? '',
-            marca: formValue.marca ?? '',
-            producto: formValue.producto ?? '',
-            campana: formValue.campana ?? '',
-            fechaInicio: formValue.fechaInicio,
-            fechaFin: formValue.fechaFin
-          };
-          localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
-        }
         // Luego manda la solicitud al backend
-        this.planMediosService.crearPlanMedios(body).subscribe({
+
+        const bodyUpdate = {
+            idPlan: Number(this.editId),
+            PaisesPauta: idsPaisesPauta.join(','),
+            Campania: safe(formValue.campana),
+            FechaInicio: formValue.fechaInicio,
+            FechaFin: formValue.fechaFin,
+            IdUsuarioCreador: 0 // Ajusta según tu lógica de usuario
+        };
+        this.planMediosService.updatePlanMedios(bodyUpdate).subscribe({
           next: (resp) => {
             this.snackBar.open('Plan de medios actualizado correctamente', '', { duration: 2000 });
             this.router.navigate(['/plan-medios-consulta']);
