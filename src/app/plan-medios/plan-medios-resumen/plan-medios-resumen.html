@@ -62,9 +62,23 @@
             <tr>
               <th class="col-medios">MEDIOS</th>
               <th class="col-proveedor">PROVEEDOR</th>
-              <th class="col-semanas" colspan="5">
+              <th class="col-semanas" [attr.colspan]="semanasConFechas.length">
                 <div class="semanas-header">
-                  <div class="semanas-title">CRONOGRAMA</div>
+                  <button mat-icon-button 
+                          class="nav-button" 
+                          [disabled]="!tieneMesAnterior()"
+                          (click)="mesAnterior()"
+                          title="Mes anterior">
+                    <mat-icon>chevron_left</mat-icon>
+                  </button>
+                  <div class="semanas-title">{{ obtenerTituloMes() }}</div>
+                  <button mat-icon-button 
+                          class="nav-button" 
+                          [disabled]="!tieneMesSiguiente()"
+                          (click)="mesSiguiente()"
+                          title="Mes siguiente">
+                    <mat-icon>chevron_right</mat-icon>
+                  </button>
                 </div>
               </th>
               <th class="col-total">VALOR TOTAL</th>
@@ -76,7 +90,7 @@
               <th class="col-fecha" *ngFor="let semana of semanasConFechas">
                 <div class="fecha-container">
                   <div class="semana-nombre">{{ semana.nombre }}</div>
-                  <div class="fecha-rango">{{ semana.fechaInicio }} - {{ semana.fechaFin }}</div>
+                  <div class="fecha-rango">{{ semana.fechaCompacta }}</div>
                 </div>
               </th>
               <th></th>
@@ -102,7 +116,7 @@
                     title="Doble click para ver opciones">
                   <td>{{ fila.nombre }}</td>
                   <td>{{ fila.medio?.proveedor || 'Sin proveedor' }}</td>
-                  <td colspan="5">
+                  <td [attr.colspan]="semanasConFechas.length">
                     <!-- Quitar los checks, dejar en blanco -->
                   </td>
                   <td class="valor-total">{{ fila.medio?.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>

@@ -184,13 +184,42 @@
   position: relative;
 }
 
-// Removido - ya no necesitamos scroll específico de tabla
+// Contenedor de la tabla con scroll horizontal
+.table-container {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0;
+  margin-bottom: 20px;
+  width: 100%; // Ocupa todo el ancho disponible
+  overflow-x: auto; // Permite scroll horizontal si es necesario
+  overflow-y: visible;
+  
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+    
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+}
 
 .medios-table {
-  width: 100%;
-  min-width: 900px; // Ancho mínimo para forzar scroll horizontal si es necesario
+  width: 100%; // Ocupa todo el ancho disponible
+  min-width: 1000px; // Ancho mínimo para que no se comprima demasiado
   border-collapse: collapse;
   background-color: white;
+  table-layout: fixed; // Distribución fija para mejor control
 
   thead {
     background-color: #1a2732;
@@ -218,30 +247,41 @@
 
 
   .col-medios {
-    width: 120px;
+    width: 20%; // Porcentaje del ancho total
+    min-width: 200px;
   }
 
   .col-proveedor {
-    width: 140px;
+    width: 15%; // Porcentaje del ancho total
+    min-width: 150px;
   }
 
   .col-semanas {
     text-align: center;
+    width: 45%; // Porcentaje del ancho total para el área de semanas
+    min-width: 450px;
+  }
+  
+  // Las fechas se distribuyen dentro del porcentaje asignado
+  .fechas-subheader .col-fecha {
+    width: calc(45% / var(--num-semanas, 5)); // Distribución dentro del porcentaje
+    min-width: 70px;
   }
 
   .col-fecha {
-    width: 80px;
     text-align: center;
     font-size: 10px;
   }
 
   .col-total {
-    width: 120px;
+    width: 12%; // Porcentaje del ancho total
+    min-width: 120px;
     text-align: right;
   }
 
   .col-soi {
-    width: 70px;
+    width: 8%; // Porcentaje del ancho total
+    min-width: 80px;
     text-align: right;
   }
 
@@ -249,11 +289,42 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 12px;
     
     .semanas-title {
       font-weight: bold;
       color: white;
       font-size: 13px;
+      min-width: 120px;
+    }
+    
+    .nav-button {
+      width: 32px;
+      height: 32px;
+      color: #ffffff;
+      transition: all 0.2s ease;
+      
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+      
+      &:hover:not([disabled]) {
+        background-color: rgba(255, 255, 255, 0.1);
+        transform: scale(1.1);
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      &:not([disabled]) {
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+      }
     }
   }
 
@@ -278,24 +349,27 @@
       }
 
       .fecha-rango {
-        font-size: 9px;
+        font-size: 10px;
         color: #ccc;
         white-space: nowrap;
+        letter-spacing: 0.5px;
       }
     }
   }
 
   .semanas-cell {
     display: flex;
-    justify-content: space-around;
-    gap: 4px;
+    justify-content: center;
+    align-items: center;
     min-height: 20px;
     padding: 4px;
+    width: calc(45% / var(--num-semanas, 5)); // Porcentaje dividido por número de semanas
+    min-width: 70px;
   }
 
   .semana-indicator {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border: 1px solid #ddd;
     background-color: transparent;
     border-radius: 3px;
@@ -500,14 +574,19 @@
     .spots-cell {
       padding: 4px;
       text-align: center;
+      width: calc(45% / var(--num-semanas, 5)); // Porcentaje dividido por número de semanas
+      min-width: 70px;
       
       .spots-input {
-        width: 50px;
+        width: calc(100% - 8px); // Ajustado para padding
+        max-width: 60px;
+        min-width: 40px;
         padding: 2px 4px;
         border: 1px solid #ddd;
         border-radius: 3px;
         text-align: center;
         font-size: 11px;
+        box-sizing: border-box;
         
         &:focus {
           outline: none;
@@ -552,5 +631,16 @@
       font-weight: 500;
       color: #2e7d32;
       font-size: 11px;
+      min-width: 60px;
+      width: auto; // Se adapta al espacio disponible
+      padding: 4px;
+    }
+    
+    // Distribución equitativa para celdas de contenido de semanas
+    .fila-spots td:nth-child(n+3):not(:nth-last-child(-n+2)),
+    .fila-inversiones td:nth-child(n+3):not(:nth-last-child(-n+2)) {
+      width: calc(100% / var(--num-semanas, 5));
+      min-width: 60px;
+      max-width: 120px;
     }
   } 

@@ -56,10 +56,15 @@ export class PlanMediosResumen implements OnInit {
   resumenPlan: ResumenPlan = this.crearPlanEjemplo(); // Inicializar con plan de ejemplo
   displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
   semanasColumnas: string[] = []; // Ahora será dinámico
-  semanasConFechas: Array<{nombre: string, fechaInicio: string, fechaFin: string}> = [];
+  semanasConFechas: Array<{nombre: string, fechaInicio: string, fechaFin: string, fechaCompacta: string}> = [];
   dataSource: FilaMedio[] = [];
   planId: string | undefined; // Almacenar el ID del plan
   flowChartAsociado: boolean = false; // Flag para saber si ya está asociado al flowchart
+  
+  // Propiedades para navegación por meses
+  mesesDisponibles: Array<{nombre: string, anio: number, fechaInicio: string, fechaFin: string}> = [];
+  mesActualIndex: number = 0;
+  mesActual: {nombre: string, anio: number, fechaInicio: string, fechaFin: string} | null = null;
 
   constructor(
     private snackBar: MatSnackBar,
@@ -163,6 +168,7 @@ export class PlanMediosResumen implements OnInit {
     }
 
     this.periodoSeleccionado = this.resumenPlan.periodos[0];
+    this.calcularMesesDisponibles();
     this.calcularSemanasConFechas();
     this.prepararDataSource();
     
@@ -232,6 +238,15 @@ export class PlanMediosResumen implements OnInit {
     });
 
     this.dataSource = filas;
+    
+    // Establecer variable CSS para el número de semanas
+    this.establecerVariableCSSNumSemanas();
+  }
+
+  private establecerVariableCSSNumSemanas(): void {
+    const numSemanas = this.semanasColumnas.length;
+    document.documentElement.style.setProperty('--num-semanas', numSemanas.toString());
+    console.log(`📊 Establecida variable CSS --num-semanas: ${numSemanas}`);
   }
 
   obtenerClaseFila(fila: FilaMedio): string {
@@ -271,22 +286,119 @@ export class PlanMediosResumen implements OnInit {
 
   onPeriodoChange(periodo: PeriodoPlan): void {
     this.periodoSeleccionado = periodo;
+    this.calcularMesesDisponibles();
     this.calcularSemanasConFechas();
     this.prepararDataSource();
+  }
+
+  // Funciones de navegación por meses
+  mesAnterior(): void {
+    if (this.mesActualIndex > 0) {
+      this.mesActualIndex--;
+      this.mesActual = this.mesesDisponibles[this.mesActualIndex];
+      this.calcularSemanasConFechas();
+      this.prepararDataSource();
+      console.log('⬅️ Navegado al mes anterior:', this.mesActual.nombre);
+    }
+  }
+
+  mesSiguiente(): void {
+    if (this.mesActualIndex < this.mesesDisponibles.length - 1) {
+      this.mesActualIndex++;
+      this.mesActual = this.mesesDisponibles[this.mesActualIndex];
+      this.calcularSemanasConFechas();
+      this.prepararDataSource();
+      console.log('➡️ Navegado al mes siguiente:', this.mesActual.nombre);
+    }
+  }
+
+  // Funciones auxiliares para la navegación
+  tieneMesAnterior(): boolean {
+    return this.mesActualIndex > 0;
+  }
+
+  tieneMesSiguiente(): boolean {
+    return this.mesActualIndex < this.mesesDisponibles.length - 1;
+  }
+
+  obtenerTituloMes(): string {
+    if (!this.mesActual) return 'CRONOGRAMA';
+    return `${this.mesActual.nombre} ${this.mesActual.anio}`;
+  }
+
+  calcularMesesDisponibles(): void {
+    const fechaInicio = new Date(this.periodoSeleccionado.fechaInicio);
+    const fechaFin = new Date(this.periodoSeleccionado.fechaFin);
+    
+    fechaInicio.setHours(0, 0, 0, 0);
+    fechaFin.setHours(23, 59, 59, 999);
+    
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    this.mesesDisponibles = [];
+    
+    let fechaActual = new Date(fechaInicio);
+    
+    while (fechaActual <= fechaFin) {
+      const mes = fechaActual.getMonth();
+      const anio = fechaActual.getFullYear();
+      
+      // Calcular el inicio y fin del mes actual
+      const inicioMes = new Date(anio, mes, 1);
+      const finMes = new Date(anio, mes + 1, 0);
+      
+      // Ajustar al rango del plan
+      const inicioMesReal = inicioMes < fechaInicio ? fechaInicio : inicioMes;
+      const finMesReal = finMes > fechaFin ? fechaFin : finMes;
+      
+      this.mesesDisponibles.push({
+        nombre: meses[mes],
+        anio: anio,
+        fechaInicio: this.formatearFecha(inicioMesReal),
+        fechaFin: this.formatearFecha(finMesReal)
+      });
+      
+      // Avanzar al siguiente mes
+      fechaActual.setMonth(fechaActual.getMonth() + 1);
+      fechaActual.setDate(1);
+    }
+    
+    // Establecer el primer mes como actual
+    this.mesActualIndex = 0;
+    this.mesActual = this.mesesDisponibles[0];
+    
+    console.log('📅 Meses disponibles:', this.mesesDisponibles);
   }
 
   calcularSemanasConFechas(): void {
     this.semanasConFechas = [];
     this.semanasColumnas = [];
     
-    const fechaInicio = new Date(this.periodoSeleccionado.fechaInicio);
-    const fechaFin = new Date(this.periodoSeleccionado.fechaFin);
+    if (!this.mesActual) return;
+    
+    // Parsear fechas con formato DD/MM/YYYY
+    const fechaInicioParts = this.mesActual.fechaInicio.split('/');
+    const fechaFinParts = this.mesActual.fechaFin.split('/');
+    
+    const fechaInicio = new Date(
+      parseInt(fechaInicioParts[2]), // año
+      parseInt(fechaInicioParts[1]) - 1, // mes (0-based)
+      parseInt(fechaInicioParts[0]) // día
+    );
+    const fechaFin = new Date(
+      parseInt(fechaFinParts[2]), // año
+      parseInt(fechaFinParts[1]) - 1, // mes (0-based)
+      parseInt(fechaFinParts[0]) // día
+    );
     
     // Asegurar que las fechas se parseen correctamente
     fechaInicio.setHours(0, 0, 0, 0);
     fechaFin.setHours(23, 59, 59, 999);
     
-    console.log('📅 Calculando semanas para período:', {
+    console.log('📅 Calculando semanas para mes:', this.mesActual.nombre, {
       fechaInicio: fechaInicio.toISOString(),
       fechaFin: fechaFin.toISOString()
     });
@@ -302,34 +414,34 @@ export class PlanMediosResumen implements OnInit {
       inicioSemana.setDate(inicioSemana.getDate() - diasHastaLunes);
     }
     
-    // Si el lunes calculado es anterior a la fecha de inicio del plan, usar la fecha de inicio
+    // Si el lunes calculado es anterior a la fecha de inicio del mes, usar la fecha de inicio
     if (inicioSemana < fechaInicio) {
       inicioSemana = new Date(fechaInicio);
     }
     
     let contadorSemana = 1;
-    const maxSemanas = 5; // Limitar a máximo 5 semanas
     
-    // Generar semanas hasta cubrir todo el período (máximo 5 semanas)
-    while (inicioSemana <= fechaFin && contadorSemana <= maxSemanas) {
+    // Generar semanas hasta cubrir todo el mes
+    while (inicioSemana <= fechaFin) {
       const finSemana = new Date(inicioSemana);
       finSemana.setDate(inicioSemana.getDate() + 6); // Domingo de la misma semana
       
-      // Si la fecha fin de la semana supera la fecha fin del período, ajustarla
+      // Si la fecha fin de la semana supera la fecha fin del mes, ajustarla
       if (finSemana > fechaFin) {
         finSemana.setTime(fechaFin.getTime());
       }
       
-      // Solo agregar si hay intersección con el período del plan
+      // Solo agregar si hay intersección con el mes
       if (inicioSemana <= fechaFin && finSemana >= fechaInicio) {
-        // Ajustar fechas para que no salgan del rango del plan
+        // Ajustar fechas para que no salgan del rango del mes
         const fechaInicioReal = inicioSemana < fechaInicio ? fechaInicio : inicioSemana;
         const fechaFinReal = finSemana > fechaFin ? fechaFin : finSemana;
         
         this.semanasConFechas.push({
           nombre: `S${contadorSemana}`,
           fechaInicio: this.formatearFecha(fechaInicioReal),
-          fechaFin: this.formatearFecha(fechaFinReal)
+          fechaFin: this.formatearFecha(fechaFinReal),
+          fechaCompacta: this.formatearFechaCompacta(fechaInicioReal, fechaFinReal)
         });
         
         this.semanasColumnas.push(`S${contadorSemana}`);
@@ -343,7 +455,7 @@ export class PlanMediosResumen implements OnInit {
       inicioSemana.setDate(inicioSemana.getDate() + 7);
     }
     
-    console.log('📅 Semanas calculadas:', this.semanasConFechas);
+    console.log('📅 Semanas calculadas para', this.mesActual.nombre, ':', this.semanasConFechas);
     console.log('📅 Columnas de semanas:', this.semanasColumnas);
   }
 
@@ -354,18 +466,35 @@ export class PlanMediosResumen implements OnInit {
     return `${dia}/${mes}/${año}`;
   }
 
+  formatearFechaCompacta(fechaInicio: Date, fechaFin: Date): string {
+    const diaInicio = fechaInicio.getDate().toString().padStart(2, '0');
+    const mesInicio = (fechaInicio.getMonth() + 1).toString().padStart(2, '0');
+    const diaFin = fechaFin.getDate().toString().padStart(2, '0');
+    const mesFin = (fechaFin.getMonth() + 1).toString().padStart(2, '0');
+    
+    // Si son el mismo mes, mostrar: 01-07/06
+    if (fechaInicio.getMonth() === fechaFin.getMonth()) {
+      return `${diaInicio}-${diaFin}/${mesInicio}`;
+    } else {
+      // Si son meses diferentes, mostrar: 30/06-07/07
+      return `${diaInicio}/${mesInicio}-${diaFin}/${mesFin}`;
+    }
+  }
+
   /**
    * Genera un array de spots por semana inicializado en 0
    */
   private generarSpotsPorSemana(): number[] {
-    return new Array(this.semanasColumnas.length).fill(0);
+    const numSemanas = this.semanasColumnas.length || 5; // Fallback a 5 semanas
+    return new Array(numSemanas).fill(0);
   }
 
   /**
    * Genera un array de semanas boolean inicializado en false
    */
   private generarSemanasBoolean(): boolean[] {
-    return new Array(this.semanasColumnas.length).fill(false);
+    const numSemanas = this.semanasColumnas.length || 5; // Fallback a 5 semanas
+    return new Array(numSemanas).fill(false);
   }
 
   onNuevaPauta(): void {
@@ -1041,6 +1170,7 @@ export class PlanMediosResumen implements OnInit {
       this.resumenPlan.periodos = periodosReales;
       this.periodos = periodosReales;
       this.periodoSeleccionado = periodosReales[0];
+      this.calcularMesesDisponibles();
       this.calcularSemanasConFechas();
       this.prepararDataSource();
       this.actualizarTotalesPeriodo(); // Asegurar que los totales se recalculen
@@ -1053,8 +1183,8 @@ export class PlanMediosResumen implements OnInit {
     const target = event.target as HTMLInputElement;
     const nuevoSpots = parseInt(target.value) || 0;
     
-    // Inicializar spotsPorSemana si no existe
-    if (!medio.spotsPorSemana) {
+    // Inicializar spotsPorSemana si no existe o si el tamaño no coincide
+    if (!medio.spotsPorSemana || medio.spotsPorSemana.length !== this.semanasColumnas.length) {
       medio.spotsPorSemana = this.generarSpotsPorSemana();
     }
     
@@ -1079,13 +1209,13 @@ export class PlanMediosResumen implements OnInit {
     this.guardarCambiosEnLocalStorage();
     
     // Mostrar confirmación visual
-    this.snackBar.open(`💾 Guardado: ${medio.nombre} - ${nuevoSpots} spots`, '', { 
-      duration: 1000,
+    this.snackBar.open(`💾 Guardado: ${medio.nombre} - S${semanaIndex + 1}: ${nuevoSpots} spots (${this.obtenerTituloMes()})`, '', { 
+      duration: 1500,
       horizontalPosition: 'right',
       verticalPosition: 'bottom'
     });
     
-    console.log(`✅ Spots actualizados para ${medio.nombre} semana ${semanaIndex + 1}: ${nuevoSpots}`);
+    console.log(`✅ Spots actualizados para ${medio.nombre} semana ${semanaIndex + 1} del mes ${this.obtenerTituloMes()}: ${nuevoSpots}`);
     console.log(`✅ Nueva inversión total: ${medio.valorNeto}`);
   }
 
@@ -1094,12 +1224,14 @@ export class PlanMediosResumen implements OnInit {
     if (!medio.spotsPorSemana) {
       return medio.salidas || 0;
     }
-    return medio.spotsPorSemana.reduce((total, spots) => total + spots, 0);
+    // Solo sumar los spots de las semanas visibles del mes actual
+    const spotsVisibles = medio.spotsPorSemana.slice(0, this.semanasColumnas.length);
+    return spotsVisibles.reduce((total, spots) => total + spots, 0);
   }
 
   // Método para calcular inversión por semana
   calcularInversionSemana(medio: MedioPlan, semanaIndex: number): number {
-    if (!medio.spotsPorSemana || !medio.tarifa) {
+    if (!medio.spotsPorSemana || !medio.tarifa || semanaIndex >= this.semanasColumnas.length) {
       return 0;
     }
     const spotsEnSemana = medio.spotsPorSemana[semanaIndex] || 0;
