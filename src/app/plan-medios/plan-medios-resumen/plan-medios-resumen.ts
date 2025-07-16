@@ -77,10 +77,31 @@ export class PlanMediosResumen implements OnInit {
 
     console.log('📋 === CONSTRUCTOR RESUMEN ===');
     console.log('📋 Plan Data recibido:', planData);
+    console.log('📋 Plan Data tiene ID:', !!(planData && planData.id));
+    console.log('📋 Plan Data ID:', planData?.id);
+    
+    // DEBUG: Verificar localStorage
+    const planesMediosStorage = localStorage.getItem('planesMedios');
+    const respuestasPautasStorage = localStorage.getItem('respuestasPautas');
+    console.log('📋 localStorage planesMedios:', planesMediosStorage ? 'EXISTE' : 'NO EXISTE');
+    console.log('📋 localStorage respuestasPautas:', respuestasPautasStorage ? 'EXISTE' : 'NO EXISTE');
+    
+    if (planesMediosStorage) {
+      const planes = JSON.parse(planesMediosStorage);
+      console.log('📋 Número de planes en localStorage:', planes.length);
+      console.log('📋 IDs de planes disponibles:', planes.map((p: any) => p.id));
+    }
+    
+    if (respuestasPautasStorage) {
+      const pautas = JSON.parse(respuestasPautasStorage);
+      console.log('📋 Número de pautas en localStorage:', pautas.length);
+      console.log('📋 Plan IDs de pautas disponibles:', [...new Set(pautas.map((p: any) => p.planId))]);
+    }
 
     if (planData && planData.id) {
       // Guardar el ID del plan
       this.planId = planData.id;
+      console.log('📋 ID del plan guardado:', this.planId);
       
       // Verificar si viene del FlowChart
       if (planData.fromFlowChart) {
@@ -119,10 +140,16 @@ export class PlanMediosResumen implements OnInit {
         console.log('🔄 No hay pautas en el estado, buscando en localStorage');
         // Fallback: Cargar desde localStorage
         const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+        console.log('🔍 DEBUG: Planes locales encontrados:', planesLocal.length);
+        console.log('🔍 DEBUG: Buscando plan con ID:', planData.id);
+        
         const planCompleto = planesLocal.find((plan: any) => plan.id === planData.id);
+        console.log('🔍 DEBUG: Plan encontrado:', planCompleto ? 'SÍ' : 'NO');
         
         if (planCompleto) {
+          console.log('🔍 DEBUG: Cargando períodos con pautas para plan:', planCompleto.id);
           const periodosReales = this.cargarPeriodosConPautas(planCompleto.id);
+          console.log('🔍 DEBUG: Períodos cargados:', periodosReales);
           
           this.resumenPlan = {
             numeroPlan: planCompleto.numeroPlan,
@@ -136,6 +163,7 @@ export class PlanMediosResumen implements OnInit {
           };
           this.periodos = periodosReales;
         } else {
+          console.log('🔍 DEBUG: No se encontró plan, inicializando ejemplo');
           this.inicializarPlanEjemplo();
         }
       }
@@ -183,7 +211,78 @@ export class PlanMediosResumen implements OnInit {
     console.log('📊 FlowChart asociado:', this.flowChartAsociado);
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    // Forzar una recarga al inicializar para asegurar que los datos estén actualizados
+    console.log('🔄 ngOnInit: Verificando carga de datos');
+    this.verificarYRecargarDatos();
+    
+    // Mostrar notificación si no hay datos cargados
+    if (this.planId && (!this.periodoSeleccionado?.medios || this.periodoSeleccionado.medios.length === 0)) {
+      setTimeout(() => {
+        this.snackBar.open('⚠️ No se encontraron datos. Use el botón "Recargar Datos" si es necesario.', 'OK', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['warning-snackbar']
+        });
+      }, 1000);
+    }
+  }
+  
+  private verificarYRecargarDatos(): void {
+    console.log('🔄 Verificando y recargando datos...');
+    
+    // Si tenemos un planId, verificar que los datos estén cargados correctamente
+    if (this.planId) {
+      console.log('🔄 Verificando datos para plan ID:', this.planId);
+      
+      // Verificar si hay medios cargados
+      const tieneMedias = this.periodoSeleccionado && this.periodoSeleccionado.medios && this.periodoSeleccionado.medios.length > 0;
+      console.log('🔄 Tiene medios cargados:', tieneMedias);
+      
+      // Verificar la integridad de los datos en localStorage
+      this.verificarIntegridadDatos();
+      
+      // Si no hay medios, intentar recargar
+      if (!tieneMedias) {
+        console.log('🔄 No hay medios cargados, intentando recargar...');
+        this.recargarResumen();
+      } else {
+        console.log('🔄 Medios ya cargados:', this.periodoSeleccionado.medios.length);
+      }
+    } else {
+      console.log('🔄 No hay planId, no se puede recargar');
+    }
+  }
+  
+  private verificarIntegridadDatos(): void {
+    if (!this.planId) return;
+    
+    console.log('🔍 Verificando integridad de datos en localStorage...');
+    
+    // Verificar que el plan existe en planesMedios
+    const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
+    const planExiste = planesLocal.some((plan: any) => plan.id === this.planId);
+    console.log('🔍 Plan existe en planesMedios:', planExiste);
+    
+    // Verificar que hay pautas para este plan
+    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    const pautasDelPlan = pautas.filter((pauta: any) => pauta.planId === this.planId);
+    console.log('🔍 Pautas encontradas para el plan:', pautasDelPlan.length);
+    
+    if (pautasDelPlan.length > 0) {
+      console.log('🔍 Detalles de pautas:');
+      pautasDelPlan.forEach((pauta: any, index: number) => {
+        console.log(`🔍 Pauta ${index + 1}:`, {
+          medio: pauta.medio,
+          proveedor: pauta.proveedor,
+          valorTotal: pauta.valorTotal,
+          totalSpots: pauta.totalSpots,
+          spotsPorFecha: pauta.datos?.spotsPorFecha
+        });
+      });
+    }
+  }
 
   prepararDataSource() {
     // Agrupar medios por nombre de medio
@@ -881,7 +980,12 @@ export class PlanMediosResumen implements OnInit {
     const respuestasPautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
     const pautasDelPlan = respuestasPautas.filter((pauta: any) => pauta.planId === planId);
 
-    console.log('Pautas encontradas para el plan:', pautasDelPlan);
+    console.log('🔍 === DEBUG CARGA INICIAL ===');
+    console.log('🔍 Plan ID buscado:', planId);
+    console.log('🔍 Total pautas en localStorage:', respuestasPautas.length);
+    console.log('🔍 Pautas encontradas para el plan:', pautasDelPlan.length);
+    console.log('🔍 Pautas del plan:', pautasDelPlan);
+    console.log('🔍 === FIN DEBUG ===');
 
     // Obtener las fechas del plan para calcular el período
     const planCompleto = JSON.parse(localStorage.getItem('planesMedios') || '[]')
@@ -1165,16 +1269,50 @@ export class PlanMediosResumen implements OnInit {
   // Método para recargar el resumen después de agregar un medio
   recargarResumen(): void {
     if (this.planId) {
+      console.log('🔄 Recargando resumen para plan ID:', this.planId);
+      
       // Recargar las pautas del plan
       const periodosReales = this.cargarPeriodosConPautas(this.planId);
-      this.resumenPlan.periodos = periodosReales;
-      this.periodos = periodosReales;
-      this.periodoSeleccionado = periodosReales[0];
-      this.calcularMesesDisponibles();
-      this.calcularSemanasConFechas();
-      this.prepararDataSource();
-      this.actualizarTotalesPeriodo(); // Asegurar que los totales se recalculen
-      console.log('✅ Resumen recargado con spots guardados:', this.periodoSeleccionado.medios);
+      
+      // Verificar que se cargaron datos
+      if (periodosReales && periodosReales.length > 0) {
+        this.resumenPlan.periodos = periodosReales;
+        this.periodos = periodosReales;
+        this.periodoSeleccionado = periodosReales[0];
+        this.calcularMesesDisponibles();
+        this.calcularSemanasConFechas();
+        this.prepararDataSource();
+        this.actualizarTotalesPeriodo(); // Asegurar que los totales se recalculen
+        console.log('✅ Resumen recargado con spots guardados:', this.periodoSeleccionado.medios);
+        
+        // Mostrar notificación de éxito
+        this.snackBar.open('✅ Datos recargados correctamente', '', {
+          duration: 2000,
+          horizontalPosition: 'right',
+          verticalPosition: 'bottom',
+          panelClass: ['success-snackbar']
+        });
+      } else {
+        console.log('❌ No se pudieron cargar períodos para el plan');
+        
+        // Mostrar notificación de error
+        this.snackBar.open('❌ No se encontraron datos para cargar', '', {
+          duration: 3000,
+          horizontalPosition: 'right',
+          verticalPosition: 'bottom',
+          panelClass: ['error-snackbar']
+        });
+      }
+    } else {
+      console.log('❌ No hay planId para recargar');
+      
+      // Mostrar notificación de error
+      this.snackBar.open('❌ No hay ID de plan para recargar', '', {
+        duration: 3000,
+        horizontalPosition: 'right',
+        verticalPosition: 'bottom',
+        panelClass: ['error-snackbar']
+      });
     }
   }
 
@@ -1353,6 +1491,17 @@ export class PlanMediosResumen implements OnInit {
     });
     
     return array;
+  }
+  
+  // Método temporal para limpiar logs de debugging
+  limpiarLogsDebugging(): void {
+    console.clear();
+    console.log('🧹 Logs de debugging limpiados');
+    this.snackBar.open('🧹 Logs de debugging limpiados', '', {
+      duration: 1000,
+      horizontalPosition: 'right',
+      verticalPosition: 'bottom'
+    });
   }
 }
 
