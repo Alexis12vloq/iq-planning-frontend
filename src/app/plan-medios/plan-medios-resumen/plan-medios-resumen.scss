@@ -181,6 +181,7 @@
   border-radius: 4px;
   padding: 15px;
   margin-bottom: 15px;
+  position: relative;
 }
 
 // Removido - ya no necesitamos scroll específico de tabla
@@ -310,6 +311,7 @@
     background-color: white;
     cursor: pointer;
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
     
     td {
       padding: 6px 8px;
@@ -335,6 +337,8 @@
       background-color: #e8f4fd;
     }
   }
+
+  // Estilos para hover mejorado en las filas
 
   .fila-salidas {
     background-color: #f9f9f9;

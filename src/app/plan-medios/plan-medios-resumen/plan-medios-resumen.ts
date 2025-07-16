@@ -407,6 +407,66 @@ export class PlanMediosResumen implements OnInit {
     });
   }
 
+  onAccionMedio(medio: any): void {
+    console.log('⚡ Abriendo modal de acciones para medio:', medio);
+    
+    const dialogRef = this.dialog.open(ModalAccionesMedioComponent, {
+      width: '400px',
+      data: { 
+        medio: medio,
+        planId: this.planId
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe((result: any) => {
+      if (result && result.accion === 'editar') {
+        console.log('✏️ Acción: Editar medio');
+        this.editarMedio(medio);
+      } else if (result && result.accion === 'eliminar') {
+        console.log('🗑️ Acción: Eliminar medio');
+        this.eliminarMedio(medio);
+      }
+    });
+  }
+
+  private editarMedio(medio: any): void {
+    const dialogRef = this.dialog.open(ModalEditarMedioComponent, {
+      width: '500px',
+      data: { 
+        medio: medio,
+        planId: this.planId,
+        proveedoresDisponibles: this.obtenerProveedoresPorMedio(medio.nombre)
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe((result: any) => {
+      if (result && result.shouldRefresh) {
+        console.log('✅ Medio editado, recargando resumen');
+        this.recargarResumen();
+      }
+    });
+  }
+
+  private eliminarMedio(medio: any): void {
+    const dialogRef = this.dialog.open(ModalConfirmarEliminacionComponent, {
+      width: '400px',
+      data: { 
+        medio: medio,
+        planId: this.planId
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe((result: any) => {
+      if (result && result.shouldRefresh) {
+        console.log('✅ Medio eliminado, recargando resumen');
+        this.recargarResumen();
+      }
+    });
+  }
+
   onDescargaFlow(): void {
     console.log('Descarga Flow clicked');
   }
@@ -1123,6 +1183,10 @@ export class PlanMediosResumen implements OnInit {
 
     return spotsPorSemana;
   }
+
+  private obtenerProveedoresPorMedio(medio: string): any[] {
+    return this.plantillaService.obtenerProveedoresPorMedio(medio);
+  }
 }
 
 // Componente Modal para Agregar Medio
@@ -1512,5 +1576,638 @@ export class ModalAgregarMedioComponent implements OnInit {
         panelClass: ['error-snackbar']
       });
     }
+  }
+} 
+
+// Componente Modal para Seleccionar Acción (Eliminar o Editar)
+@Component({
+  selector: 'app-modal-acciones-medio',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule
+  ],
+  template: `
+    <div class="modal-header">
+      <h3 mat-dialog-title>
+        <mat-icon>settings</mat-icon>
+        Acciones para: {{ data.medio.nombre }}
+      </h3>
+      <button mat-icon-button mat-dialog-close>
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-dialog-content class="modal-content">
+      <div class="medio-info">
+        <div class="info-item">
+          <span class="label">Medio:</span>
+          <span class="value">{{ data.medio.nombre }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Proveedor:</span>
+          <span class="value">{{ data.medio.proveedor }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Valor Total:</span>
+          <span class="value">{{ data.medio.valorNeto | currency:'USD':'symbol':'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="accion-mensaje">
+        <p>¿Qué acción deseas realizar con este medio?</p>
+      </div>
+
+      <div class="acciones-container">
+        <button 
+          mat-raised-button 
+          color="primary" 
+          class="accion-button editar-button"
+          (click)="seleccionarAccion('editar')">
+          <mat-icon>edit</mat-icon>
+          Editar Medio
+        </button>
+        
+        <button 
+          mat-raised-button 
+          color="warn" 
+          class="accion-button eliminar-button"
+          (click)="seleccionarAccion('eliminar')">
+          <mat-icon>delete</mat-icon>
+          Eliminar Medio
+        </button>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions class="modal-actions">
+      <button mat-button mat-dialog-close>Cancelar</button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-content {
+      padding: 24px;
+      text-align: center;
+      min-width: 350px;
+    }
+
+    .medio-info {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .value {
+      font-size: 14px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    .accion-mensaje {
+      margin-bottom: 28px;
+      
+      p {
+        font-size: 16px;
+        color: #444;
+        margin: 0;
+        font-weight: 500;
+      }
+    }
+
+    .acciones-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .accion-button {
+      min-width: 160px;
+      height: 36px;
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: none;
+      border-radius: 4px;
+      border: none;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: none;
+      
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+      
+      &:hover {
+        box-shadow: none;
+      }
+    }
+
+    .editar-button {
+      background-color: #e3f2fd;
+      color: #1565c0;
+      
+      &:hover {
+        background-color: #bbdefb;
+      }
+    }
+
+    .eliminar-button {
+      background-color: #e3f2fd;
+      color: #1565c0;
+      
+      &:hover {
+        background-color: #bbdefb;
+      }
+    }
+
+    .modal-actions {
+      padding: 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+  `]
+})
+export class ModalAccionesMedioComponent {
+  constructor(
+    private dialogRef: MatDialogRef<ModalAccionesMedioComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: any
+  ) {}
+
+  seleccionarAccion(accion: 'editar' | 'eliminar'): void {
+    this.dialogRef.close({ accion });
+  }
+}
+
+// Componente Modal para Editar Medio
+@Component({
+  selector: 'app-modal-editar-medio',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule
+  ],
+  template: `
+    <div class="modal-header">
+      <h3 mat-dialog-title>
+        <mat-icon>edit</mat-icon>
+        Editar Medio: {{ data.medio.nombre }}
+      </h3>
+      <button mat-icon-button mat-dialog-close>
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-dialog-content class="modal-content">
+      <div class="medio-info">
+        <div class="info-item">
+          <span class="label">Medio:</span>
+          <span class="value">{{ data.medio.nombre }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Proveedor Actual:</span>
+          <span class="value">{{ data.medio.proveedor }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Tarifa Actual:</span>
+          <span class="value">{{ data.medio.tarifa | currency:'USD':'symbol':'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <form [formGroup]="editarForm">
+        <mat-form-field class="full-width">
+          <mat-label>Proveedor</mat-label>
+          <mat-select formControlName="proveedor">
+            <mat-option *ngFor="let proveedor of proveedoresDisponibles" [value]="proveedor.id">
+              {{ proveedor.VENDOR }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field class="full-width">
+          <mat-label>Tarifa</mat-label>
+          <input matInput type="number" formControlName="tarifa" step="0.01">
+        </mat-form-field>
+
+        <div class="validation-message" *ngIf="existeCombinacion">
+          <mat-icon color="warn">warning</mat-icon>
+          <span>Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan</span>
+        </div>
+      </form>
+    </mat-dialog-content>
+
+    <mat-dialog-actions class="modal-actions">
+      <button mat-button mat-dialog-close>Cancelar</button>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        [disabled]="!editarForm.valid || existeCombinacion"
+        (click)="guardarCambios()">
+        <mat-icon>save</mat-icon>
+        Guardar Cambios
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-content {
+      padding: 16px;
+      min-height: 200px;
+    }
+
+    .medio-info {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .value {
+      font-size: 14px;
+      color: #333;
+    }
+
+    .full-width {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+
+    .validation-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f44336;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .modal-actions {
+      padding: 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+  `]
+})
+export class ModalEditarMedioComponent implements OnInit {
+  editarForm!: FormGroup;
+  proveedoresDisponibles: any[] = [];
+  existeCombinacion: boolean = false;
+  mediosExistentes: any[] = [];
+
+  constructor(
+    private fb: FormBuilder,
+    private dialogRef: MatDialogRef<ModalEditarMedioComponent>,
+    private snackBar: MatSnackBar,
+    @Inject(MAT_DIALOG_DATA) public data: any
+  ) {
+    this.editarForm = this.fb.group({
+      proveedor: [data.medio.proveedorId || ''],
+      tarifa: [data.medio.tarifa || 0]
+    });
+  }
+
+  ngOnInit(): void {
+    this.proveedoresDisponibles = this.data.proveedoresDisponibles || [];
+    this.cargarMediosExistentes();
+    
+    // Suscribirse a cambios en el formulario para validar duplicados
+    this.editarForm.valueChanges.subscribe(() => {
+      this.validarCombinacionDuplicada();
+    });
+  }
+
+  private cargarMediosExistentes(): void {
+    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    this.mediosExistentes = pautas
+      .filter((pauta: any) => pauta.planId === this.data.planId)
+      .map((pauta: any) => ({
+        medio: pauta.medio,
+        proveedor: pauta.proveedor,
+        tarifa: pauta.datos?.tarifa || 0
+      }));
+  }
+
+  private validarCombinacionDuplicada(): void {
+    const valores = this.editarForm.value;
+    
+    if (valores.proveedor && valores.tarifa > 0) {
+      const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+      
+      if (proveedorSeleccionado) {
+        // Verificar si existe la combinación exacta (excluyendo el medio actual)
+        this.existeCombinacion = this.mediosExistentes.some(me => 
+          me.medio === this.data.medio.nombre && 
+          me.proveedor === proveedorSeleccionado.VENDOR && 
+          Math.abs(me.tarifa - valores.tarifa) < 0.01 &&
+          // Excluir el medio actual de la validación
+          !(me.proveedor === this.data.medio.proveedor && me.tarifa === this.data.medio.tarifa)
+        );
+      }
+    } else {
+      this.existeCombinacion = false;
+    }
+  }
+
+  guardarCambios(): void {
+    if (this.editarForm.valid && !this.existeCombinacion) {
+      const valores = this.editarForm.value;
+      const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+      
+      // Actualizar pauta en localStorage
+      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      const pautaIndex = pautas.findIndex((pauta: any) => 
+        pauta.planId === this.data.planId && 
+        pauta.medio === this.data.medio.nombre && 
+        pauta.proveedor === this.data.medio.proveedor
+      );
+      
+      if (pautaIndex !== -1) {
+        // Actualizar proveedor y tarifa
+        pautas[pautaIndex].proveedor = proveedorSeleccionado ? proveedorSeleccionado.VENDOR : this.data.medio.proveedor;
+        pautas[pautaIndex].proveedorId = valores.proveedor;
+        pautas[pautaIndex].datos = pautas[pautaIndex].datos || {};
+        pautas[pautaIndex].datos.tarifa = Number(valores.tarifa);
+        
+        // Recalcular valores basados en la nueva tarifa
+        const totalSpots = pautas[pautaIndex].totalSpots || 1;
+        pautas[pautaIndex].valorTotal = totalSpots * Number(valores.tarifa);
+        pautas[pautaIndex].valorNeto = totalSpots * Number(valores.tarifa);
+        pautas[pautaIndex].fechaModificacion = new Date().toISOString();
+        
+        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+        
+        this.snackBar.open('✅ Medio actualizado correctamente', '', { 
+          duration: 2000,
+          panelClass: ['success-snackbar']
+        });
+        
+        this.dialogRef.close({ shouldRefresh: true });
+      } else {
+        this.snackBar.open('❌ Error: No se pudo encontrar el medio para actualizar', '', { 
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    }
+  }
+}
+
+// Componente Modal para Confirmar Eliminación
+@Component({
+  selector: 'app-modal-confirmar-eliminacion',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule
+  ],
+  template: `
+    <div class="modal-header">
+      <h3 mat-dialog-title>
+        <mat-icon color="warn">warning</mat-icon>
+        Confirmar Eliminación
+      </h3>
+      <button mat-icon-button mat-dialog-close>
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-dialog-content class="modal-content">
+      <div class="warning-message">
+        <mat-icon color="warn">delete_forever</mat-icon>
+        <p>¿Estás seguro que deseas eliminar este medio del plan?</p>
+      </div>
+      
+      <div class="medio-info">
+        <div class="info-item">
+          <span class="label">Medio:</span>
+          <span class="value">{{ data.medio.nombre }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Proveedor:</span>
+          <span class="value">{{ data.medio.proveedor }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Valor Total:</span>
+          <span class="value">{{ data.medio.valorNeto | currency:'USD':'symbol':'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="danger-notice">
+        <mat-icon color="warn">info</mat-icon>
+        <span>Esta acción no se puede deshacer.</span>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions class="modal-actions">
+      <button mat-button mat-dialog-close>Cancelar</button>
+      <button 
+        mat-raised-button 
+        color="warn" 
+        (click)="confirmarEliminacion()">
+        <mat-icon>delete</mat-icon>
+        Eliminar Medio
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-content {
+      padding: 16px;
+    }
+
+    .warning-message {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #fff3e0;
+      border-radius: 4px;
+      border-left: 4px solid #ff9800;
+    }
+
+    .warning-message mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    .warning-message p {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .medio-info {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .value {
+      font-size: 14px;
+      color: #333;
+    }
+
+    .danger-notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f44336;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .modal-actions {
+      padding: 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+  `]
+})
+export class ModalConfirmarEliminacionComponent {
+  constructor(
+    private dialogRef: MatDialogRef<ModalConfirmarEliminacionComponent>,
+    private snackBar: MatSnackBar,
+    @Inject(MAT_DIALOG_DATA) public data: any
+  ) {}
+
+  confirmarEliminacion(): void {
+    // Eliminar pauta de localStorage
+    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    const pautasFiltradas = pautas.filter((pauta: any) => 
+      !(pauta.planId === this.data.planId && 
+        pauta.medio === this.data.medio.nombre && 
+        pauta.proveedor === this.data.medio.proveedor)
+    );
+    
+    localStorage.setItem('respuestasPautas', JSON.stringify(pautasFiltradas));
+    
+    this.snackBar.open('✅ Medio eliminado correctamente', '', { 
+      duration: 2000,
+      panelClass: ['success-snackbar']
+    });
+    
+    this.dialogRef.close({ shouldRefresh: true });
   }
 } 

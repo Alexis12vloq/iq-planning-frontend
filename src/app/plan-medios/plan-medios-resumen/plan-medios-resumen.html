@@ -97,7 +97,9 @@
                 </tr>
                 
                 <!-- Fila del proveedor -->
-                <tr *ngIf="fila.tipo === 'nombre'" class="fila-medio">
+                <tr *ngIf="fila.tipo === 'nombre'" class="fila-medio" 
+                    (dblclick)="onAccionMedio(fila.medio)" 
+                    title="Doble click para ver opciones">
                   <td>{{ fila.nombre }}</td>
                   <td>{{ fila.medio?.proveedor || 'Sin proveedor' }}</td>
                   <td colspan="5">
