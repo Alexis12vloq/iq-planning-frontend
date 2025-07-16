@@ -127,7 +127,7 @@
                 <tr *ngIf="fila.tipo === 'spots' && fila.medio" class="fila-spots">
                   <td>{{ fila.nombre }}</td>
                   <td></td>
-                  <td *ngFor="let semana of fila.medio.semanas; let semanaIndex = index" class="spots-cell">
+                  <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="spots-cell">
                     <input 
                       type="number" 
                       class="spots-input"
@@ -144,7 +144,7 @@
                 <tr *ngIf="fila.tipo === 'inversiones' && fila.medio" class="fila-inversiones">
                   <td>{{ fila.nombre }}</td>
                   <td></td>
-                  <td *ngFor="let semana of fila.medio.semanas; let semanaIndex = index" class="inversiones-cell">
+                  <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="inversiones-cell">
                     {{ calcularInversionSemana(fila.medio, semanaIndex) | currency:'USD':'symbol-narrow':'1.0-0' }}
                   </td>
                   <td class="valor-total">{{ fila.medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
@@ -157,7 +157,7 @@
             <!-- Mostrar mensaje cuando no hay pautas -->
             <ng-container *ngIf="periodoSeleccionado.medios.length === 0">
               <tr class="fila-sin-pautas">
-                <td colspan="9" class="text-center">
+                <td [attr.colspan]="semanasConFechas.length + 4" class="text-center">
                   <div class="mensaje-sin-pautas">
                     <mat-icon>info</mat-icon>
                     <span>No hay pautas creadas para este plan. Utiliza el botón "Agregar Medio" para agregar medios.</span>
@@ -172,21 +172,21 @@
             <tr class="fila-total">
               <td>Total Inversión Neta</td>
               <td></td>
-              <td colspan="5"></td>
+              <td [attr.colspan]="semanasConFechas.length"></td>
               <td class="valor-total">{{ periodoSeleccionado.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
             <tr class="fila-iva">
               <td>IVA 19%</td>
               <td></td>
-              <td colspan="5"></td>
+              <td [attr.colspan]="semanasConFechas.length"></td>
               <td class="valor-total">{{ periodoSeleccionado.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
             <tr class="fila-total-inversion">
               <td>Total Inversión</td>
               <td></td>
-              <td colspan="5"></td>
+              <td [attr.colspan]="semanasConFechas.length"></td>
               <td class="valor-total">{{ periodoSeleccionado.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>

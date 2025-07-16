@@ -622,6 +622,14 @@
     
     td:first-child {
       padding-left: 20px;
+    }
+    
+    .inversiones-cell {
+      padding: 4px;
+      text-align: center;
+      width: calc(45% / var(--num-semanas, 5)); // Porcentaje dividido por número de semanas
+      min-width: 70px;
+      font-size: 11px;
       color: #666;
       font-weight: 500;
     }
