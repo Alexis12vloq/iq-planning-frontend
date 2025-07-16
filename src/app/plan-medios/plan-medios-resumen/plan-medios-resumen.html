@@ -131,7 +131,7 @@
                     <input 
                       type="number" 
                       class="spots-input"
-                      [value]="fila.medio.spotsPorSemana && fila.medio.spotsPorSemana[semanaIndex] !== undefined ? fila.medio.spotsPorSemana[semanaIndex] : 0"
+                      [value]="obtenerSpotsPorFecha(fila.medio, semanaIndex)"
                       (input)="onSpotsChange(fila.medio, semanaIndex, $event)"
                       min="0"
                       step="1">

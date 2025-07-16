@@ -31,6 +31,7 @@ export interface MedioPlan {
     soi: number;
     semanas: boolean[];
     spotsPorSemana?: number[]; // Nueva propiedad para almacenar spots por semana
+    spotsPorFecha?: { [fecha: string]: number }; // Nueva propiedad para almacenar spots por fecha específica
     tarifa?: number; // Propiedad para almacenar la tarifa por spot
 }
 
