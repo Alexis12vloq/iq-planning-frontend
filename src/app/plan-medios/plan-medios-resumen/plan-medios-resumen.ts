@@ -54,7 +54,7 @@ export class PlanMediosResumen implements OnInit {
   periodos: PeriodoPlan[] = [];
   periodoSeleccionado: PeriodoPlan;
   resumenPlan: ResumenPlan = this.crearPlanEjemplo(); // Inicializar con plan de ejemplo
-  displayedColumns: string[] = ['medio', 'semanas', 'total', 'soi'];
+  displayedColumns: string[] = ['medio', 'proveedor', 'semanas', 'valor-mensual', 'total', 'soi'];
   semanasColumnas: string[] = []; // Ahora será dinámico
   semanasConFechas: Array<{nombre: string, fechaInicio: string, fechaFin: string, fechaCompacta: string}> = [];
   dataSource: FilaMedio[] = [];
@@ -1502,6 +1502,62 @@ export class PlanMediosResumen implements OnInit {
       horizontalPosition: 'right',
       verticalPosition: 'bottom'
     });
+  }
+
+  // Método para calcular el valor mensual de un medio
+  calcularValorMensual(medio?: MedioPlan): number {
+    if (!medio || !medio.spotsPorFecha || !this.semanasConFechas) {
+      return 0;
+    }
+    
+    // Calcular el valor total del mes actual sumando todas las semanas del mes
+    let valorMensual = 0;
+    this.semanasConFechas.forEach(semana => {
+      const spots = medio.spotsPorFecha?.[semana.fechaInicio] || 0;
+      valorMensual += spots * (medio.tarifa || 0);
+    });
+    
+    return valorMensual;
+  }
+
+  // Método para calcular los spots mensuales de un medio
+  calcularSpotsMensual(medio?: MedioPlan): number {
+    if (!medio || !medio.spotsPorFecha || !this.semanasConFechas) {
+      return 0;
+    }
+    
+    // Calcular el total de spots del mes actual sumando todas las semanas del mes
+    let spotsMensual = 0;
+    this.semanasConFechas.forEach(semana => {
+      const spots = medio.spotsPorFecha?.[semana.fechaInicio] || 0;
+      spotsMensual += spots;
+    });
+    
+    return spotsMensual;
+  }
+
+  // Método para calcular el total de inversión neta mensual
+  calcularTotalInversionMensual(): number {
+    if (!this.periodoSeleccionado.medios || this.periodoSeleccionado.medios.length === 0) {
+      return 0;
+    }
+    
+    return this.periodoSeleccionado.medios.reduce((total, medio) => {
+      return total + this.calcularValorMensual(medio);
+    }, 0);
+  }
+
+  // Método para calcular el IVA mensual
+  calcularIvaMensual(): number {
+    const inversionNetaMensual = this.calcularTotalInversionMensual();
+    return Math.round(inversionNetaMensual * 0.19);
+  }
+
+  // Método para calcular el total mensual (inversión + IVA)
+  calcularTotalMensual(): number {
+    const inversionNetaMensual = this.calcularTotalInversionMensual();
+    const ivaMensual = this.calcularIvaMensual();
+    return inversionNetaMensual + ivaMensual;
   }
 }
 

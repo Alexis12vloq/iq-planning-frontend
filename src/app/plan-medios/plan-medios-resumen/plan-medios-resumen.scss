@@ -247,24 +247,24 @@
 
 
   .col-medios {
-    width: 20%; // Porcentaje del ancho total
-    min-width: 200px;
+    width: 18%; // Porcentaje del ancho total (reducido 2%)
+    min-width: 180px;
   }
 
   .col-proveedor {
-    width: 15%; // Porcentaje del ancho total
-    min-width: 150px;
+    width: 13%; // Porcentaje del ancho total (reducido 2%)
+    min-width: 130px;
   }
 
   .col-semanas {
     text-align: center;
-    width: 45%; // Porcentaje del ancho total para el área de semanas
-    min-width: 450px;
+    width: 40%; // Porcentaje del ancho total para el área de semanas (reducido 5%)
+    min-width: 400px;
   }
   
   // Las fechas se distribuyen dentro del porcentaje asignado
   .fechas-subheader .col-fecha {
-    width: calc(45% / var(--num-semanas, 5)); // Distribución dentro del porcentaje
+    width: calc(40% / var(--num-semanas, 5)); // Distribución dentro del porcentaje actualizado
     min-width: 70px;
   }
 
@@ -273,15 +273,21 @@
     font-size: 10px;
   }
 
-  .col-total {
-    width: 12%; // Porcentaje del ancho total
+  .col-valor-mensual {
+    width: 12%; // Porcentaje del ancho total (nueva columna)
     min-width: 120px;
     text-align: right;
   }
 
+  .col-total {
+    width: 11%; // Porcentaje del ancho total (reducido 1%)
+    min-width: 110px;
+    text-align: right;
+  }
+
   .col-soi {
-    width: 8%; // Porcentaje del ancho total
-    min-width: 80px;
+    width: 6%; // Porcentaje del ancho total (reducido 2%)
+    min-width: 60px;
     text-align: right;
   }
 
@@ -443,6 +449,13 @@
   }
 
   // Estilos para los valores
+  .valor-mensual {
+    text-align: right;
+    font-weight: 500;
+    font-size: 12px;
+    color: #2196f3; // Color azul para distinguir del valor total
+  }
+
   .valor-total {
     text-align: right;
     font-weight: 500;
@@ -500,6 +513,10 @@
           font-weight: bold;
           font-size: 1.1em;
         }
+      }
+
+      .valor-mensual {
+        color: white;
       }
 
       .valor-total {

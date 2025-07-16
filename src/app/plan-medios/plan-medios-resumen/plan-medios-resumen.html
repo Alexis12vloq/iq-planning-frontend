@@ -86,6 +86,7 @@
                   </button>
                 </div>
               </th>
+              <th class="col-valor-mensual">VALOR MENSUAL</th>
               <th class="col-total">VALOR TOTAL</th>
               <th class="col-soi">% / SOI</th>
             </tr>
@@ -100,6 +101,7 @@
               </th>
               <th></th>
               <th></th>
+              <th></th>
             </tr>
           </thead>
 
@@ -112,7 +114,7 @@
                 <!-- Fila de encabezado del medio -->
                 <tr *ngIf="fila.tipo === 'encabezado-medio'" class="fila-encabezado-medio">
                   <td>{{ fila.nombre }}</td>
-                  <td colspan="8"></td>
+                  <td colspan="9"></td>
                 </tr>
                 
                 <!-- Fila del proveedor -->
@@ -124,6 +126,7 @@
                   <td [attr.colspan]="semanasConFechas.length">
                     <!-- Quitar los checks, dejar en blanco -->
                   </td>
+                  <td class="valor-mensual">{{ calcularValorMensual(fila.medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td class="valor-total">{{ fila.medio?.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td class="valor-soi">{{ calcularPorcentaje(fila.medio?.valorNeto || 0) | number:'1.1-1' }}%</td>
                 </tr>
@@ -141,6 +144,7 @@
                       min="0"
                       step="1">
                   </td>
+                  <td class="valor-mensual">{{ calcularSpotsMensual(fila.medio) }}</td>
                   <td class="valor-total">{{ calcularTotalSpots(fila.medio) }}</td>
                   <td class="valor-soi">{{ fila.medio.soi | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 </tr>
@@ -152,6 +156,7 @@
                   <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="inversiones-cell">
                     {{ calcularInversionSemana(fila.medio, semanaIndex) | currency:'USD':'symbol-narrow':'1.0-0' }}
                   </td>
+                  <td class="valor-mensual">{{ calcularValorMensual(fila.medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td class="valor-total">{{ fila.medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td></td>
                 </tr>
@@ -162,7 +167,7 @@
             <!-- Mostrar mensaje cuando no hay pautas -->
             <ng-container *ngIf="periodoSeleccionado.medios.length === 0">
               <tr class="fila-sin-pautas">
-                <td [attr.colspan]="semanasConFechas.length + 4" class="text-center">
+                <td [attr.colspan]="semanasConFechas.length + 5" class="text-center">
                   <div class="mensaje-sin-pautas">
                     <mat-icon>info</mat-icon>
                     <span>No hay pautas creadas para este plan. Utiliza el botón "Agregar Medio" para agregar medios.</span>
@@ -178,6 +183,7 @@
               <td>Total Inversión Neta</td>
               <td></td>
               <td [attr.colspan]="semanasConFechas.length"></td>
+              <td class="valor-mensual">{{ calcularTotalInversionMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td class="valor-total">{{ periodoSeleccionado.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
@@ -185,6 +191,7 @@
               <td>IVA 19%</td>
               <td></td>
               <td [attr.colspan]="semanasConFechas.length"></td>
+              <td class="valor-mensual">{{ calcularIvaMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td class="valor-total">{{ periodoSeleccionado.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
@@ -192,6 +199,7 @@
               <td>Total Inversión</td>
               <td></td>
               <td [attr.colspan]="semanasConFechas.length"></td>
+              <td class="valor-mensual">{{ calcularTotalMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td class="valor-total">{{ periodoSeleccionado.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
