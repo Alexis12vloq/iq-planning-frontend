@@ -119,6 +119,7 @@ export class PlanMediosCreate implements AfterViewInit {
     // Llama al servicio real y luego inicializa la lógica del formulario
     this.tablaParametrosService.getAll().subscribe(parametros => {
       this.tablaParametros = parametros;
+      console.log(parametros);
       this.mapearParametros();
       this.initFormLogic();
     });
@@ -353,24 +354,35 @@ export class PlanMediosCreate implements AfterViewInit {
 
       const formValue = this.planMediosForm.getRawValue();
 
-      // Obtener los IDs reales de los selects (simulación: índice + 1)
-      const paisFacturacionIdx = this.paises.findIndex(p => p === formValue.paisFacturacion);
-      const idPaisFacturacion = paisFacturacionIdx !== -1 ? paisFacturacionIdx + 1 : null;
+      // Helper para asegurar string, nunca null
+      const safe = (v: string | null) => v ?? '';
 
-      const clienteAnuncianteIdx = this.clientesBackend.findIndex(c => c.nombre === formValue.clienteAnunciante);
-      const idClienteAnunciante = clienteAnuncianteIdx !== -1 ? clienteAnuncianteIdx + 1 : null;
+      // Busca los IDs reales usando el campo_Id de la data de tablaParametros
+      const getId = (tabla: string, value: string, parentId?: number) => {
+        if (!value) return null;
+        if (parentId !== undefined) {
+          const found = this.tablaParametros.find(
+            p => p.tabla === tabla && p.campo_Val === value && p.campo_Padre_Id === parentId
+          );
+          return found ? found.campo_Id : null;
+        }
+        const found = this.tablaParametros.find(
+          p => p.tabla === tabla && p.campo_Val === value
+        );
+        return found ? found.campo_Id : null;
+      };
 
-      const clienteFacturacionArr = clienteAnuncianteIdx !== -1 ? this.clientesBackend[clienteAnuncianteIdx].clientesFacturacion : [];
-      const clienteFacturacionIdx = clienteFacturacionArr.findIndex(cf => cf.nombre === formValue.clienteFueActuacion);
-      const idClienteFacturacion = clienteFacturacionIdx !== -1 ? clienteFacturacionIdx + 1 : null;
+      // IDs principales (campo_Id)
+      const idPaisFacturacion = getId('Paises', safe(formValue.paisFacturacion));
+      const idClienteAnunciante = getId('ClientesAnunciante', safe(formValue.clienteAnunciante));
+      const idClienteFacturacion = getId('ClientesFacturacion', safe(formValue.clienteFueActuacion), idClienteAnunciante);
+      const idMarca = getId('Marcas', safe(formValue.marca), idClienteFacturacion);
+      const idProducto = getId('Productos', safe(formValue.producto), idMarca);
 
-      const marcaArr = clienteFacturacionIdx !== -1 ? clienteFacturacionArr[clienteFacturacionIdx].marcas : [];
-      const marcaIdx = marcaArr.findIndex(m => m.nombre === formValue.marca);
-      const idMarca = marcaIdx !== -1 ? marcaIdx + 1 : null;
-
-      const productoArr = marcaIdx !== -1 ? marcaArr[marcaIdx].productos : [];
-      const productoIdx = productoArr.findIndex(p => p === formValue.producto);
-      const idProducto = productoIdx !== -1 ? productoIdx + 1 : null;
+      // IDs de países de pauta (array de campo_Id)
+      const idsPaisesPauta = (formValue.paisesPauta || []).map((pais: string | null) =>
+        getId('Paises', safe(pais))
+      ).filter((id: number | null) => id !== null);
 
       // Formatea fechas a Date
       const parseDate = (date: any): Date => {
@@ -383,9 +395,7 @@ export class PlanMediosCreate implements AfterViewInit {
 
       // Construye el body para el backend con NumeroPlan
       let lastNumeroPlan = 1000;
-
-      const planesGuardados: PlanMediosLocal[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-
+      const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
       if (!this.editMode && planesGuardados.length > 0) {
         const max = Math.max(
           ...planesGuardados
@@ -395,33 +405,23 @@ export class PlanMediosCreate implements AfterViewInit {
         if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
       }
 
+      // Construye el body SOLO con los campo_Id
       const body = {
-        NumeroPlan: lastNumeroPlan,
+        NumeroPlan: lastNumeroPlan.toString(),
         IdPaisFacturacion: idPaisFacturacion,
-        PaisesPauta: (formValue.paisesPauta || []).join(','),
+        PaisesPauta: idsPaisesPauta.join(','),
         IdClienteAnunciante: idClienteAnunciante,
         IdClienteFacturacion: idClienteFacturacion,
         IdMarca: idMarca,
         IdProducto: idProducto,
-        Campania: formValue.campana ?? '',
-        FechaInicio: parseDate(formValue.fechaInicio),
-        FechaFin: parseDate(formValue.fechaFin),
+        Campania: safe(formValue.campana),
+        FechaInicio: formValue.fechaInicio,
+        FechaFin: formValue.fechaFin,
         IdUsuarioCreador: 0 // Ajusta según tu lógica de usuario
       };
 
-    
-
-      // Formatea fechas a 'YYYY-MM-DD'
-      const formatDate = (date: any) => {
-        if (!date) return '';
-        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
-        const d = new Date(date);
-        if (isNaN(d.getTime())) return '';
-        return d.toISOString().slice(0, 10);
-      };
-
+      // --- Modo edición: primero actualiza en localStorage ---
       if (this.editMode && this.editId) {
-        // --- Modo edición: primero actualiza en localStorage ---
         const idx = planesGuardados.findIndex(p => p.id === this.editId);
         if (idx !== -1) {
           planesGuardados[idx] = {
@@ -433,8 +433,8 @@ export class PlanMediosCreate implements AfterViewInit {
             marca: formValue.marca ?? '',
             producto: formValue.producto ?? '',
             campana: formValue.campana ?? '',
-            fechaInicio: formatDate(formValue.fechaInicio),
-            fechaFin: formatDate(formValue.fechaFin)
+            fechaInicio: formValue.fechaInicio,
+            fechaFin: formValue.fechaFin
           };
           localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
         }
@@ -450,6 +450,7 @@ export class PlanMediosCreate implements AfterViewInit {
         });
       } else {
         // --- Modo creación: primero guarda en localStorage ---
+        console.log(formValue);
         const nuevoPlan: PlanMediosLocal = {
           id: Date.now().toString(),
           numeroPlan: lastNumeroPlan.toString(),
@@ -461,8 +462,8 @@ export class PlanMediosCreate implements AfterViewInit {
           marca: formValue.marca ?? '',
           producto: formValue.producto ?? '',
           campana: formValue.campana ?? '',
-          fechaInicio: formatDate(formValue.fechaInicio),
-          fechaFin: formatDate(formValue.fechaFin),
+          fechaInicio: formValue.fechaInicio ?? '',
+          fechaFin: formValue.fechaFin ?? '',
           estado : true, // Asumiendo que el estado es siempre true al crear
           tipoIngresoPlan: '', // Nuevo campo: 'Plan de Medios' o 'Flow Chart'
           fechaCreacion: Date.now().toString() 
@@ -499,4 +500,6 @@ export class PlanMediosCreate implements AfterViewInit {
 
  
 }
+ 
+
 
