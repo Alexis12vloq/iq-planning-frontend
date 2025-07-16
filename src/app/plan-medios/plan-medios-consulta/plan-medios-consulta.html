@@ -101,7 +101,11 @@
               (click)="rowClick(row, $event)">
           </tr>
         </table>
-        <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons aria-label="Select page"></mat-paginator>
+        <mat-paginator  [length]="totalCount"
+  [pageSize]="pageSize"
+  [pageIndex]="currentPage"
+  [pageSizeOptions]="[5, 10, 20]"
+  (page)="onPageChange($event)" showFirstLastButtons aria-label="Select page"></mat-paginator>
       </div>
     </div>
   </mat-card-content>

@@ -80,4 +80,12 @@ export class PlanMediosService {
   obtenerTodosParametros(): Observable<any> {
     return this.http.get(`${this.config.apiUrl}/api/TablaParametros`);
   }
+
+  /**
+   * Nuevo método: consultar paginado usando el endpoint with-details
+   */
+  consultarPaginadoWithDetails(page: number = 1, pageSize: number = 10): Observable<any> {
+    const url = `${this.config.apiUrl}/api/PlanMedios/with-details?page=${page}&pageSize=${pageSize}`;
+    return this.http.get<any>(url);
+  }
 }

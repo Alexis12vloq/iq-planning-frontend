@@ -16,7 +16,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSort, MatSortModule, Sort } from '@angular/material/sort';
 import { MatIconModule } from '@angular/material/icon';
 import { SelectionModel } from '@angular/cdk/collections';
@@ -122,6 +122,11 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   dataSource = new MatTableDataSource<Resultado>([]);
   selection = new SelectionModel<Resultado>(false, []);
+  totalCount = 0;
+  currentPage = 0;
+  // --- NUEVO: Propiedades para paginación ---
+  pageIndex = 0;
+  pageSize = 5;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sortMat!: MatSort;
@@ -472,6 +477,15 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       // Configurar paginación y ordenamiento
       this.dataSource.paginator = this.paginator;
       this.dataSource.sort = this.sortMat;
+
+      // --- NUEVO: Escuchar cambios de paginador ---
+      if (this.paginator) {
+        this.paginator.page.subscribe((event) => {
+          this.pageIndex = event.pageIndex;
+          this.pageSize = event.pageSize;
+          this.consultarBackend();
+        });
+      }
       
       // Establecer ordenamiento por defecto descendente por número de plan
       if (this.sortMat) {
@@ -721,6 +735,12 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   
 
+    onPageChange(event: PageEvent): void {
+      this.pageSize = event.pageSize;
+      this.pageIndex = event.pageIndex;
+      this.currentPage = event.pageIndex;
+      this.consultarBackend(); // Recarga la tabla con la nueva página
+    }
 
 
   // --- MÉTODOS PARA INTEGRACIÓN CON BACKEND ---
@@ -735,8 +755,9 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       this.estadoConexion = 'verificando';
     }
     
-    // Usar el nuevo servicio para obtener planes con detalles
-    this.planMediosService.consultarPlanesConDetalles()
+    
+    // --- CAMBIO: Usar pageIndex y pageSize ---
+    this.planMediosService.consultarPaginadoWithDetails(this.pageIndex + 1, this.pageSize)
       .pipe(
         retry(2), // Reintentar 2 veces en caso de error
         catchError((error) => {
@@ -764,9 +785,9 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
         })
       )
       .subscribe({
-        next: (response: PlanMediosConDetalles[]) => {
+        next: (response: { items: PlanMediosConDetalles[], totalCount: number, pageSize: number, totalPages: number, page: number }) => {
           // Convertir los datos del backend al formato local
-          const resultadosBackend = response.map((item: PlanMediosConDetalles) => ({
+          const resultadosBackend = response.items.map((item: PlanMediosConDetalles) => ({
             id: item.idPlan.toString(),
             numeroPlan: item.numeroPlan,
             version: item.version.toString(),
@@ -795,9 +816,17 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
           // Aplicar filtros localmente
           this.aplicarFiltrosLocalmente();
           
+          // Actualizar el total del paginador
+          if (this.paginator) {
+            this.paginator.length = response.totalCount;
+          }
+          this.totalCount = response.totalCount;
+          this.pageSize = response.pageSize;
+          this.currentPage = response.page - 1;
           this.isLoading = false;
           this.estadoConexion = 'conectado';
           
+
           // Asegurar que el ordenamiento esté configurado después de cargar datos
           setTimeout(() => {
             if (this.sortMat && this.dataSource) {
@@ -811,8 +840,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
             }
           }, 100);
           
-          if (response.length > 0) {
-            this.snackBar.open(`Se cargaron ${response.length} registros del backend`, '', { duration: 2000 });
+          if (response.items.length > 0) {
+            this.snackBar.open(`Se cargaron ${response.items.length} registros del backend`, '', { duration: 2000 });
           } else {
             this.snackBar.open('No se encontraron registros en el backend', '', { duration: 2000 });
           }
@@ -996,9 +1025,8 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
           
           <mat-form-field appearance="fill" style="margin-right: 16px;">
             <mat-label>Fecha de creación</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="fechaCreacion" placeholder="dd/mm/yyyy" />
-            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-            <mat-datepicker #picker></mat-datepicker>
+            <input matInput (keypress)="soloNumerosYSlash($event)"   formControlName="fechaCreacion" placeholder="dd/mm/yyyy" />
+           
           </mat-form-field>
           
           <button mat-raised-button (click)="limpiarFiltros()">Limpiar</button>
@@ -1147,7 +1175,7 @@ export class VersionesPlanDialog implements AfterViewInit {
     fechaCreacion: new FormControl('', { validators: [] })
   });
   datosOriginales: any[] = [];
-
+ 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -1169,6 +1197,7 @@ export class VersionesPlanDialog implements AfterViewInit {
       }
     }
     
+    
     // Configurar listeners para filtros automáticos con debounce
     this.filtroForm.get('version')!.valueChanges.pipe(
       startWith(''),
@@ -1182,6 +1211,14 @@ export class VersionesPlanDialog implements AfterViewInit {
     });
   }
 
+  soloNumerosYSlash(event: KeyboardEvent): void {
+  const inputChar = event.key;
+  const regex = /[0-9/]/;
+
+      if (!regex.test(inputChar)) {
+        event.preventDefault(); // Bloquea letras, símbolos, etc.
+      }
+    }
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
