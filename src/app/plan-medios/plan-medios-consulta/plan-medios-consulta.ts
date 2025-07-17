@@ -1036,15 +1036,20 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
         <form [formGroup]="filtroForm">
           <mat-form-field appearance="fill" style="margin-right: 16px;">
             <mat-label>Buscar por versión</mat-label>
-            <input matInput formControlName="version" placeholder="Ej: 1" />
+            <input matInput (keydown)="soloNumerosYSlashVersion($event)" formControlName="version" placeholder="Ej: 1" />
           </mat-form-field>
           
           <mat-form-field appearance="fill" style="margin-right: 16px;">
-            <mat-label>Fecha de creación</mat-label>
-            <input matInput (keypress)="soloNumerosYSlash($event)"   formControlName="fechaCreacion" placeholder="dd/mm/yyyy" />
-           
+          <mat-label>Fecha de creación</mat-label>
+          <input
+              matInput
+              placeholder="dd/mm/yyyy"
+              formControlName="fechaCreacion"
+              maxlength="10"
+              (keydown)="soloNumerosYSlash($event)"
+            />
           </mat-form-field>
-          
+
           <button mat-raised-button (click)="limpiarFiltros()">Limpiar</button>
         </form>
       </div>
@@ -1097,8 +1102,12 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
           <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)"></tr>
         </table>
         
-        <mat-paginator [pageSizeOptions]="[5, 10, 15]" [pageSize]="5" showFirstLastButtons></mat-paginator>
-      </div>
+        <mat-paginator [length]="totalCount"
+        [pageSize]="pageSize"
+        [pageIndex]="currentPage"
+        [pageSizeOptions]="[5, 10, 20]"
+        (page)="onPageChange($event)" showFirstLastButtons aria-label="Select page"></mat-paginator>
+        </div>
     </mat-dialog-content>
     
     <mat-dialog-actions align="end">
@@ -1191,7 +1200,12 @@ export class VersionesPlanDialog implements AfterViewInit {
     fechaCreacion: new FormControl('', { validators: [] })
   });
   datosOriginales: any[] = [];
- 
+  totalCount = 0;
+  currentPage = 0;
+  // --- NUEVO: Propiedades para paginación ---
+  pageIndex = 0;
+  pageSize = 5;
+
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -1235,17 +1249,55 @@ export class VersionesPlanDialog implements AfterViewInit {
     
     this.filtroForm.get('fechaCreacion')!.valueChanges.subscribe(() => {
       setTimeout(() => this.aplicarFiltros(), 100);
-    });
-  }
+  });
+}
 
-  soloNumerosYSlash(event: KeyboardEvent): void {
-  const inputChar = event.key;
-  const regex = /[0-9/]/;
+      soloNumerosYSlashVersion(event: KeyboardEvent): void {
+        const allowedKeys = [
+          'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'
+        ];
+        const inputChar = event.key;
+        const regex = /[0-9/]/;
 
-      if (!regex.test(inputChar)) {
-        event.preventDefault(); // Bloquea letras, símbolos, etc.
+        if (!regex.test(inputChar) && !allowedKeys.includes(inputChar)) {
+          event.preventDefault(); // Bloquea letras, símbolos, etc.
+        }
       }
+
+   soloNumerosYSlash(event: KeyboardEvent): void {
+        const input = event.target as HTMLInputElement;
+        const allowedKeys = ['Backspace', 'ArrowLeft', 'ArrowRight', 'Tab'];
+        const key = event.key;
+
+        // Permitir solo números y teclas permitidas
+        if (!/[0-9]/.test(key) && !allowedKeys.includes(key)) {
+          event.preventDefault();
+          return;
+        }
+
+        setTimeout(() => {
+          let valor = input.value.replace(/\D/g, ''); // Quitar todo menos números
+
+          if (valor.length > 8) {
+            valor = valor.substring(0, 8); // Limitar a 8 números
+          }
+
+          if (valor.length > 4) {
+            // dd/mm/yyyy
+            input.value = `${valor.substring(0, 2)}/${valor.substring(2, 4)}/${valor.substring(4)}`;
+          } else if (valor.length > 2) {
+            // dd/mm
+            input.value = `${valor.substring(0, 2)}/${valor.substring(2)}`;
+          } else {
+            // dd
+            input.value = valor;
+          }
+        });
     }
+
+
+
+
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
@@ -1284,22 +1336,31 @@ export class VersionesPlanDialog implements AfterViewInit {
   /**
    * Método para formatear fechas
    */
-  formatearFecha(fecha: string | Date): string {
-    if (!fecha) return 'N/A';
-    
-    try {
-      const date = typeof fecha === 'string' ? new Date(fecha) : fecha;
-      if (isNaN(date.getTime())) return 'N/A';
-      
-      return date.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-    } catch (error) {
-      return 'N/A';
+formatearFecha(fecha: string | Date): string {
+  if (!fecha) return 'N/A';
+
+  try {
+    let date: Date;
+
+    if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      // Evita interpretación en UTC construyendo como fecha local
+      const [year, month, day] = fecha.split('-').map(Number);
+      date = new Date(year, month - 1, day); // mes va de 0 a 11
+    } else {
+      date = new Date(fecha);
     }
+
+    if (isNaN(date.getTime())) return 'N/A';
+
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  } catch {
+    return 'N/A';
   }
+}
 
   selectRow(row: any) {
     this.selectedRow = row;
@@ -1323,10 +1384,14 @@ export class VersionesPlanDialog implements AfterViewInit {
     
     // Filtrar por fecha de creación
     if (filtros.fechaCreacion) {
+      console.log(datosFiltrados);  
+      console.log(filtros.fechaCreacion);
       const fechaFiltro = this.formatDate(filtros.fechaCreacion);
-      datosFiltrados = datosFiltrados.filter(item => 
-        item.fechaCreacion === fechaFiltro
-      );
+      console.log(fechaFiltro)
+      datosFiltrados = datosFiltrados.filter(item => {
+        const fechaCreacionFormateada = item.fechaCreacion ? item.fechaCreacion.substring(0, 10) : '';
+        return fechaCreacionFormateada === fechaFiltro;
+      });
     }
     
     this.dataSource.data = datosFiltrados;
@@ -1334,16 +1399,27 @@ export class VersionesPlanDialog implements AfterViewInit {
 
   limpiarFiltros() {
     this.filtroForm.reset();
-    this.dataSource.data = [...this.datosOriginales];
+    this.recargarTabla(this.data.selectedRow.numeroPlan,this.pageIndex + 1, this.pageSize); // Recarga la tabla con la nueva página
   }
 
   private formatDate(date: any): string {
-    if (!date) return '';
-    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return '';
-    return d.toISOString().slice(0, 10);
-  }
+        if (!date) return '';
+
+        if (typeof date === 'string') {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+
+          // Detectar y convertir "DD/MM/YYYY"
+          const match = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+          if (match) {
+            const [_, day, month, year] = match;
+            return `${year}-${month}-${day}`;
+          }
+        }
+
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().slice(0, 10);
+    } 
 
   redirigir(row: Resultado) {
     debugger;
@@ -1426,11 +1502,20 @@ export class VersionesPlanDialog implements AfterViewInit {
     this.dialogRef.close(true);
     this.router.navigate(['/plan-medios-editar', this.selectedRow.id]);
   }
-   recargarTabla(id: string) {
-    console.log(id);
+
+  
+  onPageChange(event: PageEvent): void {
+    this.pageSize = event.pageSize;
+    this.pageIndex = event.pageIndex;
+    this.currentPage = event.pageIndex;
+    this.recargarTabla(this.data.selectedRow.numeroPlan,this.pageIndex + 1, this.pageSize); // Recarga la tabla con la nueva página
+  }
+
+  
+  recargarTabla(id: string , pageIndex: number = 1, pageSize: number = 10): void {
     this.isLoading = true;
     setTimeout(() => {
-      this.planMediosService.consultarPaginadoWithDetailsPlan( Number(id) ,1, 10)
+      this.planMediosService.consultarPaginadoWithDetailsPlan( Number(id) ,pageIndex, pageSize)
       .pipe(
         retry(2), // Reintentar 2 veces en caso de error
         catchError((error) => {
@@ -1479,5 +1564,7 @@ export class VersionesPlanDialog implements AfterViewInit {
      
     }, 400); // Simula carga
   }
+
+  
 
 }
