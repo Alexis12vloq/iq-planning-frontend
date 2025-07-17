@@ -15,6 +15,8 @@ import { ResumenPlan, PeriodoPlan, MedioPlan, PlanConsultaData, PERIODOS_EJEMPLO
 import { PautaLocal } from '../models/pauta-local.model';
 import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { RespuestaPauta } from '../models/plantilla-pauta.model';
+import { BackendMediosService } from '../services/backend-medios.service';
+import { MedioBackend, ProveedorBackend } from '../models/backend-models';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -1622,21 +1624,23 @@ export class PlanMediosResumen implements OnInit {
           <form [formGroup]="medioForm">
             <mat-form-field class="full-width">
               <mat-label>Seleccionar Medio</mat-label>
-              <mat-select formControlName="medio" (selectionChange)="onMedioChange($event.value)">
+              <mat-select formControlName="medio" (selectionChange)="onMedioChange($event.value)" [disabled]="cargandoMedios">
                 <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
-                  {{ medio }}
+                  {{ medio.nombre }}
                 </mat-option>
               </mat-select>
+              <mat-hint *ngIf="cargandoMedios">Cargando medios...</mat-hint>
             </mat-form-field>
 
             <mat-form-field class="full-width" *ngIf="medioForm.get('medio')?.value">
               <mat-label>Seleccionar Proveedor</mat-label>
-              <mat-select formControlName="proveedor">
+              <mat-select formControlName="proveedor" [disabled]="cargandoProveedores">
                 <mat-option *ngFor="let proveedor of proveedoresFiltrados" [value]="proveedor.id">
                   {{ proveedor.VENDOR }}
                 </mat-option>
               </mat-select>
-              <mat-hint *ngIf="proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0">
+              <mat-hint *ngIf="cargandoProveedores">Cargando proveedores...</mat-hint>
+              <mat-hint *ngIf="!cargandoProveedores && proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0">
                 Todos los proveedores de este medio ya están agregados
               </mat-hint>
             </mat-form-field>
@@ -1784,16 +1788,19 @@ export class PlanMediosResumen implements OnInit {
 })
 export class ModalAgregarMedioComponent implements OnInit {
   medioForm!: FormGroup;
-  mediosDisponibles = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
-  proveedoresDisponibles: any[] = [];
-  proveedoresFiltrados: any[] = [];
+  mediosDisponibles: MedioBackend[] = []; // Cambiar a array de MedioBackend
+  proveedoresDisponibles: any[] = []; // Mantener compatibilidad
+  proveedoresFiltrados: any[] = []; // Mantener compatibilidad
   mediosExistentes: any[] = [];
   existeCombinacion: boolean = false;
   numSemanas: number = 5; // Por defecto 5 semanas
+  cargandoMedios: boolean = true;
+  cargandoProveedores: boolean = false;
 
   constructor(
     private fb: FormBuilder,
     private plantillaService: PlantillaPautaService,
+    private backendMediosService: BackendMediosService,
     private dialogRef: MatDialogRef<ModalAgregarMedioComponent>,
     private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: any
@@ -1810,6 +1817,9 @@ export class ModalAgregarMedioComponent implements OnInit {
     if (this.data.numSemanas) {
       this.numSemanas = this.data.numSemanas;
     }
+    
+    // Cargar medios desde el backend
+    this.cargarMediosDesdeBackend();
     
     // Cargar medios existentes del plan
     this.cargarMediosExistentes();
@@ -1840,18 +1850,73 @@ export class ModalAgregarMedioComponent implements OnInit {
     console.log('📋 Medios existentes cargados:', this.mediosExistentes);
   }
 
-  onMedioChange(medio: string): void {
-    if (medio) {
-      this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
-      this.filtrarProveedoresDisponibles(medio);
+  onMedioChange(medio: MedioBackend): void {
+    if (medio && medio.medioId) {
+      this.cargandoProveedores = true;
+      console.log('🔄 Cargando proveedores para medio:', medio.nombre, 'ID:', medio.medioId);
+      
+      this.backendMediosService.getProveedoresPorMedio(medio.medioId).subscribe(
+        (proveedoresBackend: ProveedorBackend[]) => {
+          console.log('✅ Proveedores del backend obtenidos:', proveedoresBackend);
+          
+          // Convertir proveedores del backend a formato compatible
+          this.proveedoresDisponibles = proveedoresBackend.map(p => ({
+            id: p.proveedorId.toString(),
+            VENDOR: p.nombreProveedor,
+            proveedorId: p.proveedorId,
+            nombreProveedor: p.nombreProveedor,
+            grupoProveedor: p.grupoProveedor,
+            tipoProveedor: p.tipoProveedor,
+            orionBeneficioReal: p.orionBeneficioReal,
+            estado: p.estado
+          }));
+          
+          this.filtrarProveedoresDisponibles(medio.nombre);
+          this.cargandoProveedores = false;
+        },
+        (error: any) => {
+          console.error('❌ Error cargando proveedores del backend:', error);
+          // Fallback a servicio local
+          this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio.nombre);
+          this.filtrarProveedoresDisponibles(medio.nombre);
+          this.cargandoProveedores = false;
+        }
+      );
+      
       this.medioForm.patchValue({ proveedor: '', tarifa: 0 });
     }
   }
 
-  private filtrarProveedoresDisponibles(medio: string): void {
+  // Método para cargar medios desde el backend
+  private cargarMediosDesdeBackend(): void {
+    this.cargandoMedios = true;
+    console.log('🔄 Cargando medios desde el backend...');
+    
+    this.backendMediosService.getMedios().subscribe(
+      (medios: MedioBackend[]) => {
+        console.log('✅ Medios del backend obtenidos:', medios);
+        this.mediosDisponibles = medios.filter(m => m.estado); // Solo medios activos
+        this.cargandoMedios = false;
+      },
+      (error: any) => {
+        console.error('❌ Error cargando medios del backend:', error);
+        // Fallback a medios hardcodeados
+        this.mediosDisponibles = [
+          { medioId: 1, nombre: 'TV NAL', estado: true, fechaRegistro: '', descripcion: 'Televisión Nacional' },
+          { medioId: 2, nombre: 'Radio', estado: true, fechaRegistro: '', descripcion: 'Radio' },
+          { medioId: 3, nombre: 'Digital', estado: true, fechaRegistro: '', descripcion: 'Digital' },
+          { medioId: 4, nombre: 'Prensa', estado: true, fechaRegistro: '', descripcion: 'Prensa' },
+          { medioId: 5, nombre: 'OOH', estado: true, fechaRegistro: '', descripcion: 'Out of Home' }
+        ];
+        this.cargandoMedios = false;
+      }
+    );
+  }
+
+  private filtrarProveedoresDisponibles(nombreMedio: string): void {
     // Obtener proveedores ya usados para este medio
     const proveedoresUsados = this.mediosExistentes
-      .filter(me => me.medio === medio)
+      .filter(me => me.medio === nombreMedio)
       .map(me => me.proveedor);
     
     // Filtrar proveedores disponibles excluyendo los ya usados
@@ -1859,25 +1924,26 @@ export class ModalAgregarMedioComponent implements OnInit {
       !proveedoresUsados.includes(proveedor.VENDOR)
     );
     
-    console.log('🔍 Proveedores filtrados para', medio, ':', this.proveedoresFiltrados);
+    console.log('🔍 Proveedores filtrados para', nombreMedio, ':', this.proveedoresFiltrados);
   }
 
   private validarCombinacionDuplicada(): void {
     const valores = this.medioForm.value;
     
     if (valores.medio && valores.proveedor && valores.tarifa > 0) {
+      const medioSeleccionado = valores.medio as MedioBackend;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
       
-      if (proveedorSeleccionado) {
+      if (proveedorSeleccionado && medioSeleccionado) {
         // Verificar si existe la combinación exacta
         this.existeCombinacion = this.mediosExistentes.some(me => 
-          me.medio === valores.medio && 
+          me.medio === medioSeleccionado.nombre && 
           me.proveedor === proveedorSeleccionado.VENDOR && 
           Math.abs(me.tarifa - valores.tarifa) < 0.01 // Comparación con tolerancia para decimales
         );
         
         console.log('🔍 Validando combinación:', {
-          medio: valores.medio,
+          medio: medioSeleccionado.nombre,
           proveedor: proveedorSeleccionado.VENDOR,
           tarifa: valores.tarifa,
           existe: this.existeCombinacion
@@ -1891,11 +1957,12 @@ export class ModalAgregarMedioComponent implements OnInit {
   guardarMedio(): void {
     if (this.medioForm.valid && !this.existeCombinacion) {
       const valores = this.medioForm.value;
+      const medioSeleccionado = valores.medio as MedioBackend;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
       
       // Verificar una vez más antes de guardar
       const combinacionExiste = this.mediosExistentes.some(me => 
-        me.medio === valores.medio && 
+        me.medio === medioSeleccionado.nombre && 
         me.proveedor === proveedorSeleccionado?.VENDOR && 
         Math.abs(me.tarifa - valores.tarifa) < 0.01
       );
@@ -1914,7 +1981,7 @@ export class ModalAgregarMedioComponent implements OnInit {
         planId: this.data.planData.id,
         plantillaId: 'simple',
         paisFacturacion: 'Perú',
-        medio: valores.medio,
+        medio: medioSeleccionado.nombre,
         proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
         proveedorId: valores.proveedor,
         datos: { 

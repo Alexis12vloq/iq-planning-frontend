@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 import { PlantillaPauta, LookupData, CampoPlantilla } from '../models/plantilla-pauta.model';
+import { BackendMediosService } from './backend-medios.service';
+import { MedioBackend, ProveedorBackend } from '../models/backend-models';
 
 interface ProveedorKinesso {
   id?: string;
@@ -23,9 +25,10 @@ interface ProveedorKinesso {
 })
 export class PlantillaPautaService {
 
-  constructor() {
+  constructor(private backendMediosService: BackendMediosService) {
     this.inicializarDatosEjemplo();
     this.verificarYCargarProveedores();
+    this.cargarMediosDesdeBackend();
   }
 
   // Obtener plantilla según país de facturación y medio
@@ -87,6 +90,13 @@ export class PlantillaPautaService {
   }
 
   obtenerProveedoresPorMedio(medio: string): ProveedorKinesso[] {
+    // Intentar cargar desde backend si hay datos
+    const proveedoresBackend = this.obtenerProveedoresBackendSync(medio);
+    if (proveedoresBackend.length > 0) {
+      return proveedoresBackend;
+    }
+    
+    // Fallback a localStorage
     const proveedores = this.obtenerProveedores();
     
     // Mapear medios del sistema a medios de proveedores
@@ -898,5 +908,87 @@ export class PlantillaPautaService {
     
     localStorage.setItem('provedoresKinesso', JSON.stringify(proveedoresEjemplo));
     console.log('📦 Proveedores ampliados cargados:', proveedoresEjemplo.length, 'proveedores en total');
+  }
+
+  // Método para obtener proveedores desde backend (modo sincrónico)
+  private obtenerProveedoresBackendSync(medio: string): ProveedorKinesso[] {
+    const cacheKey = `proveedores_${medio}`;
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (cached) {
+      const proveedoresCacheados = JSON.parse(cached);
+      if (proveedoresCacheados && proveedoresCacheados.length > 0) {
+        return proveedoresCacheados;
+      }
+    }
+    
+    // Cargar desde backend de forma asíncrona y guardar en cache
+    this.cargarProveedoresDesdeBackend(medio);
+    
+    return []; // Retornar vacío para usar fallback
+  }
+
+  // Método para cargar proveedores desde backend de forma asíncrona
+  private cargarProveedoresDesdeBackend(medio: string): void {
+    // Mapear nombre de medio a ID
+    const medioIds: { [key: string]: number } = {
+      'TV NAL': 1,
+      'Radio': 2,
+      'Digital': 3,
+      'Prensa': 4,
+      'OOH': 5
+    };
+    
+    const medioId = medioIds[medio];
+    if (!medioId) return;
+    
+    this.backendMediosService.getProveedoresPorMedio(medioId).subscribe(
+      (proveedoresBackend: ProveedorBackend[]) => {
+        // Convertir a formato compatible
+        const proveedoresKinesso = proveedoresBackend.map(p => this.convertirProveedorBackend(p));
+        
+        // Guardar en localStorage para uso posterior
+        const cacheKey = `proveedores_${medio}`;
+        localStorage.setItem(cacheKey, JSON.stringify(proveedoresKinesso));
+        
+        console.log(`✅ Proveedores del backend cargados para ${medio}:`, proveedoresKinesso);
+      },
+      (error: any) => {
+        console.error(`❌ Error cargando proveedores del backend para ${medio}:`, error);
+      }
+    );
+  }
+
+  // Método para convertir ProveedorBackend a ProveedorKinesso
+  private convertirProveedorBackend(proveedor: ProveedorBackend): ProveedorKinesso {
+    return {
+      id: proveedor.proveedorId.toString(),
+      VENDOR_MEDIUM: `${proveedor.nombreProveedor}${proveedor.tipoMedioProveedor || ''}`,
+      VENDOR_GROUP: proveedor.grupoProveedor || '',
+      MEDIUMS: proveedor.tipoMedioProveedor || '',
+      VENDOR: proveedor.nombreProveedor,
+      TIPO_VENDOR: proveedor.tipoProveedor || 'STANDARD',
+      ORION_BENEFICIO_REAL_VENDOR: proveedor.orionBeneficioReal || 0,
+      DIRECTO_TRADICIONAL_MVSS: proveedor.directoTradicionalMVSS || 0,
+      KINESSO_POWER: proveedor.kinessPower || 0,
+      KINESSO_GLASS: proveedor.kinessGlass || 0,
+      NOTAS_KSO: proveedor.notasKSO || '',
+      DUO_GLASS: proveedor.duoGlass || 0,
+      DUO_POWER: proveedor.duoPower || 0,
+      ESTADO: proveedor.estado ? 1 : 0
+    };
+  }
+
+  // Método para cargar medios desde backend
+  private cargarMediosDesdeBackend(): void {
+    this.backendMediosService.getMedios().subscribe(
+      (medios: MedioBackend[]) => {
+        localStorage.setItem('mediosBackend', JSON.stringify(medios));
+        console.log('✅ Medios del backend cargados:', medios);
+      },
+      (error: any) => {
+        console.error('❌ Error cargando medios del backend:', error);
+      }
+    );
   }
 } 
