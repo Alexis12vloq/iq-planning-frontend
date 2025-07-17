@@ -151,7 +151,7 @@
                 
                 <!-- Fila de inversiones -->
                 <tr *ngIf="fila.tipo === 'inversiones' && fila.medio" class="fila-inversiones">
-                  <td>{{ fila.nombre }}</td>
+                  <td>{{ fila.nombre }} (Tarifa: {{ fila.medio.tarifa | currency:'USD':'symbol-narrow':'1.0-0' }})</td>
                   <td></td>
                   <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="inversiones-cell">
                     {{ calcularInversionSemana(fila.medio, semanaIndex) | currency:'USD':'symbol-narrow':'1.0-0' }}

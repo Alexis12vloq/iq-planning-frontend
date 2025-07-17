@@ -1671,8 +1671,8 @@ export class ModalAgregarMedioComponent implements OnInit {
         tarifa: Number(valores.tarifa),
         dataJson: JSON.stringify({
           spotsPorFecha: {},
-          totalSpots: 1,
-          valorTotal: Number(valores.tarifa)
+          totalSpots: 0,
+          valorTotal: 0
         }),
         usuarioRegistro: 'SYSTEM' // TODO: Obtener usuario actual
       };
@@ -1700,9 +1700,9 @@ export class ModalAgregarMedioComponent implements OnInit {
             },
             fechaCreacion: response.fechaRegistro || new Date().toISOString(),
             fechaModificacion: response.fechaModificacion,
-            valorTotal: Number(valores.tarifa),
-            valorNeto: Number(valores.tarifa),
-            totalSpots: 1,
+            valorTotal: 0,
+            valorNeto: 0,
+            totalSpots: 0,
             diasSeleccionados: [],
             totalDiasSeleccionados: 0
           };
@@ -1735,9 +1735,9 @@ export class ModalAgregarMedioComponent implements OnInit {
               spotsPorFecha: {}
             },
             fechaCreacion: new Date().toISOString(),
-            valorTotal: Number(valores.tarifa),
-            valorNeto: Number(valores.tarifa),
-            totalSpots: 1,
+            valorTotal: 0,
+            valorNeto: 0,
+            totalSpots: 0,
             diasSeleccionados: [],
             totalDiasSeleccionados: 0
           };
