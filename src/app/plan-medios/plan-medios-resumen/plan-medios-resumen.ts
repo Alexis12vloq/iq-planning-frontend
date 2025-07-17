@@ -548,8 +548,9 @@ export class PlanMediosResumen implements OnInit {
       if (result && result.shouldRefresh) {
         console.log('✅ Medio editado, recargando resumen');
         this.recargarResumen();
-        // Marcar cambios pendientes tras editar medio
-        this.cambiosPendientes = true;
+        // NO marcar cambios pendientes para edición de medio
+        // porque es guardado automático al actualizar tarifa
+        // this.cambiosPendientes = true;
       }
     });
   }
@@ -1946,8 +1947,8 @@ export class ModalAgregarMedioComponent implements OnInit {
           <span class="value">{{ data.medio.proveedor }}</span>
         </div>
         <div class="info-item">
-          <span class="label">Valor Total:</span>
-          <span class="value">{{ data.medio.valorNeto | currency:'USD':'symbol':'1.2-2' }}</span>
+          <span class="label">Tarifa:</span>
+          <span class="value">{{ data.medio.tarifa | currency:'USD':'symbol':'1.2-2' }}</span>
         </div>
       </div>
 
@@ -2180,6 +2181,12 @@ export class ModalAccionesMedioComponent {
           <mat-icon color="warn">warning</mat-icon>
           <span>Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan</span>
         </div>
+
+        <!-- Mensaje de advertencia sobre reinicio de spots -->
+        <div class="info-message" *ngIf="editarForm.get('tarifa')?.dirty">
+          <mat-icon color="accent">info</mat-icon>
+          <span>Al cambiar la tarifa se reiniciarán todos los spots a 0 y se guardará automáticamente</span>
+        </div>
       </form>
     </mat-dialog-content>
 
@@ -2191,7 +2198,7 @@ export class ModalAccionesMedioComponent {
         [disabled]="!editarForm.valid || existeCombinacion"
         (click)="guardarCambios()">
         <mat-icon>save</mat-icon>
-        Guardar Cambios
+        {{ editarForm.get('tarifa')?.dirty ? 'Actualizar Tarifa (Reiniciará Spots)' : 'Guardar Cambios' }}
       </button>
     </mat-dialog-actions>
   `,
@@ -2256,6 +2263,25 @@ export class ModalAccionesMedioComponent {
       color: #f44336;
       font-size: 14px;
       margin-top: 8px;
+    }
+
+    .info-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #1976d2;
+      font-size: 14px;
+      margin-top: 8px;
+      padding: 8px 12px;
+      background-color: #e3f2fd;
+      border-radius: 4px;
+      border-left: 4px solid #2196f3;
+    }
+
+    .info-message mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
     .modal-actions {
@@ -2386,13 +2412,18 @@ export class ModalEditarMedioComponent implements OnInit {
       const valores = this.editarForm.value;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
 
-      // Buscar pauta en localStorage para obtener planMedioItemId
+      // Buscar pauta en localStorage usando planMedioItemId como identificador principal
       const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-      const pautaIndex = pautas.findIndex((pauta: any) =>
-        pauta.planId === this.data.planId &&
-        pauta.medio === this.data.medio.nombre &&
-        pauta.proveedor === this.data.medio.proveedor
-      );
+      const pautaIndex = pautas.findIndex((pauta: any) => {
+        // Priorizar búsqueda por planMedioItemId si está disponible
+        if (this.data.medio.planMedioItemId && pauta.planMedioItemId) {
+          return pauta.planMedioItemId === this.data.medio.planMedioItemId;
+        }
+        // Fallback: buscar por combinación de plan, medio y proveedor
+        return pauta.planId === this.data.planId &&
+               pauta.medio === this.data.medio.nombre &&
+               pauta.proveedor === this.data.medio.proveedor;
+      });
 
       if (pautaIndex !== -1) {
         const pauta = pautas[pautaIndex];
@@ -2407,9 +2438,9 @@ export class ModalEditarMedioComponent implements OnInit {
             proveedorId: Number(valores.proveedor),
             tarifa: Number(valores.tarifa),
             dataJson: JSON.stringify({
-              spotsPorFecha: pauta.datos?.spotsPorFecha || {},
-              totalSpots: pauta.totalSpots || 1,
-              valorTotal: (pauta.totalSpots || 1) * Number(valores.tarifa)
+              spotsPorFecha: {}, // Reiniciar spots a vacío
+              totalSpots: 0, // Reiniciar spots a 0
+              valorTotal: 0 // Reiniciar valor total a 0
             }),
             usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
           };
@@ -2423,8 +2454,8 @@ export class ModalEditarMedioComponent implements OnInit {
               // Actualizar también en localStorage
               this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado, response);
 
-              this.snackBar.open('✅ Medio actualizado correctamente', '', {
-                duration: 2000,
+              this.snackBar.open('✅ Tarifa actualizada y spots reiniciados automáticamente', '', {
+                duration: 3000,
                 panelClass: ['success-snackbar']
               });
 
@@ -2436,8 +2467,8 @@ export class ModalEditarMedioComponent implements OnInit {
               // Fallback: actualizar solo en localStorage
               this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
 
-              this.snackBar.open('⚠️ Medio actualizado (solo local - error en backend)', '', {
-                duration: 3000,
+              this.snackBar.open('⚠️ Tarifa actualizada y spots reiniciados (solo local - error en backend)', '', {
+                duration: 4000,
                 panelClass: ['warning-snackbar']
               });
 
@@ -2448,8 +2479,8 @@ export class ModalEditarMedioComponent implements OnInit {
           // No tiene planMedioItemId, actualizar solo en localStorage
           this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
 
-          this.snackBar.open('✅ Medio actualizado correctamente (solo local)', '', {
-            duration: 2000,
+          this.snackBar.open('✅ Tarifa actualizada y spots reiniciados (solo local)', '', {
+            duration: 3000,
             panelClass: ['success-snackbar']
           });
 
@@ -2473,10 +2504,11 @@ export class ModalEditarMedioComponent implements OnInit {
     pautas[pautaIndex].datos = pautas[pautaIndex].datos || {};
     pautas[pautaIndex].datos.tarifa = Number(valores.tarifa);
 
-    // Recalcular valores basados en la nueva tarifa
-    const totalSpots = pautas[pautaIndex].totalSpots || 1;
-    pautas[pautaIndex].valorTotal = totalSpots * Number(valores.tarifa);
-    pautas[pautaIndex].valorNeto = totalSpots * Number(valores.tarifa);
+    // Reiniciar spots y valores cuando se actualiza la tarifa
+    pautas[pautaIndex].datos.spotsPorFecha = {}; // Reiniciar spots por fecha
+    pautas[pautaIndex].totalSpots = 0; // Reiniciar spots totales
+    pautas[pautaIndex].valorTotal = 0; // Reiniciar valor total
+    pautas[pautaIndex].valorNeto = 0; // Reiniciar valor neto
 
     // Actualizar fechas
     if (response) {
