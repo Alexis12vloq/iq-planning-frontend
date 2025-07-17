@@ -140,7 +140,7 @@
                       type="number" 
                       class="spots-input"
                       [value]="obtenerSpotsPorFecha(fila.medio, semanaIndex)"
-                      (input)="onSpotsChange(fila.medio, semanaIndex, $event)"
+                      (blur)="onSpotsChange(fila.medio, semanaIndex, $event)"
                       min="0"
                       step="1">
                   </td>
