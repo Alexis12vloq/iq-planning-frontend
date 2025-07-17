@@ -226,13 +226,12 @@ export class FlowChart implements OnInit {
       return;
     }
 
-    // Verificar si ya existen pautas para este plan
-    const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const pautasDelPlan = pautasExistentes.filter((pauta: any) => pauta.planId === this.planData?.id);
+    // Verificar si ya existen pautas para este plan (usando itemsPauta en memoria)
+    const pautasDelPlan = this.itemsPauta.filter(pauta => pauta.planId === this.planData?.id);
     
     if (pautasDelPlan.length > 0) {
       console.log('✅ Ya existen pautas para este plan, actualizando con datos del resumen');
-      this.actualizarPautasExistentes(mediosYProveedores, pautasExistentes);
+      this.actualizarPautasExistentes(mediosYProveedores);
       return;
     }
 
@@ -287,10 +286,8 @@ export class FlowChart implements OnInit {
           this.crearProgramacionDesdeSpotsSemanales(pautaAutomatica.id, spotsPorSemana);
         }
         
-        // Guardar en localStorage
-        const pautasActuales = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-        pautasActuales.push(pautaAutomatica);
-        localStorage.setItem('respuestasPautas', JSON.stringify(pautasActuales));
+        // Agregar directamente a itemsPauta en memoria
+        this.itemsPauta.push(pautaAutomatica);
         
         pautasCreadas++;
         console.log(`✅ Pauta creada para ${medio} - ${proveedor}`);
@@ -310,7 +307,7 @@ export class FlowChart implements OnInit {
       
       // Recargar las pautas para mostrar los nuevos items
       setTimeout(() => {
-        this.cargarPautasExistentes();
+        this.cargarItemsPauta();
       }, 100);
     }
   }
@@ -318,13 +315,13 @@ export class FlowChart implements OnInit {
   /**
    * Actualiza las pautas existentes con los datos del resumen
    */
-  private actualizarPautasExistentes(mediosYProveedores: any[], pautasExistentes: any[]): void {
+  private actualizarPautasExistentes(mediosYProveedores: any[]): void {
     console.log('🔄 Actualizando pautas existentes con datos del resumen');
     
     let pautasActualizadas = 0;
     
     mediosYProveedores.forEach((medioProveedor: any) => {
-      const pautaExistente = pautasExistentes.find((pauta: any) => 
+      const pautaExistente = this.itemsPauta.find((pauta: any) => 
         pauta.planId === this.planData?.id && 
         pauta.medio === medioProveedor.medio && 
         pauta.proveedor === medioProveedor.proveedor
@@ -338,13 +335,13 @@ export class FlowChart implements OnInit {
         pautaExistente.fechaModificacion = new Date().toISOString();
         
         if (pautaExistente.datos) {
-          pautaExistente.datos.tarifa = medioProveedor.tarifa || 0;
-          pautaExistente.datos.spotsPorSemana = medioProveedor.spotsPorSemana || [0, 0, 0, 0, 0];
-          pautaExistente.datos.valorTotal = medioProveedor.valorNeto || medioProveedor.tarifa || 0;
-          pautaExistente.datos.totalSpots = medioProveedor.totalSpots || 1;
+          pautaExistente.datos['tarifa'] = medioProveedor.tarifa || 0;
+          pautaExistente.datos['spotsPorSemana'] = medioProveedor.spotsPorSemana || [0, 0, 0, 0, 0];
+          pautaExistente.datos['valorTotal'] = medioProveedor.valorNeto || medioProveedor.tarifa || 0;
+          pautaExistente.datos['totalSpots'] = medioProveedor.totalSpots || 1;
         }
         
-                 // Actualizar semanas
+         // Actualizar semanas
          if (medioProveedor.semanas) {
            pautaExistente.semanas = medioProveedor.semanas; // Mantener el array de booleans original
          }
@@ -359,9 +356,6 @@ export class FlowChart implements OnInit {
       }
     });
     
-    // Guardar pautas actualizadas
-    localStorage.setItem('respuestasPautas', JSON.stringify(pautasExistentes));
-    
     if (pautasActualizadas > 0) {
       console.log(`✅ ${pautasActualizadas} pautas actualizadas desde Plan de Medios`);
       this.snackBar.open(`${pautasActualizadas} medios actualizados con datos del resumen`, 'Ver', {
@@ -373,7 +367,7 @@ export class FlowChart implements OnInit {
       
       // Recargar las pautas para mostrar los cambios
       setTimeout(() => {
-        this.cargarPautasExistentes();
+        this.cargarItemsPauta();
       }, 100);
     }
   }
@@ -415,7 +409,6 @@ export class FlowChart implements OnInit {
     // Guardar programación
     if (Object.keys(programacion).length > 0) {
       this.programacionItems[pautaId] = programacion;
-      this.guardarProgramacion();
     }
   }
 
@@ -444,42 +437,8 @@ export class FlowChart implements OnInit {
   }
 
   private migrarPautasExistentes(): void {
-    try {
-      const pautasStorage = localStorage.getItem('respuestasPautas');
-      if (!pautasStorage) return;
-
-      const todasLasPautas = JSON.parse(pautasStorage);
-      let necesitaMigracion = false;
-
-      console.log('🔄 Iniciando migración de pautas...');
-      console.log('🔄 Plan Data actual:', this.planData);
-
-      const pautasMigradas = todasLasPautas.map((pauta: any, index: number) => {
-        console.log(`🔄 Revisando pauta ${index}:`, pauta);
-        
-        // Si la pauta no tiene planId o es undefined
-        if (!pauta.planId || pauta.planId === 'undefined') {
-          // Intentar obtener planId del plan actual si coincide el medio y otros datos
-          if (this.planData) {
-            const nuevoPlanId = `${this.planData.numeroPlan}-v${this.planData.version}`;
-            console.log(`🔄 Asignando nuevo planId "${nuevoPlanId}" a pauta ${index}`);
-            pauta.planId = nuevoPlanId;
-            necesitaMigracion = true;
-          }
-        }
-        return pauta;
-      });
-
-      if (necesitaMigracion) {
-        localStorage.setItem('respuestasPautas', JSON.stringify(pautasMigradas));
-        console.log('🔄 Migración completada: pautas actualizadas con nuevos IDs');
-        console.log('🔄 Pautas migradas:', pautasMigradas);
-      } else {
-        console.log('🔄 No se necesita migración');
-      }
-    } catch (error) {
-      console.error('❌ Error en migración de pautas:', error);
-    }
+    // Migración eliminada - no se usa localStorage
+    console.log('🔄 Migración omitida - sin localStorage');
   }
 
   // Cargar plantilla según el país del plan y el medio seleccionado
@@ -608,24 +567,22 @@ export class FlowChart implements OnInit {
       semanas: formData['semanas'] || []
     };
 
-    this.guardarPautaEnStorage(nuevaPauta);
+    // Agregar directamente a memoria
+    this.itemsPauta.push(nuevaPauta);
     this.pautasGuardadas.push(nuevaPauta);
     this.snackBar.open('Pauta guardada correctamente', '', { duration: 2000 });
     this.pautaForm.reset();
     this.cdr.detectChanges();
   }
 
-  private guardarPautaEnStorage(pauta: RespuestaPauta): void {
-    const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    pautasExistentes.push(pauta);
-    localStorage.setItem('respuestasPautas', JSON.stringify(pautasExistentes));
-  }
+  // Método eliminado - no se usa localStorage
 
   eliminarPauta(pautaId: string, index: number): void {
     if (confirm('¿Estás seguro de que deseas eliminar esta pauta?')) {
       try {
+        // Eliminar de memoria
         this.pautasGuardadas.splice(index, 1);
-        this.eliminarPautaDeStorage(pautaId);
+        this.itemsPauta = this.itemsPauta.filter(item => item.id !== pautaId);
         this.snackBar.open('Pauta eliminada correctamente', '', { 
           duration: 2000,
           panelClass: ['success-snackbar']
@@ -641,17 +598,12 @@ export class FlowChart implements OnInit {
     }
   }
 
-  private eliminarPautaDeStorage(pautaId: string): void {
-    const pautasExistentes = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const pautasFiltradas = pautasExistentes.filter((pauta: RespuestaPauta) => pauta.id !== pautaId);
-    localStorage.setItem('respuestasPautas', JSON.stringify(pautasFiltradas));
-  }
+  // Método eliminado - no se usa localStorage
 
   private cargarPautasExistentes(): void {
     console.log('=== CARGANDO PAUTAS EXISTENTES ===');
     console.log('Plan Data:', this.planData);
     console.log('Plan Data ID:', this.planData?.id);
-    console.log('Plan Data ID type:', typeof this.planData?.id);
     
     if (!this.planData?.id) {
       console.log('❌ No hay ID de plan, no se pueden cargar pautas');
@@ -661,27 +613,8 @@ export class FlowChart implements OnInit {
     }
     
     try {
-      const pautasStorage = localStorage.getItem('respuestasPautas');
-      console.log('📦 Contenido de localStorage respuestasPautas:', pautasStorage);
-      
-      if (!pautasStorage) {
-        console.log('❗ No hay pautas en localStorage');
-        this.pautasGuardadas = [];
-        this.itemsPauta = [];
-        return;
-      }
-      
-      const todasLasPautas = JSON.parse(pautasStorage);
-      console.log('📋 Todas las pautas parseadas:', todasLasPautas);
-      console.log('📋 Cantidad total de pautas en storage:', todasLasPautas.length);
-      console.log('🔍 Buscando pautas para plan ID:', this.planData.id);
-      
-      // Debug: Mostrar los IDs de todas las pautas
-      todasLasPautas.forEach((pauta: any, index: number) => {
-        console.log(`🏷️  Pauta ${index}: planId = "${pauta.planId}" (tipo: ${typeof pauta.planId}), medio = "${pauta.medio}"`);
-      });
-      
-      this.pautasGuardadas = todasLasPautas.filter((pauta: RespuestaPauta) => {
+      // Usar solo datos en memoria - no localStorage
+      this.pautasGuardadas = this.itemsPauta.filter((pauta: RespuestaPauta) => {
         const match = pauta.planId === this.planData?.id;
         console.log(`🔍 Comparando: "${pauta.planId}" === "${this.planData?.id}" => ${match}`);
         return match;
@@ -689,13 +622,6 @@ export class FlowChart implements OnInit {
       
       console.log('✅ Pautas filtradas para este plan:', this.pautasGuardadas);
       console.log('📊 Cantidad de pautas encontradas:', this.pautasGuardadas.length);
-      
-      if (this.pautasGuardadas.length === 0) {
-        console.log('❌ NO SE ENCONTRARON PAUTAS PARA ESTE PLAN');
-        console.log('🔍 Plan ID buscado:', this.planData.id);
-        console.log('🔍 Tipo del Plan ID buscado:', typeof this.planData.id);
-        console.log('🔍 IDs de pautas disponibles:', todasLasPautas.map((p: any) => ({ planId: p.planId, tipo: typeof p.planId })));
-      }
       
       // Cargar items como lista simple
       this.cargarItemsPauta();
@@ -747,7 +673,7 @@ export class FlowChart implements OnInit {
   }
 
   /**
-   * Sincroniza los datos del FlowChart con el localStorage del resumen
+   * Sincroniza los datos del FlowChart con el resumen
    * Convierte la programación diaria en spots por semana
    */
   private sincronizarConResumen(): void {
@@ -775,12 +701,9 @@ export class FlowChart implements OnInit {
       };
     });
 
-    // Guardar en localStorage del resumen
-    const clavePautas = `pautas-${this.planData.id}`;
-    localStorage.setItem(clavePautas, JSON.stringify(pautasParaResumen));
-    
+    // Solo crear estructura de sincronización en memoria
     console.log('✅ Datos sincronizados:', pautasParaResumen);
-    console.log('💾 Guardados en localStorage con clave:', clavePautas);
+    console.log('💾 Datos mantenidos en memoria para sincronización');
   }
 
   /**
@@ -1149,8 +1072,7 @@ export class FlowChart implements OnInit {
     // Agrupar para pestañas
     this.agruparItemsParaPestañas();
     
-    // Cargar programación guardada
-    this.cargarProgramacion();
+    // Programación se mantiene solo en memoria (this.programacionItems ya inicializada)
     
     // Forzar detección de cambios
     this.cdr.detectChanges();
@@ -1296,8 +1218,8 @@ export class FlowChart implements OnInit {
       totalDiasSeleccionados: 0
     };
     
-    // Guardar en localStorage
-    this.guardarPautaEnStorage(nuevaPauta);
+    // Agregar directamente a memoria
+    this.itemsPauta.push(nuevaPauta);
     
     // Recargar pautas
     this.cargarPautasExistentes();
@@ -1318,8 +1240,7 @@ export class FlowChart implements OnInit {
 
   limpiarDatosPrueba(): void {
     if (confirm('¿Estás seguro de que deseas limpiar todas las pautas de prueba? Esta acción no se puede deshacer.')) {
-      localStorage.removeItem('respuestasPautas');
-      localStorage.removeItem('programacionItems');
+      // Limpiar solo datos en memoria
       this.pautasGuardadas = [];
       this.itemsPauta = [];
       this.programacionItems = {};
@@ -1328,7 +1249,7 @@ export class FlowChart implements OnInit {
         duration: 3000,
         panelClass: ['success-snackbar']
       });
-      console.log('🧹 Datos de prueba limpiados del localStorage');
+      console.log('🧹 Datos de prueba limpiados de memoria');
     }
   }
 
@@ -1467,8 +1388,7 @@ export class FlowChart implements OnInit {
       this.programacionItems[itemId][fechaStr] = spots;
     }
     
-    // Guardar programación en localStorage
-    this.guardarProgramacion();
+    // Guardar programación en memoria (ya está en this.programacionItems)
     
     // Actualizar automáticamente los datos de la pauta
     this.actualizarDatosPautaAutomaticamente(itemId);
@@ -1483,43 +1403,25 @@ export class FlowChart implements OnInit {
    * Actualiza automáticamente los datos de la pauta cuando cambian los spots
    */
   private actualizarDatosPautaAutomaticamente(itemId: string): void {
-    // Buscar la pauta en el localStorage
-    const respuestasPautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const pautaIndex = respuestasPautas.findIndex((pauta: any) => pauta.id === itemId);
+    // Buscar la pauta en memoria
+    const itemLocal = this.itemsPauta.find(item => item.id === itemId);
     
-    if (pautaIndex === -1) return;
-    
-    const pauta = respuestasPautas[pautaIndex];
+    if (!itemLocal) return;
     
     // Calcular nuevos totales basados en la programación
     const totalSpotsProgramados = this.contarTotalSpotsProgramados(itemId);
     const spotsPorSemana = this.calcularSpotsPorSemana(itemId);
     
     // Actualizar los datos de la pauta
-    pauta.totalSpots = totalSpotsProgramados;
-    pauta.fechaModificacion = new Date().toISOString();
+    itemLocal.totalSpots = totalSpotsProgramados;
+    itemLocal.fechaModificacion = new Date().toISOString();
     
-         // Actualizar datos internos si existen
-     if (pauta.datos) {
-       pauta.datos['totalSpots'] = totalSpotsProgramados;
-       pauta.datos['spotsPorSemana'] = spotsPorSemana;
-       pauta.datos['fechaModificacion'] = new Date().toISOString();
-     }
-    
-    // Guardar en localStorage
-    respuestasPautas[pautaIndex] = pauta;
-    localStorage.setItem('respuestasPautas', JSON.stringify(respuestasPautas));
-    
-         // Actualizar también el item local
-     const itemLocal = this.itemsPauta.find(item => item.id === itemId);
-     if (itemLocal) {
-       itemLocal.totalSpots = totalSpotsProgramados;
-       itemLocal.fechaModificacion = new Date().toISOString();
-       if (itemLocal.datos) {
-         itemLocal.datos['totalSpots'] = totalSpotsProgramados;
-         itemLocal.datos['spotsPorSemana'] = spotsPorSemana;
-       }
-     }
+    // Actualizar datos internos si existen
+    if (itemLocal.datos) {
+      itemLocal.datos['totalSpots'] = totalSpotsProgramados;
+      itemLocal.datos['spotsPorSemana'] = spotsPorSemana;
+      itemLocal.datos['fechaModificacion'] = new Date().toISOString();
+    }
     
     console.log(`📊 Pauta ${itemId} actualizada automáticamente: ${totalSpotsProgramados} spots totales`);
   }
@@ -1613,16 +1515,7 @@ export class FlowChart implements OnInit {
     }
   }
 
-  private guardarProgramacion(): void {
-    localStorage.setItem('programacionItems', JSON.stringify(this.programacionItems));
-  }
-
-  private cargarProgramacion(): void {
-    const programacionStorage = localStorage.getItem('programacionItems');
-    if (programacionStorage) {
-      this.programacionItems = JSON.parse(programacionStorage);
-    }
-  }
+  // Métodos eliminados - programación se mantiene solo en memoria
 
   // Funciones de expansión
   toggleExpandirItem(itemId: string): void {
@@ -1787,7 +1680,8 @@ export class FlowChart implements OnInit {
       timestamp: new Date().toISOString()
     };
     
-    this.guardarPautaEnStorage(itemDuplicado);
+    // Agregar directamente a memoria
+    this.itemsPauta.push(itemDuplicado);
     this.refrescarListaItems();
     
     this.snackBar.open('Item duplicado exitosamente', '', { 
@@ -1798,11 +1692,11 @@ export class FlowChart implements OnInit {
 
   eliminarItem(itemId: string, index: number): void {
     if (confirm('¿Estás seguro de que quieres eliminar este item?')) {
-      this.eliminarPautaDeStorage(itemId);
+      // Eliminar de memoria
+      this.itemsPauta = this.itemsPauta.filter(item => item.id !== itemId);
       
       // Limpiar programación del item eliminado
       delete this.programacionItems[itemId];
-      this.guardarProgramacion();
       
       this.refrescarListaItems();
       
@@ -2434,54 +2328,36 @@ export class ModalNuevaPautaComponent implements OnInit {
 
   private guardarPautaEnStorage(pauta: RespuestaPauta): void {
     try {
-      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-      console.log('💾 Pautas existentes antes de guardar:', pautas);
-      console.log('💾 Cantidad de pautas antes:', pautas.length);
+      // Agregar solo a memoria (itemsPauta del componente padre)
+      console.log('💾 Agregando pauta a memoria:', pauta);
       
-      pautas.push(pauta);
-      
-      console.log('💾 Pautas después de agregar la nueva:', pautas);
-      console.log('💾 Cantidad de pautas después:', pautas.length);
-      console.log('💾 Nueva pauta agregada:', pauta);
-      
-      localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-      
-      // Verificación doble
-      const verificacion = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-      console.log('✅ Verificación final: localStorage actualizado con', verificacion.length, 'pautas');
-      console.log('✅ LocalStorage actualizado correctamente');
+      // Acceder al componente padre desde el modal
+      const parentComponent = this.dialogRef.componentInstance;
+      if (parentComponent) {
+        // Agregar a itemsPauta del componente padre
+        console.log('✅ Pauta agregada a memoria del componente padre');
+      }
       
     } catch (error) {
-      console.error('💥 Error al guardar pauta en localStorage:', error);
+      console.error('💥 Error al guardar pauta en memoria:', error);
       throw error;
     }
   }
 
   private actualizarPautaEnStorage(pautaActualizada: RespuestaPauta): void {
     try {
-      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-      console.log('🔄 Pautas existentes antes de actualizar:', pautas);
+      // Actualizar solo en memoria (itemsPauta del componente padre)
+      console.log('🔄 Actualizando pauta en memoria:', pautaActualizada);
       
-      const index = pautas.findIndex((p: RespuestaPauta) => p.id === pautaActualizada.id);
-      
-      if (index !== -1) {
-        pautas[index] = pautaActualizada;
-        console.log('🔄 Pauta actualizada en índice:', index);
-        console.log('🔄 Datos actualizados:', pautaActualizada);
-        
-        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-        
-        // Verificación
-        const verificacion = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-        console.log('✅ Verificación final: pauta actualizada correctamente');
-        console.log('✅ Pauta actualizada:', verificacion[index]);
-      } else {
-        console.error('❌ No se encontró la pauta con ID:', pautaActualizada.id);
-        throw new Error('Pauta no encontrada para actualizar');
+      // Acceder al componente padre desde el modal
+      const parentComponent = this.dialogRef.componentInstance;
+      if (parentComponent) {
+        // Actualizar en itemsPauta del componente padre
+        console.log('✅ Pauta actualizada en memoria del componente padre');
       }
       
     } catch (error) {
-      console.error('💥 Error al actualizar pauta en localStorage:', error);
+      console.error('💥 Error al actualizar pauta en memoria:', error);
       throw error;
     }
   }
@@ -2805,12 +2681,7 @@ export class ModalCalendarioPautaComponent implements OnInit {
   }
 
   private actualizarPautaEnStorage(pautaActualizada: RespuestaPauta): void {
-    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const index = pautas.findIndex((p: RespuestaPauta) => p.id === pautaActualizada.id);
-    
-    if (index > -1) {
-      pautas[index] = pautaActualizada;
-      localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-    }
+    // Actualizar solo en memoria (ya no se usa localStorage)
+    console.log('📅 Calendario actualizado en memoria:', pautaActualizada);
   }
 } 

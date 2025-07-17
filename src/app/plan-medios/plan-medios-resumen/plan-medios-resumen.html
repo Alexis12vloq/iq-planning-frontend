@@ -38,22 +38,22 @@
           </button>
           
           <!-- Botón temporal para debugging -->
-          <button mat-raised-button class="action-button debug-button" (click)="recargarResumen()" style="background-color: #f44336; color: white;">
+          <button mat-raised-button class="action-button debug-button" (click)="recargarResumen()" style="background-color: #f44336; color: white;" [disabled]="true">
             <mat-icon>refresh</mat-icon> Recargar Datos
           </button>
-          <button mat-raised-button class="action-button orange-button" (click)="onIrAFlowChart()">
+          <button mat-raised-button class="action-button orange-button" (click)="onIrAFlowChart()" [disabled]="true">
             <mat-icon>analytics</mat-icon> 
             Ir a FlowChart
           </button>
-          <button mat-raised-button class="action-button blue-button" (click)="onDescargaFlow()">
+          <button mat-raised-button class="action-button blue-button" (click)="onDescargaFlow()" [disabled]="true">
             <mat-icon>download</mat-icon> Descarga FlowChart
           </button>
-          <button mat-raised-button class="action-button purple-button" (click)="onAprobarPlan()">
+          <button mat-raised-button class="action-button purple-button" (click)="onAprobarPlan()" [disabled]="true">
             <mat-icon>check_circle</mat-icon> Aprobar Plan de Medios
           </button>
         </div>
         <div class="right-buttons">
-          <button mat-raised-button color="warn" (click)="onRegresar()">
+          <button mat-raised-button color="warn" (click)="onRegresar()" [disabled]="true">
             <mat-icon>arrow_back</mat-icon> Regresar
           </button>
         </div>
