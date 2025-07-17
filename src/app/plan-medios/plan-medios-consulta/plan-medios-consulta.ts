@@ -1346,6 +1346,7 @@ export class VersionesPlanDialog implements AfterViewInit {
   }
 
   redirigir(row: Resultado) {
+    debugger;
     const planData = {
       id: row.id,
       numeroPlan: row.numeroPlan,

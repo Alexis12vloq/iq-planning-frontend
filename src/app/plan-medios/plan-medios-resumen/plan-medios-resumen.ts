@@ -16,9 +16,9 @@ import { PautaLocal } from '../models/pauta-local.model';
 import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { RespuestaPauta } from '../models/plantilla-pauta.model';
 import { BackendMediosService } from '../services/backend-medios.service';
-import { 
-  MedioBackend, 
-  ProveedorBackend, 
+import {
+  MedioBackend,
+  ProveedorBackend,
   CrearPlanMedioItemRequest,
   ActualizarPlanMedioItemRequest,
   PlanMedioItemBackend,
@@ -61,19 +61,19 @@ export class PlanMediosResumen implements OnInit {
   @ViewChild('content') content!: ElementRef;
 
   periodos: PeriodoPlan[] = [];
-  periodoSeleccionado: PeriodoPlan;
-  resumenPlan: ResumenPlan = this.crearPlanEjemplo(); // Inicializar con plan de ejemplo
+  periodoSeleccionado!: PeriodoPlan;
+  resumenPlan!: ResumenPlan;
   displayedColumns: string[] = ['medio', 'proveedor', 'semanas', 'valor-mensual', 'total', 'soi'];
   semanasColumnas: string[] = []; // Ahora será dinámico
-  semanasConFechas: Array<{nombre: string, fechaInicio: string, fechaFin: string, fechaCompacta: string}> = [];
+  semanasConFechas: Array<{ nombre: string, fechaInicio: string, fechaFin: string, fechaCompacta: string }> = [];
   dataSource: FilaMedio[] = [];
   planId: string | undefined; // Almacenar el ID del plan
   // Variable eliminada: flowChartAsociado - ya no es necesaria
-  
+
   // Propiedades para navegación por meses
-  mesesDisponibles: Array<{nombre: string, anio: number, fechaInicio: string, fechaFin: string}> = [];
+  mesesDisponibles: Array<{ nombre: string, anio: number, fechaInicio: string, fechaFin: string }> = [];
   mesActualIndex: number = 0;
-  mesActual: {nombre: string, anio: number, fechaInicio: string, fechaFin: string} | null = null;
+  mesActual: { nombre: string, anio: number, fechaInicio: string, fechaFin: string } | null = null;
 
   constructor(
     private snackBar: MatSnackBar,
@@ -85,16 +85,16 @@ export class PlanMediosResumen implements OnInit {
     const navigation = this.router.getCurrentNavigation();
     const planData = navigation?.extras?.state?.['planData'] as any;
 
-
+    debugger;
 
     if (planData && planData.id) {
       // Guardar el ID del plan
       this.planId = planData.id;
-      
+
       // Verificar si viene del FlowChart
       if (planData.fromFlowChart) {
-        const periodosConPautas = this.cargarPeriodosConPautas(planData.id);
-        
+        const periodosConPautas = this.cargarPeriodosConPautas(planData.id, planData.version);
+
         this.resumenPlan = {
           numeroPlan: planData.numeroPlan,
           version: Number(planData.version),
@@ -110,7 +110,7 @@ export class PlanMediosResumen implements OnInit {
       // Priorizar datos que vienen del estado de navegación (más actualizados)
       else if (planData.pautas && planData.pautas.length > 0) {
         const periodosConPautas = this.crearPeriodosConPautasDelEstado(planData);
-        
+
         this.resumenPlan = {
           numeroPlan: planData.numeroPlan,
           version: Number(planData.version),
@@ -125,13 +125,13 @@ export class PlanMediosResumen implements OnInit {
       } else {
         // Fallback: Cargar desde localStorage
         const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-        
+
         const planCompleto = planesLocal.find((plan: any) => plan.id === planData.id);
-        
+
         if (planCompleto) {
           this.resumenPlan = {
             numeroPlan: planCompleto.numeroPlan,
-            version: Number(planData.version || planCompleto.version),
+            version: Number(planData.version),
             cliente: planCompleto.clienteFueActuacion || planData.cliente,
             producto: planCompleto.producto,
             campana: planCompleto.campana,
@@ -139,24 +139,32 @@ export class PlanMediosResumen implements OnInit {
             fechaFin: planCompleto.fechaFin,
             periodos: []
           };
-          
-          const periodosReales = this.cargarPeriodosConPautas(planCompleto.id);
+
+          const periodosReales = this.cargarPeriodosConPautas(planCompleto.id, planData.version);
           this.resumenPlan.periodos = periodosReales;
           this.periodos = periodosReales;
         } else {
-          this.inicializarPlanEjemplo();
+          // No hay datos del plan, redirigir a consulta
+          this.snackBar.open('❌ No se encontraron datos del plan', 'Cerrar', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+          this.router.navigate(['/plan-medios-consulta']);
+          return;
         }
       }
     } else if (planData) {
       // Compatibilidad con navegación anterior (sin ID)
       let periodosCompatibles = [];
-      
+
       if (planData.pautas && planData.pautas.length > 0) {
         periodosCompatibles = this.crearPeriodosConPautasDelEstado(planData);
       } else {
         periodosCompatibles = [this.crearPeriodoVacio(planData.fechaInicio, planData.fechaFin)];
       }
-      
+
       this.resumenPlan = {
         numeroPlan: planData.numeroPlan,
         version: Number(planData.version),
@@ -169,8 +177,15 @@ export class PlanMediosResumen implements OnInit {
       };
       this.periodos = periodosCompatibles;
     } else {
-      // Si no hay datos de consulta, usar datos de ejemplo
-      this.inicializarPlanEjemplo();
+      // Si no hay datos de consulta, redirigir a la consulta
+      this.snackBar.open('❌ No se encontraron datos del plan', 'Cerrar', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['error-snackbar']
+      });
+      this.router.navigate(['/plan-medios-consulta']);
+      return;
     }
 
     this.periodoSeleccionado = this.resumenPlan.periodos[0];
@@ -182,7 +197,7 @@ export class PlanMediosResumen implements OnInit {
   ngOnInit(): void {
     // Forzar una recarga al inicializar para asegurar que los datos estén actualizados
     this.verificarYRecargarDatos();
-    
+
     // Mostrar notificación si no hay datos cargados
     if (this.planId && (!this.periodoSeleccionado?.medios || this.periodoSeleccionado.medios.length === 0)) {
       setTimeout(() => {
@@ -195,30 +210,30 @@ export class PlanMediosResumen implements OnInit {
       }, 1000);
     }
   }
-  
+
   private verificarYRecargarDatos(): void {
     // Si tenemos un planId, verificar que los datos estén cargados correctamente
     if (this.planId) {
       // Verificar si hay medios cargados
       const tieneMedias = this.periodoSeleccionado && this.periodoSeleccionado.medios && this.periodoSeleccionado.medios.length > 0;
-      
+
       // Verificar la integridad de los datos en localStorage
       this.verificarIntegridadDatos();
-      
+
       // Si no hay medios, intentar recargar
       if (!tieneMedias) {
         this.recargarResumen();
       }
     }
   }
-  
+
   private verificarIntegridadDatos(): void {
     if (!this.planId) return;
-    
+
     // Verificar que el plan existe en planesMedios
     const planesLocal = JSON.parse(localStorage.getItem('planesMedios') || '[]');
     const planExiste = planesLocal.some((plan: any) => plan.id === this.planId);
-    
+
     // Verificar que hay pautas para este plan
     const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
     const pautasDelPlan = pautas.filter((pauta: any) => pauta.planId === this.planId);
@@ -227,7 +242,7 @@ export class PlanMediosResumen implements OnInit {
   prepararDataSource() {
     // Agrupar medios por nombre de medio
     const mediosAgrupados = new Map<string, MedioPlan[]>();
-    
+
     this.periodoSeleccionado.medios.forEach(medio => {
       if (!mediosAgrupados.has(medio.nombre)) {
         mediosAgrupados.set(medio.nombre, []);
@@ -236,7 +251,7 @@ export class PlanMediosResumen implements OnInit {
     });
 
     const filas: FilaMedio[] = [];
-    
+
     // Iterar sobre cada grupo de medios
     mediosAgrupados.forEach((mediosDelGrupo, nombreMedio) => {
       // Agregar fila de encabezado del medio (solo si hay más de un proveedor)
@@ -259,14 +274,14 @@ export class PlanMediosResumen implements OnInit {
           semanas: medio.semanas,
           soi: medio.soi
         });
-        
+
         // Fila de spots del proveedor
         filas.push({
           tipo: 'spots',
           medio: medio,
           nombre: 'SPOTS'
         });
-        
+
         // Fila de inversiones del proveedor
         filas.push({
           tipo: 'inversiones',
@@ -277,7 +292,7 @@ export class PlanMediosResumen implements OnInit {
     });
 
     this.dataSource = filas;
-    
+
     // Establecer variable CSS para el número de semanas
     this.establecerVariableCSSNumSemanas();
   }
@@ -310,16 +325,16 @@ export class PlanMediosResumen implements OnInit {
   calcularPorcentaje(valorMedio: number): number {
     // Calcular la suma total de todos los medios
     const totalMedios = this.periodoSeleccionado.medios.reduce((total, medio) => total + medio.valorNeto, 0);
-    
+
     if (totalMedios === 0) {
       return 0;
     }
-    
+
     // Calcular el porcentaje basado en la suma de los medios
     const porcentaje = (valorMedio / totalMedios) * 100;
-    
+
     console.log(`📊 Calculando porcentaje: ${valorMedio} / ${totalMedios} = ${porcentaje.toFixed(1)}%`);
-    
+
     return porcentaje;
   }
 
@@ -368,60 +383,60 @@ export class PlanMediosResumen implements OnInit {
   calcularMesesDisponibles(): void {
     const fechaInicio = new Date(this.periodoSeleccionado.fechaInicio);
     const fechaFin = new Date(this.periodoSeleccionado.fechaFin);
-    
+
     fechaInicio.setHours(0, 0, 0, 0);
     fechaFin.setHours(23, 59, 59, 999);
-    
+
     const meses = [
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
-    
+
     this.mesesDisponibles = [];
-    
+
     let fechaActual = new Date(fechaInicio);
-    
+
     while (fechaActual <= fechaFin) {
       const mes = fechaActual.getMonth();
       const anio = fechaActual.getFullYear();
-      
+
       // Calcular el inicio y fin del mes actual
       const inicioMes = new Date(anio, mes, 1);
       const finMes = new Date(anio, mes + 1, 0);
-      
+
       // Ajustar al rango del plan
       const inicioMesReal = inicioMes < fechaInicio ? fechaInicio : inicioMes;
       const finMesReal = finMes > fechaFin ? fechaFin : finMes;
-      
+
       this.mesesDisponibles.push({
         nombre: meses[mes],
         anio: anio,
         fechaInicio: this.formatearFecha(inicioMesReal),
         fechaFin: this.formatearFecha(finMesReal)
       });
-      
+
       // Avanzar al siguiente mes
       fechaActual.setMonth(fechaActual.getMonth() + 1);
       fechaActual.setDate(1);
     }
-    
+
     // Establecer el primer mes como actual
     this.mesActualIndex = 0;
     this.mesActual = this.mesesDisponibles[0];
-    
+
     console.log('📅 Meses disponibles:', this.mesesDisponibles);
   }
 
   calcularSemanasConFechas(): void {
     this.semanasConFechas = [];
     this.semanasColumnas = [];
-    
+
     if (!this.mesActual) return;
-    
+
     // Parsear fechas con formato DD/MM/YYYY
     const fechaInicioParts = this.mesActual.fechaInicio.split('/');
     const fechaFinParts = this.mesActual.fechaFin.split('/');
-    
+
     const fechaInicio = new Date(
       parseInt(fechaInicioParts[2]), // año
       parseInt(fechaInicioParts[1]) - 1, // mes (0-based)
@@ -432,19 +447,19 @@ export class PlanMediosResumen implements OnInit {
       parseInt(fechaFinParts[1]) - 1, // mes (0-based)
       parseInt(fechaFinParts[0]) // día
     );
-    
+
     // Asegurar que las fechas se parseen correctamente
     fechaInicio.setHours(0, 0, 0, 0);
     fechaFin.setHours(23, 59, 59, 999);
-    
+
     console.log('📅 Calculando semanas para mes:', this.mesActual.nombre, {
       fechaInicio: fechaInicio.toISOString(),
       fechaFin: fechaFin.toISOString()
     });
-    
+
     // Encontrar el primer lunes de la semana que contiene la fecha de inicio
     let inicioSemana = new Date(fechaInicio);
-    
+
     // Si la fecha de inicio no es lunes, ajustar al lunes de esa semana
     const diaSemana = inicioSemana.getDay(); // 0=domingo, 1=lunes, etc.
     if (diaSemana !== 1) {
@@ -452,48 +467,48 @@ export class PlanMediosResumen implements OnInit {
       let diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1; // Si es domingo (0), retroceder 6 días
       inicioSemana.setDate(inicioSemana.getDate() - diasHastaLunes);
     }
-    
+
     // Si el lunes calculado es anterior a la fecha de inicio del mes, usar la fecha de inicio
     if (inicioSemana < fechaInicio) {
       inicioSemana = new Date(fechaInicio);
     }
-    
+
     let contadorSemana = 1;
-    
+
     // Generar semanas hasta cubrir todo el mes
     while (inicioSemana <= fechaFin) {
       const finSemana = new Date(inicioSemana);
       finSemana.setDate(inicioSemana.getDate() + 6); // Domingo de la misma semana
-      
+
       // Si la fecha fin de la semana supera la fecha fin del mes, ajustarla
       if (finSemana > fechaFin) {
         finSemana.setTime(fechaFin.getTime());
       }
-      
+
       // Solo agregar si hay intersección con el mes
       if (inicioSemana <= fechaFin && finSemana >= fechaInicio) {
         // Ajustar fechas para que no salgan del rango del mes
         const fechaInicioReal = inicioSemana < fechaInicio ? fechaInicio : inicioSemana;
         const fechaFinReal = finSemana > fechaFin ? fechaFin : finSemana;
-        
+
         this.semanasConFechas.push({
           nombre: `S${contadorSemana}`,
           fechaInicio: this.formatearFecha(fechaInicioReal),
           fechaFin: this.formatearFecha(fechaFinReal),
           fechaCompacta: this.formatearFechaCompacta(fechaInicioReal, fechaFinReal)
         });
-        
+
         this.semanasColumnas.push(`S${contadorSemana}`);
-        
+
         console.log(`📅 Semana ${contadorSemana}: ${this.formatearFecha(fechaInicioReal)} - ${this.formatearFecha(fechaFinReal)}`);
-        
+
         contadorSemana++;
       }
-      
+
       // Avanzar al próximo lunes
       inicioSemana.setDate(inicioSemana.getDate() + 7);
     }
-    
+
     console.log('📅 Semanas calculadas para', this.mesActual.nombre, ':', this.semanasConFechas);
     console.log('📅 Columnas de semanas:', this.semanasColumnas);
   }
@@ -510,7 +525,7 @@ export class PlanMediosResumen implements OnInit {
     const mesInicio = (fechaInicio.getMonth() + 1).toString().padStart(2, '0');
     const diaFin = fechaFin.getDate().toString().padStart(2, '0');
     const mesFin = (fechaFin.getMonth() + 1).toString().padStart(2, '0');
-    
+
     // Si son el mismo mes, mostrar: 01-07/06
     if (fechaInicio.getMonth() === fechaFin.getMonth()) {
       return `${diaInicio}-${diaFin}/${mesInicio}`;
@@ -547,11 +562,11 @@ export class PlanMediosResumen implements OnInit {
       fechaInicio: this.resumenPlan.fechaInicio,
       fechaFin: this.resumenPlan.fechaFin
     };
-    
+
     console.log('🔄 Navegando a nueva pauta con plan data:', planData);
-    
-    this.router.navigate(['/plan-medios-nueva-pauta'], { 
-      state: { planData } 
+
+    this.router.navigate(['/plan-medios-nueva-pauta'], {
+      state: { planData }
     });
   }
 
@@ -567,20 +582,20 @@ export class PlanMediosResumen implements OnInit {
       fechaFin: this.resumenPlan.fechaFin,
       medioSeleccionado: medio.nombre // Pasar el medio seleccionado
     };
-    
+
     console.log('🔄 Navegando a nueva pauta para editar medio:', medio.nombre, 'con plan data:', planData);
-    
-    this.router.navigate(['/plan-medios-nueva-pauta'], { 
-      state: { planData } 
+
+    this.router.navigate(['/plan-medios-nueva-pauta'], {
+      state: { planData }
     });
   }
 
   onAccionMedio(medio: any): void {
     console.log('⚡ Abriendo modal de acciones para medio:', medio);
-    
+
     const dialogRef = this.dialog.open(ModalAccionesMedioComponent, {
       width: '400px',
-      data: { 
+      data: {
         medio: medio,
         planId: this.planId
       },
@@ -601,7 +616,7 @@ export class PlanMediosResumen implements OnInit {
   private editarMedio(medio: any): void {
     const dialogRef = this.dialog.open(ModalEditarMedioComponent, {
       width: '500px',
-      data: { 
+      data: {
         medio: medio,
         planId: this.planId,
         proveedoresDisponibles: this.obtenerProveedoresPorMedio(medio.nombre)
@@ -620,7 +635,7 @@ export class PlanMediosResumen implements OnInit {
   private eliminarMedio(medio: any): void {
     const dialogRef = this.dialog.open(ModalConfirmarEliminacionComponent, {
       width: '400px',
-      data: { 
+      data: {
         medio: medio,
         planId: this.planId
       },
@@ -650,12 +665,12 @@ export class PlanMediosResumen implements OnInit {
       fechaInicio: this.resumenPlan.fechaInicio,
       fechaFin: this.resumenPlan.fechaFin
     };
-    
+
     console.log('🔄 Abriendo modal para agregar medio:', planData);
-    
+
     const dialogRef = this.dialog.open(ModalAgregarMedioComponent, {
       width: '600px',
-      data: { 
+      data: {
         planData,
         numSemanas: this.semanasColumnas.length
       },
@@ -687,10 +702,10 @@ export class PlanMediosResumen implements OnInit {
         semanas: medio.semanas
       }))
     };
-    
+
     // Guardar en storage del flowchart
     const flowChartStorage = JSON.parse(localStorage.getItem('flowChartData') || '[]');
-    
+
     // Agregar o actualizar datos del plan actual
     const existingIndex = flowChartStorage.findIndex((item: any) => item.planId === this.planId);
     if (existingIndex !== -1) {
@@ -698,12 +713,12 @@ export class PlanMediosResumen implements OnInit {
     } else {
       flowChartStorage.push(datosFlowChart);
     }
-    
+
     localStorage.setItem('flowChartData', JSON.stringify(flowChartStorage));
-    
+
     // Navegar directamente al flowchart
-    this.router.navigate(['/flow-chart'], { 
-      state: { 
+    this.router.navigate(['/flow-chart'], {
+      state: {
         planData: this.resumenPlan,
         mediosYProveedores: datosFlowChart.mediosYProveedores,
         fromPlanMedios: true
@@ -795,49 +810,16 @@ export class PlanMediosResumen implements OnInit {
     }
   }
 
-  private crearPlanEjemplo(): ResumenPlan {
-    // Fechas de ejemplo dinámicas
-    const fechaInicio = "2024-01-01";
-    const fechaFin = "2024-12-31";
-    const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
 
-    // Crear un período vacío para el plan de ejemplo
-    const periodoVacio: PeriodoPlan = {
-      id: '1',
-      nombre: periodoInfo.nombre,
-      anio: periodoInfo.anio,
-      fechaInicio: fechaInicio,
-      fechaFin: fechaFin,
-      medios: [], // Sin medios
-      totalInversionNeta: 0,
-      iva: 0,
-      totalInversion: 0
-    };
 
-    return {
-      numeroPlan: "0001",
-      version: 1,
-      cliente: "Cliente Ejemplo",
-      producto: "Producto Ejemplo",
-      campana: "Campaña Ejemplo",
-      fechaInicio: fechaInicio,
-      fechaFin: fechaFin,
-      periodos: [periodoVacio]
-    };
-  }
-
-  private inicializarPlanEjemplo(): void {
-    this.resumenPlan = this.crearPlanEjemplo();
-  }
-
-  private cargarPeriodosConPautas(planId: string): PeriodoPlan[] {
+  private cargarPeriodosConPautas(planId: string, version: string | number): PeriodoPlan[] {
     // Ahora cargar desde el backend usando el servicio
     const planNumerico = Number(planId);
-    const version = this.resumenPlan.version;
-    
+    const versionNumerico = Number(version);
+
     // Cargar de forma asíncrona desde el backend
-    this.cargarDatosDesdeBackend(planNumerico, version);
-    
+    this.cargarDatosDesdeBackend(planNumerico, versionNumerico);
+
     // Mientras tanto, devolver estructura vacía
     const fechaInicio = this.resumenPlan.fechaInicio;
     const fechaFin = this.resumenPlan.fechaFin;
@@ -867,7 +849,7 @@ export class PlanMediosResumen implements OnInit {
           this.calcularMesesDisponibles();
           this.calcularSemanasConFechas();
           this.prepararDataSource();
-          
+
           // Mostrar notificación de éxito
           this.snackBar.open('✅ Datos cargados correctamente desde servidor', '', {
             duration: 2000,
@@ -902,17 +884,17 @@ export class PlanMediosResumen implements OnInit {
 
     // Agrupar items por medio y proveedor
     const mediosMap = new Map<string, MedioPlan>();
-    
+
     planMedioItems.forEach((item: PlanMedioItemBackend) => {
       const medio = item.medioNombre || 'Medio desconocido';
       const proveedor = item.proveedorNombre || 'Proveedor desconocido';
       const claveAgrupacion = `${medio}_${proveedor}`;
-      
+
       // Parsear el dataJson si existe
       let spotsPorFecha: { [fecha: string]: number } = {};
       let totalSpots = 0;
       let valorTotal = 0;
-      
+
       if (item.dataJson && item.dataJson.trim() !== '') {
         try {
           const dataJsonParsed: SpotsPorFechaData = JSON.parse(item.dataJson);
@@ -923,16 +905,16 @@ export class PlanMediosResumen implements OnInit {
           console.error('❌ Error parseando dataJson:', error);
         }
       }
-      
+
       // Si no hay data en JSON, inicializar con valores por defecto
       if (totalSpots === 0) {
         totalSpots = 1; // Valor por defecto
         valorTotal = item.tarifa;
       }
-      
+
       // Generar semanas boolean basado en spots por fecha
       const semanasBoolean = this.generarSemanasBoolean();
-      
+
       // Crear o actualizar el medio
       if (mediosMap.has(claveAgrupacion)) {
         const medioExistente = mediosMap.get(claveAgrupacion)!;
@@ -959,7 +941,7 @@ export class PlanMediosResumen implements OnInit {
 
     // Convertir map a array
     const medios = Array.from(mediosMap.values());
-    
+
     // Calcular totales
     const totalInversionNeta = medios.reduce((total, medio) => total + medio.valorNeto, 0);
     const iva = Math.round(totalInversionNeta * 0.19);
@@ -986,7 +968,7 @@ export class PlanMediosResumen implements OnInit {
     // Obtener las fechas del plan para calcular el período
     const planCompleto = JSON.parse(localStorage.getItem('planesMedios') || '[]')
       .find((plan: any) => plan.id === planId);
-    
+
     const fechaInicio = planCompleto?.fechaInicio || this.resumenPlan.fechaInicio;
     const fechaFin = planCompleto?.fechaFin || this.resumenPlan.fechaFin;
     const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
@@ -1008,7 +990,7 @@ export class PlanMediosResumen implements OnInit {
 
     // Agrupar pautas por medio y proveedor
     const mediosMap = new Map<string, MedioPlan>();
-    
+
     pautasDelPlan.forEach((respuestaPauta: any) => {
       const medio = respuestaPauta.medio;
       const proveedor = respuestaPauta.proveedor || 'Sin proveedor';
@@ -1017,20 +999,20 @@ export class PlanMediosResumen implements OnInit {
       const valorTotal = Number(respuestaPauta.valorTotal) || 0;
       const totalSpots = Number(respuestaPauta.totalSpots) || 1;
       const tarifa = Number(respuestaPauta.datos?.tarifa) || (valorTotal / totalSpots) || 0;
-      
+
       // Calcular semanas basado en días seleccionados del calendario
       let semanasBoolean = this.generarSemanasBoolean(); // Dinámico basado en número de semanas
-      
+
       if (respuestaPauta.diasSeleccionados && respuestaPauta.diasSeleccionados.length > 0) {
         // Si tiene días específicos seleccionados, calcular las semanas correspondientes
         const diasSeleccionados = respuestaPauta.diasSeleccionados;
         const fechaInicioPlan = new Date(fechaInicio);
-        
+
         diasSeleccionados.forEach((fechaStr: string) => {
           const fechaDia = new Date(fechaStr);
           const diferenciaDias = Math.floor((fechaDia.getTime() - fechaInicioPlan.getTime()) / (1000 * 60 * 60 * 24));
           const semanaIndex = Math.floor(diferenciaDias / 7);
-          
+
           // Mapear a las semanas disponibles
           if (semanaIndex >= 0 && semanaIndex < semanasBoolean.length) {
             semanasBoolean[semanaIndex] = true;
@@ -1042,22 +1024,22 @@ export class PlanMediosResumen implements OnInit {
       } else if (respuestaPauta.semanas) {
         // Fallback al sistema anterior de semanas
         const semanas = respuestaPauta.semanas || [];
-        semanasBoolean = this.semanasColumnas.map(codigo => 
+        semanasBoolean = this.semanasColumnas.map(codigo =>
           semanas.includes(codigo)
         );
       }
-      
+
       // Cargar spots guardados desde localStorage (nuevo formato por fecha)
       const spotsPorFecha = respuestaPauta.datos?.spotsPorFecha || {};
       const totalSpotsGuardados = Object.values(spotsPorFecha as { [key: string]: number }).reduce((total: number, spots: number) => total + (spots || 0), 0);
-      
+
       if (mediosMap.has(claveAgrupacion)) {
         // Si el medio y proveedor ya existen, sumar los valores
         const medioExistente = mediosMap.get(claveAgrupacion)!;
         medioExistente.salidas = Math.max(medioExistente.salidas, totalSpotsGuardados); // Usar spots guardados
         medioExistente.valorNeto = Number(medioExistente.valorNeto) + Number(valorTotal);
         // Para semanas, hacer OR lógico (si cualquier pauta tiene true, el resultado es true)
-        medioExistente.semanas = medioExistente.semanas.map((valor, index) => 
+        medioExistente.semanas = medioExistente.semanas.map((valor, index) =>
           valor || semanasBoolean[index]
         );
         // Calcular SOI promedio
@@ -1082,14 +1064,14 @@ export class PlanMediosResumen implements OnInit {
 
     // Convertir map a array
     const medios = Array.from(mediosMap.values());
-    
+
     // Recalcular inversiones basadas en spots cargados
     medios.forEach(medio => {
       if (medio.tarifa && medio.salidas > 0) {
         medio.valorNeto = medio.salidas * medio.tarifa;
       }
     });
-    
+
     // Calcular totales
     const totalInversionNeta = medios.reduce((total, medio) => total + medio.valorNeto, 0);
     const iva = Math.round(totalInversionNeta * 0.19); // CAMBIO: Usar 19% como especificado
@@ -1110,14 +1092,14 @@ export class PlanMediosResumen implements OnInit {
 
   private crearPeriodosConPautasDelEstado(planData: any): PeriodoPlan[] {
     console.log('🔄 Creando períodos con pautas del estado:', planData.pautas);
-    
+
     const fechaInicio = planData.fechaInicio;
     const fechaFin = planData.fechaFin;
     const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
 
     // Agrupar pautas por medio y proveedor
     const mediosMap = new Map<string, MedioPlan>();
-    
+
     planData.pautas.forEach((pautaResumen: any) => {
       const medio = pautaResumen.medio;
       const proveedor = pautaResumen.proveedor || 'Sin proveedor';
@@ -1126,14 +1108,14 @@ export class PlanMediosResumen implements OnInit {
       const valorTotal = Number(pautaResumen.valorTotal) || 0;
       const totalSpots = Number(pautaResumen.totalSpots) || 1;
       const tarifa = Number(pautaResumen.datos?.tarifa) || (valorTotal / totalSpots) || 0;
-      
+
       // Para pautas del estado, usar semanas por defecto (se pueden mejorar después)
       const semanasBoolean = this.generarSemanasBoolean().map(() => true); // Todas las semanas activas por defecto
-      
+
       // Cargar spots guardados desde localStorage (nuevo formato por fecha)
       const spotsPorFecha = pautaResumen.datos?.spotsPorFecha || {};
       const totalSpotsGuardados = Object.values(spotsPorFecha as { [key: string]: number }).reduce((total: number, spots: number) => total + (spots || 0), 0);
-      
+
       if (mediosMap.has(claveAgrupacion)) {
         // Si el medio y proveedor ya existen, sumar los valores
         const medioExistente = mediosMap.get(claveAgrupacion)!;
@@ -1160,21 +1142,21 @@ export class PlanMediosResumen implements OnInit {
 
     // Convertir map a array
     const medios = Array.from(mediosMap.values());
-    
+
     // Recalcular inversiones basadas en spots cargados
     medios.forEach(medio => {
       if (medio.tarifa && medio.salidas > 0) {
         medio.valorNeto = medio.salidas * medio.tarifa;
       }
     });
-    
+
     // CORRECCIÓN: Calcular totales SIEMPRE desde la suma de medios (no usar presupuestoTotal)
     const totalInversionNeta = medios.reduce((total, medio) => {
       const valorNumerico = Number(medio.valorNeto);
       console.log(`💰 Sumando medio ${medio.nombre}: ${valorNumerico} (tipo: ${typeof valorNumerico})`);
       return Number(total) + valorNumerico;
     }, 0);
-    
+
     const iva = Math.round(Number(totalInversionNeta) * 0.19);
     const totalInversion = Number(totalInversionNeta) + Number(iva);
 
@@ -1198,7 +1180,7 @@ export class PlanMediosResumen implements OnInit {
 
   private crearPeriodoVacio(fechaInicio: string, fechaFin: string): PeriodoPlan {
     const periodoInfo = this.calcularPeriodo(fechaInicio, fechaFin);
-    
+
     return {
       id: '1',
       nombre: periodoInfo.nombre,
@@ -1221,7 +1203,7 @@ export class PlanMediosResumen implements OnInit {
     // Asegurar que las fechas se parseen correctamente
     const fechaIni = new Date(fechaInicio + 'T00:00:00.000Z');
     const fechaFinal = new Date(fechaFin + 'T00:00:00.000Z');
-    
+
     const mesInicio = fechaIni.getUTCMonth(); // 0-11
     const mesFin = fechaFinal.getUTCMonth(); // 0-11
     const anioInicio = fechaIni.getUTCFullYear();
@@ -1268,9 +1250,9 @@ export class PlanMediosResumen implements OnInit {
       // Recargar datos desde el backend
       const planNumerico = Number(this.planId);
       const version = this.resumenPlan.version;
-      
+
       this.cargarDatosDesdeBackend(planNumerico, version);
-      
+
       // Mostrar notificación de carga
       this.snackBar.open('🔄 Recargando datos desde servidor...', '', {
         duration: 2000,
@@ -1293,49 +1275,49 @@ export class PlanMediosResumen implements OnInit {
   onSpotsChange(medio: MedioPlan, semanaIndex: number, event: Event): void {
     const target = event.target as HTMLInputElement;
     const nuevoSpots = parseInt(target.value) || 0;
-    
+
     // Obtener la fecha específica de la semana
     const semanaActual = this.semanasConFechas[semanaIndex];
     if (!semanaActual) {
       console.error('No se encontró la semana en el índice:', semanaIndex);
       return;
     }
-    
+
     // Inicializar spotsPorFecha si no existe
     if (!medio.spotsPorFecha) {
       medio.spotsPorFecha = {};
     }
-    
+
     // Usar la fecha de inicio de la semana como clave
     const fechaClave = semanaActual.fechaInicio;
     medio.spotsPorFecha[fechaClave] = nuevoSpots;
-    
+
     // Recalcular salidas totales sumando todos los spots guardados
     medio.salidas = Object.values(medio.spotsPorFecha).reduce((total: number, spots: number) => total + (spots || 0), 0);
-    
+
     // Recalcular inversiones totales
     if (medio.tarifa) {
       medio.valorNeto = medio.salidas * medio.tarifa;
     }
-    
+
     // Recalcular SOI
     medio.soi = medio.salidas > 0 ? Math.round(medio.valorNeto / medio.salidas) : 0;
-    
+
     // Actualizar totales del período
     this.actualizarTotalesPeriodo();
-    
+
     // Actualizar en el backend si tiene planMedioItemId
     if (medio.planMedioItemId) {
       this.actualizarSpotsEnBackend(medio);
     }
-    
+
     // Mostrar confirmación visual
-    this.snackBar.open(`💾 Guardado: ${medio.nombre} - ${semanaActual.nombre}: ${nuevoSpots} spots (${fechaClave})`, '', { 
+    this.snackBar.open(`💾 Guardado: ${medio.nombre} - ${semanaActual.nombre}: ${nuevoSpots} spots (${fechaClave})`, '', {
       duration: 1500,
       horizontalPosition: 'right',
       verticalPosition: 'bottom'
     });
-    
+
     console.log(`✅ Spots actualizados para ${medio.nombre} ${semanaActual.nombre} (${fechaClave}): ${nuevoSpots}`);
     console.log(`✅ Nueva inversión total: ${medio.valorNeto}`);
     console.log(`✅ Spots por fecha:`, medio.spotsPorFecha);
@@ -1370,7 +1352,7 @@ export class PlanMediosResumen implements OnInit {
     this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
       (response: PlanMedioItemBackend) => {
         console.log('✅ Spots actualizados en backend:', response);
-        
+
         // Mostrar notificación de éxito discreta
         this.snackBar.open('✅ Sincronizado con servidor', '', {
           duration: 1000,
@@ -1421,11 +1403,11 @@ export class PlanMediosResumen implements OnInit {
     const totalInversionNeta = this.periodoSeleccionado.medios.reduce((total, medio) => total + medio.valorNeto, 0);
     const iva = Math.round(totalInversionNeta * 0.19);
     const totalInversion = totalInversionNeta + iva;
-    
+
     this.periodoSeleccionado.totalInversionNeta = totalInversionNeta;
     this.periodoSeleccionado.iva = iva;
     this.periodoSeleccionado.totalInversion = totalInversion;
-    
+
     // Actualizar el dataSource para reflejar los cambios
     this.prepararDataSource();
   }
@@ -1435,7 +1417,7 @@ export class PlanMediosResumen implements OnInit {
   private distribuirSpotsEnSemanas(totalSpots: number, semanasBoolean: boolean[]): number[] {
     // Inicializar todos los spots en 0 por defecto
     const spotsPorSemana: number[] = this.generarSpotsPorSemana();
-    
+
     // Solo distribuir si hay spots especificados y mayor a 0
     if (totalSpots > 0) {
       let spotsRestantes = totalSpots;
@@ -1457,7 +1439,8 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private obtenerProveedoresPorMedio(medio: string): any[] {
-    return this.plantillaService.obtenerProveedoresPorMedio(medio);
+    // Ya no usar datos locales hardcodeados
+    return [];
   }
 
   // Método para convertir spots por fecha a array (compatibilidad con flowchart)
@@ -1465,19 +1448,19 @@ export class PlanMediosResumen implements OnInit {
     if (!spotsPorFecha) {
       return [0, 0, 0, 0, 0];
     }
-    
+
     const array = [0, 0, 0, 0, 0];
-    
+
     // Mapear cada fecha a su índice correspondiente en el array
     this.semanasConFechas.forEach((semana, index) => {
       if (index < 5 && spotsPorFecha[semana.fechaInicio]) {
         array[index] = spotsPorFecha[semana.fechaInicio];
       }
     });
-    
+
     return array;
   }
-  
+
   // Método temporal para limpiar logs de debugging
   limpiarLogsDebugging(): void {
     console.clear();
@@ -1499,7 +1482,7 @@ export class PlanMediosResumen implements OnInit {
     console.log('✅ Eliminación de dependencia de localStorage');
     console.log('✅ Notificaciones de estado para todas las operaciones');
     console.log('🔧 === FIN INFORMACIÓN ===');
-    
+
     this.snackBar.open('ℹ️ Integración backend completada - Ver consola para detalles', '', {
       duration: 3000,
       horizontalPosition: 'center',
@@ -1513,14 +1496,14 @@ export class PlanMediosResumen implements OnInit {
     if (!medio || !medio.spotsPorFecha || !this.semanasConFechas) {
       return 0;
     }
-    
+
     // Calcular el valor total del mes actual sumando todas las semanas del mes
     let valorMensual = 0;
     this.semanasConFechas.forEach(semana => {
       const spots = medio.spotsPorFecha?.[semana.fechaInicio] || 0;
       valorMensual += spots * (medio.tarifa || 0);
     });
-    
+
     return valorMensual;
   }
 
@@ -1529,14 +1512,14 @@ export class PlanMediosResumen implements OnInit {
     if (!medio || !medio.spotsPorFecha || !this.semanasConFechas) {
       return 0;
     }
-    
+
     // Calcular el total de spots del mes actual sumando todas las semanas del mes
     let spotsMensual = 0;
     this.semanasConFechas.forEach(semana => {
       const spots = medio.spotsPorFecha?.[semana.fechaInicio] || 0;
       spotsMensual += spots;
     });
-    
+
     return spotsMensual;
   }
 
@@ -1545,7 +1528,7 @@ export class PlanMediosResumen implements OnInit {
     if (!this.periodoSeleccionado.medios || this.periodoSeleccionado.medios.length === 0) {
       return 0;
     }
-    
+
     return this.periodoSeleccionado.medios.reduce((total, medio) => {
       return total + this.calcularValorMensual(medio);
     }, 0);
@@ -1819,13 +1802,13 @@ export class ModalAgregarMedioComponent implements OnInit {
     if (this.data.numSemanas) {
       this.numSemanas = this.data.numSemanas;
     }
-    
+
     // Cargar medios desde el backend
     this.cargarMediosDesdeBackend();
-    
+
     // Cargar medios existentes del plan
     this.cargarMediosExistentes();
-    
+
     // Suscribirse a cambios en el formulario para validar duplicados
     this.medioForm.valueChanges.subscribe(() => {
       this.validarCombinacionDuplicada();
@@ -1848,7 +1831,7 @@ export class ModalAgregarMedioComponent implements OnInit {
         proveedor: pauta.proveedor,
         tarifa: pauta.datos?.tarifa || 0
       }));
-    
+
     console.log('📋 Medios existentes cargados:', this.mediosExistentes);
   }
 
@@ -1856,11 +1839,11 @@ export class ModalAgregarMedioComponent implements OnInit {
     if (medio && medio.medioId) {
       this.cargandoProveedores = true;
       console.log('🔄 Cargando proveedores para medio:', medio.nombre, 'ID:', medio.medioId);
-      
+
       this.backendMediosService.getProveedoresPorMedio(medio.medioId).subscribe(
         (proveedoresBackend: ProveedorBackend[]) => {
           console.log('✅ Proveedores del backend obtenidos:', proveedoresBackend);
-          
+
           // Convertir proveedores del backend a formato compatible
           this.proveedoresDisponibles = proveedoresBackend.map(p => ({
             id: p.proveedorId.toString(),
@@ -1872,19 +1855,25 @@ export class ModalAgregarMedioComponent implements OnInit {
             orionBeneficioReal: p.orionBeneficioReal,
             estado: p.estado
           }));
-          
+
           this.filtrarProveedoresDisponibles(medio.nombre);
           this.cargandoProveedores = false;
         },
         (error: any) => {
           console.error('❌ Error cargando proveedores del backend:', error);
-          // Fallback a servicio local
-          this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio.nombre);
-          this.filtrarProveedoresDisponibles(medio.nombre);
+          this.proveedoresDisponibles = [];
           this.cargandoProveedores = false;
+          
+          // Mostrar error al usuario
+          this.snackBar.open('❌ Error cargando proveedores desde el servidor', 'Cerrar', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
         }
       );
-      
+
       this.medioForm.patchValue({ proveedor: '', tarifa: 0 });
     }
   }
@@ -1893,7 +1882,7 @@ export class ModalAgregarMedioComponent implements OnInit {
   private cargarMediosDesdeBackend(): void {
     this.cargandoMedios = true;
     console.log('🔄 Cargando medios desde el backend...');
-    
+
     this.backendMediosService.getMedios().subscribe(
       (medios: MedioBackend[]) => {
         console.log('✅ Medios del backend obtenidos:', medios);
@@ -1902,15 +1891,16 @@ export class ModalAgregarMedioComponent implements OnInit {
       },
       (error: any) => {
         console.error('❌ Error cargando medios del backend:', error);
-        // Fallback a medios hardcodeados
-        this.mediosDisponibles = [
-          { medioId: 1, nombre: 'TV NAL', estado: true, fechaRegistro: '', descripcion: 'Televisión Nacional' },
-          { medioId: 2, nombre: 'Radio', estado: true, fechaRegistro: '', descripcion: 'Radio' },
-          { medioId: 3, nombre: 'Digital', estado: true, fechaRegistro: '', descripcion: 'Digital' },
-          { medioId: 4, nombre: 'Prensa', estado: true, fechaRegistro: '', descripcion: 'Prensa' },
-          { medioId: 5, nombre: 'OOH', estado: true, fechaRegistro: '', descripcion: 'Out of Home' }
-        ];
+        this.mediosDisponibles = [];
         this.cargandoMedios = false;
+        
+        // Mostrar error al usuario
+        this.snackBar.open('❌ Error cargando medios desde el servidor', 'Cerrar', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     );
   }
@@ -1920,30 +1910,30 @@ export class ModalAgregarMedioComponent implements OnInit {
     const proveedoresUsados = this.mediosExistentes
       .filter(me => me.medio === nombreMedio)
       .map(me => me.proveedor);
-    
+
     // Filtrar proveedores disponibles excluyendo los ya usados
-    this.proveedoresFiltrados = this.proveedoresDisponibles.filter(proveedor => 
+    this.proveedoresFiltrados = this.proveedoresDisponibles.filter(proveedor =>
       !proveedoresUsados.includes(proveedor.VENDOR)
     );
-    
+
     console.log('🔍 Proveedores filtrados para', nombreMedio, ':', this.proveedoresFiltrados);
   }
 
   private validarCombinacionDuplicada(): void {
     const valores = this.medioForm.value;
-    
+
     if (valores.medio && valores.proveedor && valores.tarifa > 0) {
       const medioSeleccionado = valores.medio as MedioBackend;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
-      
+
       if (proveedorSeleccionado && medioSeleccionado) {
         // Verificar si existe la combinación exacta
-        this.existeCombinacion = this.mediosExistentes.some(me => 
-          me.medio === medioSeleccionado.nombre && 
-          me.proveedor === proveedorSeleccionado.VENDOR && 
+        this.existeCombinacion = this.mediosExistentes.some(me =>
+          me.medio === medioSeleccionado.nombre &&
+          me.proveedor === proveedorSeleccionado.VENDOR &&
           Math.abs(me.tarifa - valores.tarifa) < 0.01 // Comparación con tolerancia para decimales
         );
-        
+
         console.log('🔍 Validando combinación:', {
           medio: medioSeleccionado.nombre,
           proveedor: proveedorSeleccionado.VENDOR,
@@ -1961,16 +1951,16 @@ export class ModalAgregarMedioComponent implements OnInit {
       const valores = this.medioForm.value;
       const medioSeleccionado = valores.medio as MedioBackend;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
-      
+
       // Verificar una vez más antes de guardar
-      const combinacionExiste = this.mediosExistentes.some(me => 
-        me.medio === medioSeleccionado.nombre && 
-        me.proveedor === proveedorSeleccionado?.VENDOR && 
+      const combinacionExiste = this.mediosExistentes.some(me =>
+        me.medio === medioSeleccionado.nombre &&
+        me.proveedor === proveedorSeleccionado?.VENDOR &&
         Math.abs(me.tarifa - valores.tarifa) < 0.01
       );
-      
+
       if (combinacionExiste) {
-        this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe', '', { 
+        this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe', '', {
           duration: 3000,
           panelClass: ['error-snackbar']
         });
@@ -1998,7 +1988,7 @@ export class ModalAgregarMedioComponent implements OnInit {
       this.backendMediosService.crearPlanMedioItem(crearRequest).subscribe(
         (response: PlanMedioItemBackend) => {
           console.log('✅ PlanMedioItem creado en backend:', response);
-          
+
           // También guardar en localStorage para compatibilidad
           const nuevaPauta: RespuestaPauta = {
             id: `pauta-${response.planMedioItemId}`,
@@ -2009,7 +1999,7 @@ export class ModalAgregarMedioComponent implements OnInit {
             proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
             proveedorId: valores.proveedor,
             planMedioItemId: response.planMedioItemId, // Agregar ID del backend
-            datos: { 
+            datos: {
               tarifa: Number(valores.tarifa),
               spotsPorFecha: {}
             },
@@ -2026,16 +2016,16 @@ export class ModalAgregarMedioComponent implements OnInit {
           pautas.push(nuevaPauta);
           localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
 
-          this.snackBar.open('✅ Medio agregado correctamente', '', { 
+          this.snackBar.open('✅ Medio agregado correctamente', '', {
             duration: 2000,
             panelClass: ['success-snackbar']
           });
-          
+
           this.dialogRef.close({ shouldRefresh: true });
         },
         (error: any) => {
           console.error('❌ Error creando PlanMedioItem en backend:', error);
-          
+
           // Fallback: guardar solo en localStorage
           const nuevaPauta: RespuestaPauta = {
             id: `pauta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -2045,7 +2035,7 @@ export class ModalAgregarMedioComponent implements OnInit {
             medio: medioSeleccionado.nombre,
             proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
             proveedorId: valores.proveedor,
-            datos: { 
+            datos: {
               tarifa: Number(valores.tarifa),
               spotsPorFecha: {}
             },
@@ -2061,23 +2051,23 @@ export class ModalAgregarMedioComponent implements OnInit {
           pautas.push(nuevaPauta);
           localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
 
-          this.snackBar.open('⚠️ Medio agregado (solo local - error en backend)', '', { 
+          this.snackBar.open('⚠️ Medio agregado (solo local - error en backend)', '', {
             duration: 3000,
             panelClass: ['warning-snackbar']
           });
-          
+
           this.dialogRef.close({ shouldRefresh: true });
         }
       );
 
     } else if (this.existeCombinacion) {
-      this.snackBar.open('❌ Esta combinación ya existe en el plan', '', { 
+      this.snackBar.open('❌ Esta combinación ya existe en el plan', '', {
         duration: 3000,
         panelClass: ['error-snackbar']
       });
     }
   }
-} 
+}
 
 // Componente Modal para Seleccionar Acción (Eliminar o Editar)
 @Component({
@@ -2277,7 +2267,7 @@ export class ModalAccionesMedioComponent {
   constructor(
     private dialogRef: MatDialogRef<ModalAccionesMedioComponent>,
     @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
+  ) { }
 
   seleccionarAccion(accion: 'editar' | 'eliminar'): void {
     this.dialogRef.close({ accion });
@@ -2454,7 +2444,7 @@ export class ModalEditarMedioComponent implements OnInit {
   ngOnInit(): void {
     this.proveedoresDisponibles = this.data.proveedoresDisponibles || [];
     this.cargarMediosExistentes();
-    
+
     // Suscribirse a cambios en el formulario para validar duplicados
     this.editarForm.valueChanges.subscribe(() => {
       this.validarCombinacionDuplicada();
@@ -2474,15 +2464,15 @@ export class ModalEditarMedioComponent implements OnInit {
 
   private validarCombinacionDuplicada(): void {
     const valores = this.editarForm.value;
-    
+
     if (valores.proveedor && valores.tarifa > 0) {
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
-      
+
       if (proveedorSeleccionado) {
         // Verificar si existe la combinación exacta (excluyendo el medio actual)
-        this.existeCombinacion = this.mediosExistentes.some(me => 
-          me.medio === this.data.medio.nombre && 
-          me.proveedor === proveedorSeleccionado.VENDOR && 
+        this.existeCombinacion = this.mediosExistentes.some(me =>
+          me.medio === this.data.medio.nombre &&
+          me.proveedor === proveedorSeleccionado.VENDOR &&
           Math.abs(me.tarifa - valores.tarifa) < 0.01 &&
           // Excluir el medio actual de la validación
           !(me.proveedor === this.data.medio.proveedor && me.tarifa === this.data.medio.tarifa)
@@ -2497,18 +2487,18 @@ export class ModalEditarMedioComponent implements OnInit {
     if (this.editarForm.valid && !this.existeCombinacion) {
       const valores = this.editarForm.value;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
-      
+
       // Buscar pauta en localStorage para obtener planMedioItemId
       const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-      const pautaIndex = pautas.findIndex((pauta: any) => 
-        pauta.planId === this.data.planId && 
-        pauta.medio === this.data.medio.nombre && 
+      const pautaIndex = pautas.findIndex((pauta: any) =>
+        pauta.planId === this.data.planId &&
+        pauta.medio === this.data.medio.nombre &&
         pauta.proveedor === this.data.medio.proveedor
       );
-      
+
       if (pautaIndex !== -1) {
         const pauta = pautas[pautaIndex];
-        
+
         // Si tiene planMedioItemId, actualizar en el backend
         if (pauta.planMedioItemId) {
           const actualizarRequest: ActualizarPlanMedioItemRequest = {
@@ -2531,44 +2521,44 @@ export class ModalEditarMedioComponent implements OnInit {
           this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
             (response: PlanMedioItemBackend) => {
               console.log('✅ PlanMedioItem actualizado en backend:', response);
-              
+
               // Actualizar también en localStorage
               this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado, response);
-              
-              this.snackBar.open('✅ Medio actualizado correctamente', '', { 
+
+              this.snackBar.open('✅ Medio actualizado correctamente', '', {
                 duration: 2000,
                 panelClass: ['success-snackbar']
               });
-              
+
               this.dialogRef.close({ shouldRefresh: true });
             },
             (error: any) => {
               console.error('❌ Error actualizando PlanMedioItem en backend:', error);
-              
+
               // Fallback: actualizar solo en localStorage
               this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
-              
-              this.snackBar.open('⚠️ Medio actualizado (solo local - error en backend)', '', { 
+
+              this.snackBar.open('⚠️ Medio actualizado (solo local - error en backend)', '', {
                 duration: 3000,
                 panelClass: ['warning-snackbar']
               });
-              
+
               this.dialogRef.close({ shouldRefresh: true });
             }
           );
         } else {
           // No tiene planMedioItemId, actualizar solo en localStorage
           this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
-          
-          this.snackBar.open('✅ Medio actualizado correctamente (solo local)', '', { 
+
+          this.snackBar.open('✅ Medio actualizado correctamente (solo local)', '', {
             duration: 2000,
             panelClass: ['success-snackbar']
           });
-          
+
           this.dialogRef.close({ shouldRefresh: true });
         }
       } else {
-        this.snackBar.open('❌ Error: No se pudo encontrar el medio para actualizar', '', { 
+        this.snackBar.open('❌ Error: No se pudo encontrar el medio para actualizar', '', {
           duration: 3000,
           panelClass: ['error-snackbar']
         });
@@ -2578,25 +2568,25 @@ export class ModalEditarMedioComponent implements OnInit {
 
   private actualizarPautaEnLocalStorage(pautaIndex: number, valores: any, proveedorSeleccionado: any, response?: PlanMedioItemBackend): void {
     const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    
+
     // Actualizar proveedor y tarifa
     pautas[pautaIndex].proveedor = proveedorSeleccionado ? proveedorSeleccionado.VENDOR : this.data.medio.proveedor;
     pautas[pautaIndex].proveedorId = valores.proveedor;
     pautas[pautaIndex].datos = pautas[pautaIndex].datos || {};
     pautas[pautaIndex].datos.tarifa = Number(valores.tarifa);
-    
+
     // Recalcular valores basados en la nueva tarifa
     const totalSpots = pautas[pautaIndex].totalSpots || 1;
     pautas[pautaIndex].valorTotal = totalSpots * Number(valores.tarifa);
     pautas[pautaIndex].valorNeto = totalSpots * Number(valores.tarifa);
-    
+
     // Actualizar fechas
     if (response) {
       pautas[pautaIndex].fechaModificacion = response.fechaModificacion;
     } else {
       pautas[pautaIndex].fechaModificacion = new Date().toISOString();
     }
-    
+
     localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
   }
 }
@@ -2756,70 +2746,70 @@ export class ModalConfirmarEliminacionComponent {
     private dialogRef: MatDialogRef<ModalConfirmarEliminacionComponent>,
     private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
+  ) { }
 
   confirmarEliminacion(): void {
     // Buscar pauta en localStorage para obtener planMedioItemId
     const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const pautaAEliminar = pautas.find((pauta: any) => 
-      pauta.planId === this.data.planId && 
-      pauta.medio === this.data.medio.nombre && 
+    const pautaAEliminar = pautas.find((pauta: any) =>
+      pauta.planId === this.data.planId &&
+      pauta.medio === this.data.medio.nombre &&
       pauta.proveedor === this.data.medio.proveedor
     );
-    
+
     if (pautaAEliminar && pautaAEliminar.planMedioItemId) {
       // Eliminar del backend si tiene planMedioItemId
       console.log('📤 Eliminando PlanMedioItem del backend ID:', pautaAEliminar.planMedioItemId);
-      
+
       this.backendMediosService.eliminarPlanMedioItem(pautaAEliminar.planMedioItemId).subscribe(
         (response) => {
           console.log('✅ PlanMedioItem eliminado del backend:', response);
-          
+
           // También eliminar de localStorage
           this.eliminarDeLocalStorage();
-          
-          this.snackBar.open('✅ Medio eliminado correctamente', '', { 
+
+          this.snackBar.open('✅ Medio eliminado correctamente', '', {
             duration: 2000,
             panelClass: ['success-snackbar']
           });
-          
+
           this.dialogRef.close({ shouldRefresh: true });
         },
         (error: any) => {
           console.error('❌ Error eliminando PlanMedioItem del backend:', error);
-          
+
           // Fallback: eliminar solo de localStorage
           this.eliminarDeLocalStorage();
-          
-          this.snackBar.open('⚠️ Medio eliminado (solo local - error en backend)', '', { 
+
+          this.snackBar.open('⚠️ Medio eliminado (solo local - error en backend)', '', {
             duration: 3000,
             panelClass: ['warning-snackbar']
           });
-          
+
           this.dialogRef.close({ shouldRefresh: true });
         }
       );
     } else {
       // No tiene planMedioItemId, eliminar solo de localStorage
       this.eliminarDeLocalStorage();
-      
-      this.snackBar.open('✅ Medio eliminado correctamente (solo local)', '', { 
+
+      this.snackBar.open('✅ Medio eliminado correctamente (solo local)', '', {
         duration: 2000,
         panelClass: ['success-snackbar']
       });
-      
+
       this.dialogRef.close({ shouldRefresh: true });
     }
   }
 
   private eliminarDeLocalStorage(): void {
     const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const pautasFiltradas = pautas.filter((pauta: any) => 
-      !(pauta.planId === this.data.planId && 
-        pauta.medio === this.data.medio.nombre && 
+    const pautasFiltradas = pautas.filter((pauta: any) =>
+      !(pauta.planId === this.data.planId &&
+        pauta.medio === this.data.medio.nombre &&
         pauta.proveedor === this.data.medio.proveedor)
     );
-    
+
     localStorage.setItem('respuestasPautas', JSON.stringify(pautasFiltradas));
   }
 } 
