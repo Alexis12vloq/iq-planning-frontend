@@ -50,8 +50,8 @@ export class BackendMediosService {
   // Actualizar un PlanMedioItem existente
   actualizarPlanMedioItem(request: ActualizarPlanMedioItemRequest): Observable<PlanMedioItemBackend> {
     const url = `${this.baseUrl}/api/PlanMedioItem/update-json`;
-    console.log('🔄 PUT PlanMedioItem:', url, request);
-    return this.http.put<PlanMedioItemBackend>(url, request);
+    console.log('🔄 PATCH PlanMedioItem:', url, request);
+    return this.http.patch<PlanMedioItemBackend>(url, request);
   }
 
   // Eliminar un PlanMedioItem
