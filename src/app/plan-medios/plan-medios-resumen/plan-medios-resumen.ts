@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, Inject } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, Inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -85,7 +85,8 @@ export class PlanMediosResumen implements OnInit {
     private router: Router,
     private dialog: MatDialog,
     private plantillaService: PlantillaPautaService,
-    private backendMediosService: BackendMediosService
+    private backendMediosService: BackendMediosService,
+    private cdr: ChangeDetectorRef
   ) {
     const navigation = this.router.getCurrentNavigation();
     const planData = navigation?.extras?.state?.['planData'] as any;
@@ -172,6 +173,9 @@ export class PlanMediosResumen implements OnInit {
   }
 
   prepararDataSource() {
+    // Limpiar dataSource anterior
+    this.dataSource = [];
+    
     // Agrupar medios por nombre de medio
     const mediosAgrupados = new Map<string, MedioPlan[]>();
 
@@ -198,10 +202,13 @@ export class PlanMediosResumen implements OnInit {
 
       // Agregar filas para cada proveedor del medio
       mediosDelGrupo.forEach(medio => {
+        // Crear copia profunda del medio para evitar referencias compartidas
+        const medioCopy = this.crearCopiaMedio(medio);
+
         // Fila del proveedor
         filas.push({
           tipo: 'nombre',
-          medio: medio,
+          medio: medioCopy,
           nombre: mediosDelGrupo.length > 1 ? `  ${medio.proveedor || 'Sin proveedor'}` : medio.nombre,
           semanas: medio.semanas,
           soi: medio.soi
@@ -210,23 +217,44 @@ export class PlanMediosResumen implements OnInit {
         // Fila de spots del proveedor
         filas.push({
           tipo: 'spots',
-          medio: medio,
+          medio: medioCopy,
           nombre: 'SPOTS'
         });
 
         // Fila de inversiones del proveedor
         filas.push({
           tipo: 'inversiones',
-          medio: medio,
+          medio: medioCopy,
           nombre: 'INVERSIONES'
         });
       });
     });
 
-    this.dataSource = filas;
+    this.dataSource = [...filas]; // Crear nueva referencia del array
 
     // Establecer variable CSS para el número de semanas
     this.establecerVariableCSSNumSemanas();
+    
+    // Forzar detección de cambios
+    this.cdr.detectChanges();
+    
+    console.log('📊 DataSource preparado con', this.dataSource.length, 'filas');
+  }
+
+  // Método auxiliar para crear copias profundas de medios
+  private crearCopiaMedio(medio: MedioPlan): MedioPlan {
+    return {
+      nombre: medio.nombre,
+      proveedor: medio.proveedor,
+      proveedorId: medio.proveedorId,
+      salidas: medio.salidas,
+      valorNeto: medio.valorNeto,
+      soi: medio.soi,
+      semanas: [...(medio.semanas || [])],
+      tarifa: medio.tarifa,
+      spotsPorFecha: medio.spotsPorFecha ? { ...medio.spotsPorFecha } : {},
+      planMedioItemId: medio.planMedioItemId
+    };
   }
 
   private establecerVariableCSSNumSemanas(): void {
@@ -547,10 +575,26 @@ export class PlanMediosResumen implements OnInit {
     dialogRef.afterClosed().subscribe((result: any) => {
       if (result && result.shouldRefresh) {
         console.log('✅ Medio editado, recargando resumen');
+        
+        // Recargar datos desde el backend
         this.recargarResumen();
-        // NO marcar cambios pendientes para edición de medio
-        // porque es guardado automático al actualizar tarifa
-        // this.cambiosPendientes = true;
+        
+        // Forzar actualización inmediata de la UI múltiples veces
+        setTimeout(() => {
+          this.actualizarUIInmediata();
+          console.log('✅ Primera actualización UI completada');
+        }, 100);
+        
+        setTimeout(() => {
+          this.actualizarUIInmediata();
+          console.log('✅ Segunda actualización UI completada');
+        }, 300);
+        
+        setTimeout(() => {
+          this.prepararDataSource();
+          this.cdr.detectChanges();
+          console.log('✅ Actualización final UI completada');
+        }, 500);
       }
     });
   }
@@ -571,6 +615,9 @@ export class PlanMediosResumen implements OnInit {
         this.recargarResumen();
         // Marcar cambios pendientes tras eliminar medio
         this.cambiosPendientes = true;
+        
+        // Forzar actualización inmediata de la UI
+        this.actualizarUIInmediata();
       }
     });
   }
@@ -608,6 +655,9 @@ export class PlanMediosResumen implements OnInit {
         this.recargarResumen();
         // Marcar cambios pendientes tras agregar medio
         this.cambiosPendientes = true;
+        
+        // Forzar actualización inmediata de la UI
+        this.actualizarUIInmediata();
       }
     });
   }
@@ -624,12 +674,7 @@ export class PlanMediosResumen implements OnInit {
       dialogRef.afterClosed().subscribe((result: any) => {
         if (result && result.accion === 'guardar') {
           this.guardarResumen();
-          const checkGuardado = setInterval(() => {
-            if (!this.guardandoResumen) {
-              clearInterval(checkGuardado);
-              this.ejecutarNavegacionFlowChart();
-            }
-          }, 100);
+          this.ejecutarNavegacionFlowChart();
         } else if (result && result.accion === 'continuar') {
           this.cambiosPendientes = false;
           this.ejecutarNavegacionFlowChart();
@@ -718,13 +763,7 @@ export class PlanMediosResumen implements OnInit {
         if (result && result.accion === 'guardar') {
           // Guardar primero y luego navegar
           this.guardarResumen();
-          // Esperar a que termine de guardar
-          const checkGuardado = setInterval(() => {
-            if (!this.guardandoResumen) {
-              clearInterval(checkGuardado);
-              this.ejecutarNavegacion(ruta, stateData);
-            }
-          }, 100);
+          this.ejecutarNavegacion(ruta, stateData);
         } else if (result && result.accion === 'continuar') {
           // Continuar sin guardar
           this.cambiosPendientes = false;
@@ -844,6 +883,9 @@ export class PlanMediosResumen implements OnInit {
           // Log de éxito sin notificación que pueda distraer
           console.log(`✅ Cargados exitosamente ${planMedioItems.length} medios desde servidor`);
           this.cargandoDatos = false;
+          
+          // Forzar detección de cambios después de cargar datos
+          this.cdr.detectChanges();
         } else {
           // Plan existe pero sin medios - crear período vacío para que funcione el resumen
           const periodoVacio = this.crearPeriodoVacio(this.resumenPlan.fechaInicio, this.resumenPlan.fechaFin);
@@ -857,6 +899,9 @@ export class PlanMediosResumen implements OnInit {
           // Log informativo sin notificación
           console.log('ℹ️ Plan sin medios cargado - listo para agregar medios');
           this.cargandoDatos = false;
+          
+          // Forzar detección de cambios
+          this.cdr.detectChanges();
         }
       },
       (error) => {
@@ -873,6 +918,9 @@ export class PlanMediosResumen implements OnInit {
         
         console.error('❌ Error cargando datos del servidor - Plan configurado para agregar medios');
         this.cargandoDatos = false;
+        
+        // Forzar detección de cambios
+        this.cdr.detectChanges();
       }
     );
   }
@@ -1050,10 +1098,18 @@ export class PlanMediosResumen implements OnInit {
 
       console.log('🔄 Recargando datos desde servidor...');
       this.cargarDatosDesdeBackend(planNumerico, version);
+      
+      // Forzar detección de cambios después de recargar
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        console.log('✅ UI actualizada después de recargar resumen');
+      }, 100);
     } else {
       console.error('❌ No hay ID de plan para recargar');
     }
   }
+
+
 
   // Método para guardar todos los cambios del resumen
   guardarResumen(): void {
@@ -1163,6 +1219,9 @@ export class PlanMediosResumen implements OnInit {
     // Marcar que hay cambios pendientes
     this.cambiosPendientes = true;
 
+    // Forzar detección de cambios inmediata
+    this.cdr.detectChanges();
+
     // *** GUARDADO AUTOMÁTICO DESHABILITADO ***
     // Ahora solo se guarda cuando el usuario presiona "Guardar Resumen"
     // if (medio.planMedioItemId) {
@@ -1257,6 +1316,31 @@ export class PlanMediosResumen implements OnInit {
 
     // Actualizar el dataSource para reflejar los cambios
     this.prepararDataSource();
+    
+    // Forzar detección de cambios para actualizar la UI
+    this.cdr.detectChanges();
+  }
+
+  // Método para forzar actualización inmediata de la UI
+  private actualizarUIInmediata(): void {
+    // Recalcular totales del período
+    this.actualizarTotalesPeriodo();
+    
+    // Regenerar completamente el dataSource con datos actualizados
+    this.prepararDataSource();
+    
+    // Forzar múltiples ciclos de detección de cambios
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      this.prepararDataSource(); // Regenerar una vez más
+      this.cdr.detectChanges();
+      console.log('✅ UI actualizada inmediatamente');
+    }, 50);
+    
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      console.log('✅ UI actualizada - segundo ciclo');
+    }, 200);
   }
 
 
@@ -1315,6 +1399,18 @@ export class PlanMediosResumen implements OnInit {
       horizontalPosition: 'right',
       verticalPosition: 'bottom'
     });
+  }
+
+  // Método para debugging - mostrar estado actual del resumen
+  mostrarEstadoResumen(): void {
+    console.log('📊 === ESTADO ACTUAL DEL RESUMEN ===');
+    console.log('✅ Plan ID:', this.planId);
+    console.log('✅ Resumen Plan:', this.resumenPlan);
+    console.log('✅ Período Seleccionado:', this.periodoSeleccionado);
+    console.log('✅ Medios en período:', this.periodoSeleccionado?.medios || []);
+    console.log('✅ DataSource:', this.dataSource);
+    console.log('✅ Cambios Pendientes:', this.cambiosPendientes);
+    console.log('📊 === FIN ESTADO RESUMEN ===');
   }
 
   // Método para mostrar información sobre la integración con el backend
@@ -2414,6 +2510,7 @@ export class ModalEditarMedioComponent implements OnInit {
 
       // Buscar pauta en localStorage usando planMedioItemId como identificador principal
       const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      
       const pautaIndex = pautas.findIndex((pauta: any) => {
         // Priorizar búsqueda por planMedioItemId si está disponible
         if (this.data.medio.planMedioItemId && pauta.planMedioItemId) {
