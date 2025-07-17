@@ -602,23 +602,22 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       )
       .subscribe({
         next: (response: { items: PlanMediosConDetalles[], totalCount: number, pageSize: number, totalPages: number, page: number }) => {
-          console.log('Datos obtenidos del backend:', response);
           const versiones = response.items
         .filter(r => r.numeroPlan === row.numeroPlan)
         .map(plan => ({
-          id: plan.idPlan,
+          id: plan.idPlan.toString(),
           numeroPlan: plan.numeroPlan,
-          version: plan.version,
-          pais: plan.idPaisFacturacion,
-          anunciante: plan.idClienteAnunciante,
-          cliente: plan.idClienteAnunciante,
-          marca: plan.idMarca,
-          producto: plan.idProducto,
-          fechaInicio: plan.fechaInicio,
-          fechaFin: plan.fechaFin,
-          campania: plan.campania,
-          fechaCreacion: plan.fechaCreacion,
-          estado: plan.idEstadoRegistro,
+          version: plan.version.toString(),
+          pais: plan.paisFacturacionDescripcion || 'N/A',
+          anunciante: plan.clienteAnuncianteDescripcion || 'N/A',
+          cliente: plan.clienteFacturacionDescripcion || this.obtenerNombreCliente(plan.idClienteFacturacion),
+          marca: plan.marcaDescripcion || this.obtenerNombreMarca(plan.idMarca),
+          producto: plan.productoDescripcion || this.obtenerNombreProducto(plan.idProducto),
+          fechaInicio: typeof plan.fechaInicio === 'string' ? plan.fechaInicio.slice(0, 10) : plan.fechaInicio,
+          fechaFin: typeof plan.fechaFin === 'string' ? plan.fechaFin.slice(0, 10) : plan.fechaFin,
+          campania: plan.campania || 'N/A',
+          fechaCreacion: typeof plan.fechaCreacion === 'string' ? plan.fechaCreacion.slice(0, 10) : plan.fechaCreacion,
+          estado: plan.idEstadoRegistro === 1 ? 'Activo' : 'Inactivo',
           // IDs para mantener consistencia
           idPaisFacturacion: plan.idPaisFacturacion,
           idClienteAnunciante: plan.idClienteAnunciante,
@@ -626,8 +625,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
           idMarca: plan.idMarca,
           idProducto: plan.idProducto,
           idEstadoRegistro: plan.idEstadoRegistro
-        })
-      );
+        }));
 
         const dialogRef = this.dialog.open(VersionesPlanDialog, {
           width: '85vw',
@@ -1210,10 +1208,20 @@ export class VersionesPlanDialog implements AfterViewInit {
     
     // Seleccionar automáticamente el registro correspondiente al de la grilla principal
     if (data.selectedRow) {
-      const foundRow = data.versiones.find(v => v.id === data.selectedRow.id);
+      const foundRow = data.versiones.find(v => 
+        v.id === data.selectedRow.id && 
+        v.version === data.selectedRow.version
+      );
+      
       if (foundRow) {
         this.selectedRow = foundRow;
+      } else {
+        // Si no se encuentra por ID y version, buscar solo por ID
+        const foundById = data.versiones.find(v => v.id === data.selectedRow.id);
+        this.selectedRow = foundById || data.versiones[0];
       }
+    } else {
+      this.selectedRow = data.versiones[0];
     }
     
     
@@ -1341,17 +1349,20 @@ export class VersionesPlanDialog implements AfterViewInit {
     const planData = {
       id: row.id,
       numeroPlan: row.numeroPlan,
-      // version: row.version, // Temporalmente comentado
+      version: row.version,
       cliente: row.cliente,
       producto: row.producto,
       campana: row.campania,
       fechaInicio: row.fechaInicio,
       fechaFin: row.fechaFin,
-      // tipoIngresoPlan: row.tipoIngresoPlan // Temporalmente comentado
+      idPaisFacturacion: row.idPaisFacturacion,
+      idClienteAnunciante: row.idClienteAnunciante,
+      idClienteFacturacion: row.idClienteFacturacion,
+      idMarca: row.idMarca,
+      idProducto: row.idProducto,
+      idEstadoRegistro: row.idEstadoRegistro
     };
     
-    // Validar el tipo de plan para redirigir a la ruta correcta
-    // Temporalmente deshabilitado - redirigir siempre al resumen
     this.router.navigate(['/plan-medios-resumen'], { 
       state: { planData } 
     });
@@ -1368,6 +1379,9 @@ export class VersionesPlanDialog implements AfterViewInit {
    // --- NUEVO: Copiar plan ---
   copiarPlan() {
     if (!this.selectedRow) return;
+    
+    console.log('📋 Copiando plan con datos de la versión seleccionada:', this.selectedRow);
+    
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Copiar plan',
@@ -1405,6 +1419,9 @@ export class VersionesPlanDialog implements AfterViewInit {
 
   editarPlan() {
     if (!this.selectedRow) return;
+    
+    console.log('✏️ Editando plan con datos de la versión seleccionada:', this.selectedRow);
+    
     this.dialogRef.close(true);
     this.router.navigate(['/plan-medios-editar', this.selectedRow.id]);
   }
