@@ -639,9 +639,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
           panelClass: 'centered-modal'
         });
         dialogRef.afterClosed().subscribe(result => {
-          if (result === true) {
-            this.recargarTabla(); // <-- Recarga el listado general
-          }
+          this.recargarTabla(); // <-- Recarga el listado general
         });
         },
         error: (error) => {
@@ -1414,31 +1412,53 @@ export class VersionesPlanDialog implements AfterViewInit {
     console.log(id);
     this.isLoading = true;
     setTimeout(() => {
-      // Recargar desde el servicio backend en lugar de localStorage
-      // Por ahora mantenemos la misma lógica, pero debería conectarse al backend
-      const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-      const versiones = planesGuardados
-        .filter(p => p.numeroPlan === id)
+      this.planMediosService.consultarPaginadoWithDetailsPlan( Number(id) ,1, 10)
+      .pipe(
+        retry(2), // Reintentar 2 veces en caso de error
+        catchError((error) => {
+          return of([]);
+        })
+      )
+      .subscribe({
+        next: (response: { items: PlanMediosConDetalles[], totalCount: number, pageSize: number, totalPages: number, page: number }) => {
+          console.log('Datos obtenidos del backend:', response);
+        const versiones = response.items
+        .filter(r => r.numeroPlan === id)
         .map(plan => ({
-          id: plan.id,
+          id: plan.idPlan,
           numeroPlan: plan.numeroPlan,
           version: plan.version,
-          pais: plan.paisFacturacion,
-          anunciante: plan.clienteAnunciante,
-          cliente: plan.clienteFueActuacion,
-          marca: plan.marca,
-          producto: plan.producto,
+          pais: plan.idPaisFacturacion,
+          anunciante: plan.idClienteAnunciante,
+          cliente: plan.idClienteAnunciante,
+          marca: plan.idMarca,
+          producto: plan.idProducto,
           fechaInicio: plan.fechaInicio,
           fechaFin: plan.fechaFin,
-          campania: plan.campana,
-          fechaCreacion: plan.fechaCreacion || new Date().toISOString().slice(0, 10),
-          estado: plan.estado ?? false
-        }))
-        .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
-        
-      this.datosOriginales = versiones; // Actualizar datos originales
-      this.dataSource.data = versiones;
-      this.isLoading = false;
+          campania: plan.campania,
+          fechaCreacion: plan.fechaCreacion,
+          estado: plan.idEstadoRegistro,
+          // IDs para mantener consistencia
+          idPaisFacturacion: plan.idPaisFacturacion,
+          idClienteAnunciante: plan.idClienteAnunciante,
+          idClienteFacturacion: plan.idClienteFacturacion,
+          idMarca: plan.idMarca,
+          idProducto: plan.idProducto,
+          idEstadoRegistro: plan.idEstadoRegistro
+        })
+      );
+        this.dataSource.data = versiones;
+        this.isLoading = false;
+       
+       
+        },
+        error: (error) => {
+          // Este caso no debería ocurrir por el catchError, pero por seguridad
+          console.error('Error no manejado:', error);
+          this.isLoading = false;
+        }
+      });
+     
     }, 400); // Simula carga
   }
 
