@@ -857,7 +857,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
           }, 100);
           
           if (response.items.length > 0) {
-            this.snackBar.open(`Se cargaron ${response.items.length} registros del backend`, '', { duration: 2000 });
+            //this.snackBar.open(`Se cargaron ${response.items.length} registros del backend`, '', { duration: 2000 });
           } else {
             this.snackBar.open('No se encontraron registros en el backend', '', { duration: 2000 });
           }
