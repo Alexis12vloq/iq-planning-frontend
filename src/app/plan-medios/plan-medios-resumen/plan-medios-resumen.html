@@ -37,10 +37,16 @@
             <mat-icon>add_circle</mat-icon> Agregar Medio
           </button>
           
-          <!-- Botón temporal para debugging -->
-          <button mat-raised-button class="action-button debug-button" (click)="recargarResumen()" style="background-color: #f44336; color: white;" [disabled]="true">
-            <mat-icon>refresh</mat-icon> Recargar Datos
+          <!-- Botón para guardar resumen -->
+          <button mat-raised-button class="action-button save-button" 
+                  (click)="guardarResumen()" 
+                  [disabled]="!cambiosPendientes || guardandoResumen"
+                  [class.save-pending]="cambiosPendientes"
+                  [class.saving]="guardandoResumen">
+            <mat-icon>{{ guardandoResumen ? 'hourglass_empty' : 'save' }}</mat-icon> 
+            {{ guardandoResumen ? 'Guardando...' : 'Guardar Resumen' }}
           </button>
+          
           <button mat-raised-button class="action-button orange-button" (click)="onIrAFlowChart()" [disabled]="true">
             <mat-icon>analytics</mat-icon> 
             Ir a FlowChart

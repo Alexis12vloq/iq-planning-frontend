@@ -76,6 +76,10 @@ export class PlanMediosResumen implements OnInit {
   mesActualIndex: number = 0;
   mesActual: { nombre: string, anio: number, fechaInicio: string, fechaFin: string } | null = null;
 
+  // Control de cambios pendientes
+  cambiosPendientes: boolean = false;
+  guardandoResumen: boolean = false;
+
   constructor(
     private snackBar: MatSnackBar,
     private router: Router,
@@ -480,8 +484,8 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onNuevaPauta(): void {
-    const planData = {
-      id: this.planId, // Usar el ID almacenado
+    this.navegarConConfirmacion('/plan-medios-nueva-pauta', {
+      id: this.planId,
       numeroPlan: this.resumenPlan.numeroPlan,
       version: this.resumenPlan.version,
       cliente: this.resumenPlan.cliente,
@@ -489,18 +493,12 @@ export class PlanMediosResumen implements OnInit {
       campana: this.resumenPlan.campana,
       fechaInicio: this.resumenPlan.fechaInicio,
       fechaFin: this.resumenPlan.fechaFin
-    };
-
-    console.log('🔄 Navegando a nueva pauta con plan data:', planData);
-
-    this.router.navigate(['/plan-medios-nueva-pauta'], {
-      state: { planData }
     });
   }
 
   onEditarMedio(medio: any): void {
-    const planData = {
-      id: this.planId, // Usar el ID almacenado
+    this.navegarConConfirmacion('/plan-medios-nueva-pauta', {
+      id: this.planId,
       numeroPlan: this.resumenPlan.numeroPlan,
       version: this.resumenPlan.version,
       cliente: this.resumenPlan.cliente,
@@ -508,13 +506,7 @@ export class PlanMediosResumen implements OnInit {
       campana: this.resumenPlan.campana,
       fechaInicio: this.resumenPlan.fechaInicio,
       fechaFin: this.resumenPlan.fechaFin,
-      medioSeleccionado: medio.nombre // Pasar el medio seleccionado
-    };
-
-    console.log('🔄 Navegando a nueva pauta para editar medio:', medio.nombre, 'con plan data:', planData);
-
-    this.router.navigate(['/plan-medios-nueva-pauta'], {
-      state: { planData }
+      medioSeleccionado: medio.nombre
     });
   }
 
@@ -556,6 +548,8 @@ export class PlanMediosResumen implements OnInit {
       if (result && result.shouldRefresh) {
         console.log('✅ Medio editado, recargando resumen');
         this.recargarResumen();
+        // Marcar cambios pendientes tras editar medio
+        this.cambiosPendientes = true;
       }
     });
   }
@@ -574,6 +568,8 @@ export class PlanMediosResumen implements OnInit {
       if (result && result.shouldRefresh) {
         console.log('✅ Medio eliminado, recargando resumen');
         this.recargarResumen();
+        // Marcar cambios pendientes tras eliminar medio
+        this.cambiosPendientes = true;
       }
     });
   }
@@ -609,11 +605,41 @@ export class PlanMediosResumen implements OnInit {
       if (result && result.shouldRefresh) {
         console.log('✅ Medio agregado, recargando resumen');
         this.recargarResumen();
+        // Marcar cambios pendientes tras agregar medio
+        this.cambiosPendientes = true;
       }
     });
   }
 
   onIrAFlowChart(): void {
+    // Aplicar confirmación si hay cambios pendientes
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: '/flow-chart' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          const checkGuardado = setInterval(() => {
+            if (!this.guardandoResumen) {
+              clearInterval(checkGuardado);
+              this.ejecutarNavegacionFlowChart();
+            }
+          }, 100);
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarNavegacionFlowChart();
+        }
+      });
+    } else {
+      this.ejecutarNavegacionFlowChart();
+    }
+  }
+
+  private ejecutarNavegacionFlowChart(): void {
     // Preparar datos para enviar al flowchart
     const datosFlowChart = {
       planId: this.planId,
@@ -675,7 +701,53 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onRegresar(): void {
-    this.router.navigate(['/plan-medios-consulta']);
+    this.navegarConConfirmacion('/plan-medios-consulta');
+  }
+
+  // Método para navegar con confirmación de cambios pendientes
+  navegarConConfirmacion(ruta: string, stateData?: any): void {
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          // Guardar primero y luego navegar
+          this.guardarResumen();
+          // Esperar a que termine de guardar
+          const checkGuardado = setInterval(() => {
+            if (!this.guardandoResumen) {
+              clearInterval(checkGuardado);
+              this.ejecutarNavegacion(ruta, stateData);
+            }
+          }, 100);
+        } else if (result && result.accion === 'continuar') {
+          // Continuar sin guardar
+          this.cambiosPendientes = false;
+          this.ejecutarNavegacion(ruta, stateData);
+        }
+        // Si cancela, no hacer nada
+      });
+    } else {
+      // No hay cambios pendientes, navegar directamente
+      this.ejecutarNavegacion(ruta, stateData);
+    }
+  }
+
+  private ejecutarNavegacion(ruta: string, stateData?: any): void {
+    if (stateData) {
+      if (ruta === '/plan-medios-nueva-pauta') {
+        console.log('🔄 Navegando a nueva pauta con plan data:', stateData);
+        this.router.navigate([ruta], { state: { planData: stateData } });
+      } else {
+        this.router.navigate([ruta], { state: stateData });
+      }
+    } else {
+      this.router.navigate([ruta]);
+    }
   }
 
   async exportarPDF() {
@@ -982,6 +1054,76 @@ export class PlanMediosResumen implements OnInit {
     }
   }
 
+  // Método para guardar todos los cambios del resumen
+  guardarResumen(): void {
+    if (!this.cambiosPendientes) {
+      this.snackBar.open('ℹ️ No hay cambios pendientes para guardar', '', {
+        duration: 2000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['info-snackbar']
+      });
+      return;
+    }
+
+    this.guardandoResumen = true;
+    let mediosActualizados = 0;
+    let totalMedios = 0;
+
+    // Contar medios con cambios
+    this.periodoSeleccionado.medios.forEach(medio => {
+      if (medio.planMedioItemId) {
+        totalMedios++;
+      }
+    });
+
+    if (totalMedios === 0) {
+      this.snackBar.open('ℹ️ No hay medios para guardar', '', {
+        duration: 2000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['info-snackbar']
+      });
+      this.guardandoResumen = false;
+      return;
+    }
+
+    console.log(`💾 Guardando resumen: ${totalMedios} medios por actualizar`);
+
+    // Guardar todos los medios
+    this.periodoSeleccionado.medios.forEach(medio => {
+      if (medio.planMedioItemId) {
+        this.actualizarSpotsEnBackend(medio).then(() => {
+          mediosActualizados++;
+          if (mediosActualizados === totalMedios) {
+            // Todos los medios actualizados
+            this.guardandoResumen = false;
+            this.cambiosPendientes = false;
+            this.snackBar.open('✅ Resumen guardado exitosamente', '', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['success-snackbar']
+            });
+            console.log('✅ Todos los medios actualizados correctamente');
+          }
+        }).catch((error) => {
+          console.error('❌ Error guardando medio:', medio.nombre, error);
+          mediosActualizados++;
+          if (mediosActualizados === totalMedios) {
+            this.guardandoResumen = false;
+            this.snackBar.open('⚠️ Resumen guardado con algunos errores', '', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['warning-snackbar']
+            });
+          }
+        });
+      }
+    });
+  }
+
   // Método para actualizar spots y recalcular inversiones
   onSpotsChange(medio: MedioPlan, semanaIndex: number, event: Event): void {
     const target = event.target as HTMLInputElement;
@@ -1017,55 +1159,62 @@ export class PlanMediosResumen implements OnInit {
     // Actualizar totales del período
     this.actualizarTotalesPeriodo();
 
-    // Actualizar en el backend si tiene planMedioItemId
-    if (medio.planMedioItemId) {
-      this.actualizarSpotsEnBackend(medio);
-    }
+    // Marcar que hay cambios pendientes
+    this.cambiosPendientes = true;
+
+    // *** GUARDADO AUTOMÁTICO DESHABILITADO ***
+    // Ahora solo se guarda cuando el usuario presiona "Guardar Resumen"
+    // if (medio.planMedioItemId) {
+    //   this.actualizarSpotsEnBackend(medio);
+    // }
 
     // Eliminar snackBar para mantener el foco en el input
     // Solo console.log para debugging
     console.log(`✅ Spots actualizados para ${medio.nombre} ${semanaActual.nombre} (${fechaClave}): ${nuevoSpots}`);
     console.log(`✅ Nueva inversión total: ${medio.valorNeto}`);
     console.log(`✅ Spots por fecha:`, medio.spotsPorFecha);
+    console.log(`⚠️ Cambios pendientes: ${this.cambiosPendientes}`);
   }
 
   // Método para actualizar spots en el backend
-  private actualizarSpotsEnBackend(medio: MedioPlan): void {
-    if (!medio.planMedioItemId || !this.planId) {
-      console.log('⚠️ No se puede actualizar en backend: falta planMedioItemId o planId');
-      return;
-    }
-
-    const dataJson: SpotsPorFechaData = {
-      spotsPorFecha: medio.spotsPorFecha || {},
-      totalSpots: medio.salidas,
-      valorTotal: medio.valorNeto
-    };
-
-    const actualizarRequest: ActualizarPlanMedioItemRequest = {
-      planMedioItemId: medio.planMedioItemId,
-      planMedioId: Number(this.planId),
-      version: this.resumenPlan.version || 1,
-      medioId: 1, // TODO: Obtener el medioId real desde el backend
-      proveedorId: Number(medio.proveedorId),
-      tarifa: medio.tarifa || 0,
-      dataJson: JSON.stringify(dataJson),
-      usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
-    };
-
-    console.log('📤 Actualizando spots en backend:', actualizarRequest);
-
-    this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
-      (response: PlanMedioItemBackend) => {
-        console.log('✅ Spots actualizados en backend:', response);
-        // Eliminamos snackBar para mantener el foco en el input
-        // Solo logging para confirmar sincronización
-      },
-      (error) => {
-        console.error('❌ Error actualizando spots en backend:', error);
-        // Solo logging, sin snackBar que interrumpa la edición
+  private actualizarSpotsEnBackend(medio: MedioPlan): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!medio.planMedioItemId || !this.planId) {
+        console.log('⚠️ No se puede actualizar en backend: falta planMedioItemId o planId');
+        reject('Falta planMedioItemId o planId');
+        return;
       }
-    );
+
+      const dataJson: SpotsPorFechaData = {
+        spotsPorFecha: medio.spotsPorFecha || {},
+        totalSpots: medio.salidas,
+        valorTotal: medio.valorNeto
+      };
+
+      const actualizarRequest: ActualizarPlanMedioItemRequest = {
+        planMedioItemId: medio.planMedioItemId,
+        planMedioId: Number(this.planId),
+        version: this.resumenPlan.version || 1,
+        medioId: 1, // TODO: Obtener el medioId real desde el backend
+        proveedorId: Number(medio.proveedorId),
+        tarifa: medio.tarifa || 0,
+        dataJson: JSON.stringify(dataJson),
+        usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
+      };
+
+      console.log('📤 Actualizando spots en backend:', actualizarRequest);
+
+      this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
+        (response: PlanMedioItemBackend) => {
+          console.log('✅ Spots actualizados en backend:', response);
+          resolve();
+        },
+        (error: any) => {
+          console.error('❌ Error actualizando spots en backend:', error);
+          reject(error);
+        }
+      );
+    });
   }
 
   // Método para calcular total de spots
@@ -2559,5 +2708,195 @@ export class ModalConfirmarEliminacionComponent {
 
     localStorage.setItem('respuestasPautas', JSON.stringify(pautasFiltradas));
     console.log('🧹 Medio eliminado de localStorage');
+  }
+}
+
+// Componente Modal para Confirmar Cambios Pendientes
+@Component({
+  selector: 'app-modal-confirmar-cambios-pendientes',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule
+  ],
+  template: `
+    <div class="modal-header">
+      <h3 mat-dialog-title>
+        <mat-icon color="warn">warning</mat-icon>
+        Cambios Sin Guardar
+      </h3>
+      <button mat-icon-button mat-dialog-close>
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-dialog-content class="modal-content">
+      <div class="warning-message">
+        <mat-icon color="warn">edit</mat-icon>
+        <div class="message-text">
+          <p class="main-message">Tienes cambios sin guardar en el resumen</p>
+          <p class="sub-message">Si sales de esta página, perderás todos los cambios realizados en los spots.</p>
+        </div>
+      </div>
+
+      <div class="options-info">
+        <div class="option-item">
+          <mat-icon color="primary">save</mat-icon>
+          <span><strong>Guardar y Salir:</strong> Guarda todos los cambios antes de salir</span>
+        </div>
+        <div class="option-item">
+          <mat-icon color="warn">exit_to_app</mat-icon>
+          <span><strong>Salir sin Guardar:</strong> Descarta todos los cambios</span>
+        </div>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions class="modal-actions">
+      <button mat-button mat-dialog-close>
+        <mat-icon>cancel</mat-icon>
+        Cancelar
+      </button>
+      <button mat-button color="warn" (click)="continuar()">
+        <mat-icon>exit_to_app</mat-icon>
+        Salir sin Guardar
+      </button>
+      <button mat-raised-button color="primary" (click)="guardarYSalir()">
+        <mat-icon>save</mat-icon>
+        Guardar y Salir
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+      background: linear-gradient(135deg, #fff3e0 0%, #ffecb3 100%);
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #e65100;
+    }
+
+    .modal-content {
+      padding: 20px;
+      min-width: 350px;
+    }
+
+    .warning-message {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: #fff3e0;
+      border-radius: 8px;
+      border-left: 4px solid #ff9800;
+    }
+
+    .warning-message mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .message-text {
+      flex: 1;
+      
+      .main-message {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        margin: 0 0 8px 0;
+      }
+      
+      .sub-message {
+        font-size: 14px;
+        color: #666;
+        margin: 0;
+        line-height: 1.4;
+      }
+    }
+
+    .options-info {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+      
+      span {
+        font-size: 14px;
+        color: #333;
+        
+        strong {
+          color: #1976d2;
+        }
+      }
+    }
+
+    .modal-actions {
+      padding: 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      background: #fafafa;
+    }
+
+    .modal-actions button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  `]
+})
+export class ModalConfirmarCambiosPendientesComponent {
+  constructor(
+    private dialogRef: MatDialogRef<ModalConfirmarCambiosPendientesComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: any
+  ) { }
+
+  guardarYSalir(): void {
+    this.dialogRef.close({ accion: 'guardar' });
+  }
+
+  continuar(): void {
+    this.dialogRef.close({ accion: 'continuar' });
   }
 } 

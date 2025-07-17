@@ -172,7 +172,46 @@
         background-color: darken(#ffe0b2, 5%);
       }
     }
+
+    &.save-button {
+      background-color: #f5f5f5;
+      color: #666;
+      border: none;
+      opacity: 0.7;
+
+      &:hover {
+        background-color: darken(#f5f5f5, 5%);
+      }
+
+      &.save-pending {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+        opacity: 1;
+        
+        &:hover {
+          background-color: darken(#fff3cd, 5%);
+        }
+      }
+
+      &.saving {
+        background-color: #e3f2fd;
+        color: #1565c0;
+        border: 1px solid #bbdefb;
+        opacity: 1;
+        
+        mat-icon {
+          animation: spin 1s linear infinite;
+        }
+      }
+    }
   }
+}
+
+// Animación para el ícono de carga
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .table-container {
