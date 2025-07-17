@@ -69,6 +69,7 @@ export class PlanMediosResumen implements OnInit {
   dataSource: FilaMedio[] = [];
   planId: string | undefined; // Almacenar el ID del plan
   // Variable eliminada: flowChartAsociado - ya no es necesaria
+  cargandoDatos: boolean = false; // Estado de carga de datos
 
   // Propiedades para navegación por meses
   mesesDisponibles: Array<{ nombre: string, anio: number, fechaInicio: string, fechaFin: string }> = [];
@@ -110,6 +111,7 @@ export class PlanMediosResumen implements OnInit {
       this.periodos = [];
 
       // Consultar servicio con planId y version
+      console.log('🔄 Iniciando carga de datos desde backend...');
       this.cargarPeriodosConPautas(planData.id, planData.version);
     } else {
       // No hay datos, redirigir a consulta
@@ -125,7 +127,7 @@ export class PlanMediosResumen implements OnInit {
       this.prepararDataSource();
     } else {
       // Si no hay períodos, esperar a que se carguen asíncronamente
-      console.log('ℹ️ Esperando carga asíncrona de datos...');
+      console.log('ℹ️ Configurando resumen - esperando carga asíncrona de datos del servidor...');
     }
   }
 
@@ -133,17 +135,8 @@ export class PlanMediosResumen implements OnInit {
     // Forzar una recarga al inicializar para asegurar que los datos estén actualizados
     this.verificarYRecargarDatos();
 
-    // Mostrar notificación si no hay datos cargados
-    if (this.planId && (!this.periodoSeleccionado?.medios || this.periodoSeleccionado.medios.length === 0)) {
-      setTimeout(() => {
-        this.snackBar.open('⚠️ No se encontraron datos. Use el botón "Recargar Datos" si es necesario.', 'OK', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'top',
-          panelClass: ['warning-snackbar']
-        });
-      }, 1000);
-    }
+    // Eliminar notificación inicial que causa confusión
+    // El usuario verá la carga asíncrona naturalmente
   }
 
   private verificarYRecargarDatos(): void {
@@ -554,7 +547,7 @@ export class PlanMediosResumen implements OnInit {
       data: {
         medio: medio,
         planId: this.planId,
-        proveedoresDisponibles: this.obtenerProveedoresPorMedio(medio.nombre)
+        resumenPlan: this.resumenPlan
       },
       disableClose: true
     });
@@ -761,6 +754,7 @@ export class PlanMediosResumen implements OnInit {
   private cargarDatosDesdeBackend(planMedioId: number, version: number): void {
     console.log('🔄 Consultando backend para plan:', planMedioId, 'versión:', version);
     
+    this.cargandoDatos = true;
     this.backendMediosService.getPlanMedioItemsPorPlan(planMedioId, version).subscribe(
       (planMedioItems: PlanMedioItemBackend[]) => {
         console.log('📥 Respuesta del backend:', planMedioItems);
@@ -774,13 +768,9 @@ export class PlanMediosResumen implements OnInit {
           this.calcularSemanasConFechas();
           this.prepararDataSource();
 
-          // Mostrar notificación de éxito
-          this.snackBar.open(`✅ Cargados ${planMedioItems.length} medios desde servidor`, '', {
-            duration: 2000,
-            horizontalPosition: 'right',
-            verticalPosition: 'bottom',
-            panelClass: ['success-snackbar']
-          });
+          // Log de éxito sin notificación que pueda distraer
+          console.log(`✅ Cargados exitosamente ${planMedioItems.length} medios desde servidor`);
+          this.cargandoDatos = false;
         } else {
           // Plan existe pero sin medios - crear período vacío para que funcione el resumen
           const periodoVacio = this.crearPeriodoVacio(this.resumenPlan.fechaInicio, this.resumenPlan.fechaFin);
@@ -791,13 +781,9 @@ export class PlanMediosResumen implements OnInit {
           this.calcularSemanasConFechas();
           this.prepararDataSource();
 
-          // Mostrar notificación informativa
-          this.snackBar.open('ℹ️ Plan sin medios - listo para agregar', '', {
-            duration: 3000,
-            horizontalPosition: 'right',
-            verticalPosition: 'bottom',
-            panelClass: ['info-snackbar']
-          });
+          // Log informativo sin notificación
+          console.log('ℹ️ Plan sin medios cargado - listo para agregar medios');
+          this.cargandoDatos = false;
         }
       },
       (error) => {
@@ -812,10 +798,8 @@ export class PlanMediosResumen implements OnInit {
         this.calcularSemanasConFechas();
         this.prepararDataSource();
         
-        this.snackBar.open('❌ Error cargando datos del servidor - Plan listo para agregar medios', '', {
-          duration: 3000,
-          panelClass: ['error-snackbar']
-        });
+        console.error('❌ Error cargando datos del servidor - Plan configurado para agregar medios');
+        this.cargandoDatos = false;
       }
     );
   }
@@ -987,23 +971,10 @@ export class PlanMediosResumen implements OnInit {
       const planNumerico = Number(this.planId);
       const version = this.resumenPlan.version;
 
+      console.log('🔄 Recargando datos desde servidor...');
       this.cargarDatosDesdeBackend(planNumerico, version);
-
-      // Mostrar notificación de carga
-      this.snackBar.open('🔄 Recargando datos desde servidor...', '', {
-        duration: 2000,
-        horizontalPosition: 'right',
-        verticalPosition: 'bottom',
-        panelClass: ['info-snackbar']
-      });
     } else {
-      // Mostrar notificación de error
-      this.snackBar.open('❌ No hay ID de plan para recargar', '', {
-        duration: 3000,
-        horizontalPosition: 'right',
-        verticalPosition: 'bottom',
-        panelClass: ['error-snackbar']
-      });
+      console.error('❌ No hay ID de plan para recargar');
     }
   }
 
@@ -1047,13 +1018,8 @@ export class PlanMediosResumen implements OnInit {
       this.actualizarSpotsEnBackend(medio);
     }
 
-    // Mostrar confirmación visual
-    this.snackBar.open(`💾 Guardado: ${medio.nombre} - ${semanaActual.nombre}: ${nuevoSpots} spots (${fechaClave})`, '', {
-      duration: 1500,
-      horizontalPosition: 'right',
-      verticalPosition: 'bottom'
-    });
-
+    // Eliminar snackBar para mantener el foco en el input
+    // Solo console.log para debugging
     console.log(`✅ Spots actualizados para ${medio.nombre} ${semanaActual.nombre} (${fechaClave}): ${nuevoSpots}`);
     console.log(`✅ Nueva inversión total: ${medio.valorNeto}`);
     console.log(`✅ Spots por fecha:`, medio.spotsPorFecha);
@@ -1088,21 +1054,12 @@ export class PlanMediosResumen implements OnInit {
     this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
       (response: PlanMedioItemBackend) => {
         console.log('✅ Spots actualizados en backend:', response);
-
-        // Mostrar notificación de éxito discreta
-        this.snackBar.open('✅ Sincronizado con servidor', '', {
-          duration: 1000,
-          horizontalPosition: 'right',
-          verticalPosition: 'bottom',
-          panelClass: ['success-snackbar']
-        });
+        // Eliminamos snackBar para mantener el foco en el input
+        // Solo logging para confirmar sincronización
       },
       (error) => {
         console.error('❌ Error actualizando spots en backend:', error);
-        this.snackBar.open('⚠️ Error actualizando en servidor (datos guardados localmente)', '', {
-          duration: 2000,
-          panelClass: ['warning-snackbar']
-        });
+        // Solo logging, sin snackBar que interrumpa la edición
       }
     );
   }
@@ -1174,10 +1131,8 @@ export class PlanMediosResumen implements OnInit {
     return spotsPorSemana;
   }
 
-  private obtenerProveedoresPorMedio(medio: string): any[] {
-    // Ya no usar datos locales hardcodeados
-    return [];
-  }
+  // Método eliminado: obtenerProveedoresPorMedio - ya no se necesita
+  // Los proveedores se cargan dinámicamente desde el backend
 
   // Método para convertir spots por fecha a array (compatibilidad con flowchart)
   private convertirSpotsPorFechaAArray(spotsPorFecha?: { [fecha: string]: number }): number[] {
@@ -2055,11 +2010,12 @@ export class ModalAccionesMedioComponent {
       <form [formGroup]="editarForm">
         <mat-form-field class="full-width">
           <mat-label>Proveedor</mat-label>
-          <mat-select formControlName="proveedor">
+          <mat-select formControlName="proveedor" [disabled]="cargandoProveedores">
             <mat-option *ngFor="let proveedor of proveedoresDisponibles" [value]="proveedor.id">
               {{ proveedor.VENDOR }}
             </mat-option>
           </mat-select>
+          <mat-hint *ngIf="cargandoProveedores">Cargando proveedores...</mat-hint>
         </mat-form-field>
 
         <mat-form-field class="full-width">
@@ -2163,6 +2119,8 @@ export class ModalEditarMedioComponent implements OnInit {
   proveedoresDisponibles: any[] = [];
   existeCombinacion: boolean = false;
   mediosExistentes: any[] = [];
+  cargandoProveedores: boolean = false;
+  medioActual: MedioBackend | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -2178,13 +2136,64 @@ export class ModalEditarMedioComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.proveedoresDisponibles = this.data.proveedoresDisponibles || [];
     this.cargarMediosExistentes();
+    this.cargarProveedoresParaMedio();
 
     // Suscribirse a cambios en el formulario para validar duplicados
     this.editarForm.valueChanges.subscribe(() => {
       this.validarCombinacionDuplicada();
     });
+  }
+
+  private cargarProveedoresParaMedio(): void {
+    this.cargandoProveedores = true;
+    console.log('🔄 Cargando proveedores para medio:', this.data.medio.nombre);
+
+    // Primero buscar el medio en el backend
+    this.backendMediosService.getMedios().subscribe(
+      (medios: MedioBackend[]) => {
+        this.medioActual = medios.find(m => m.nombre === this.data.medio.nombre) || null;
+        
+        if (this.medioActual) {
+          console.log('✅ Medio encontrado:', this.medioActual);
+          
+          // Cargar proveedores para este medio
+          this.backendMediosService.getProveedoresPorMedio(this.medioActual.medioId).subscribe(
+            (proveedoresBackend: ProveedorBackend[]) => {
+              console.log('✅ Proveedores cargados para edición:', proveedoresBackend);
+
+              // Convertir proveedores del backend a formato compatible
+              this.proveedoresDisponibles = proveedoresBackend.map(p => ({
+                id: p.proveedorId.toString(),
+                VENDOR: p.nombreProveedor,
+                proveedorId: p.proveedorId,
+                nombreProveedor: p.nombreProveedor,
+                grupoProveedor: p.grupoProveedor,
+                tipoProveedor: p.tipoProveedor,
+                orionBeneficioReal: p.orionBeneficioReal,
+                estado: p.estado
+              }));
+
+              this.cargandoProveedores = false;
+            },
+            (error) => {
+              console.error('❌ Error cargando proveedores:', error);
+              this.proveedoresDisponibles = [];
+              this.cargandoProveedores = false;
+            }
+          );
+        } else {
+          console.warn('⚠️ No se encontró el medio en el backend');
+          this.proveedoresDisponibles = [];
+          this.cargandoProveedores = false;
+        }
+      },
+      (error) => {
+        console.error('❌ Error cargando medios:', error);
+        this.proveedoresDisponibles = [];
+        this.cargandoProveedores = false;
+      }
+    );
   }
 
   private cargarMediosExistentes(): void {
