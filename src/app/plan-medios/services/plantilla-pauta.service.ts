@@ -963,18 +963,18 @@ export class PlantillaPautaService {
   private convertirProveedorBackend(proveedor: ProveedorBackend): ProveedorKinesso {
     return {
       id: proveedor.proveedorId.toString(),
-      VENDOR_MEDIUM: `${proveedor.nombreProveedor}${proveedor.tipoMedioProveedor || ''}`,
+      VENDOR_MEDIUM: `${proveedor.nombreProveedor}${proveedor.tipoProveedor || ''}`,
       VENDOR_GROUP: proveedor.grupoProveedor || '',
-      MEDIUMS: proveedor.tipoMedioProveedor || '',
+      MEDIUMS: proveedor.tipoProveedor || '',
       VENDOR: proveedor.nombreProveedor,
       TIPO_VENDOR: proveedor.tipoProveedor || 'STANDARD',
       ORION_BENEFICIO_REAL_VENDOR: proveedor.orionBeneficioReal || 0,
-      DIRECTO_TRADICIONAL_MVSS: proveedor.directoTradicionalMVSS || 0,
-      KINESSO_POWER: proveedor.kinessPower || 0,
-      KINESSO_GLASS: proveedor.kinessGlass || 0,
-      NOTAS_KSO: proveedor.notasKSO || '',
-      DUO_GLASS: proveedor.duoGlass || 0,
-      DUO_POWER: proveedor.duoPower || 0,
+      DIRECTO_TRADICIONAL_MVSS: 0, // Valor por defecto - no disponible en backend
+      KINESSO_POWER: 0, // Valor por defecto - no disponible en backend
+      KINESSO_GLASS: 0, // Valor por defecto - no disponible en backend
+      NOTAS_KSO: '', // Valor por defecto - no disponible en backend
+      DUO_GLASS: 0, // Valor por defecto - no disponible en backend
+      DUO_POWER: 0, // Valor por defecto - no disponible en backend
       ESTADO: proveedor.estado ? 1 : 0
     };
   }

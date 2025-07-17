@@ -33,6 +33,7 @@ export interface MedioPlan {
     spotsPorSemana?: number[]; // Nueva propiedad para almacenar spots por semana
     spotsPorFecha?: { [fecha: string]: number }; // Nueva propiedad para almacenar spots por fecha específica
     tarifa?: number; // Propiedad para almacenar la tarifa por spot
+    planMedioItemId?: number; // Referencia al ID del backend para operaciones CRUD
 }
 
 // Interface para pasar datos desde la consulta al resumen
