@@ -43,6 +43,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'plan-medios-copiar/:id',
+    loadComponent: () =>
+      import('./plan-medios/plan-medios-create/plan-medios-create').then(
+        (m) => m.PlanMediosCreate
+      ),
+  },
+  {
     path: 'kinesso/clientes',
     loadComponent: () => import('./kinesso/clientes/clientes').then((m) => m.Clientes),
   },

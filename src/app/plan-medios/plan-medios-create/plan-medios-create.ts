@@ -40,7 +40,6 @@ export class PlanMediosCreate implements AfterViewInit {
   // Opciones fijas
   paises: string[] = [];
   tiposCompra: string[] = [];
-
   // Simulación de respuesta del backend (estructura anidada)
   clientesBackend = [
     {
@@ -71,12 +70,10 @@ export class PlanMediosCreate implements AfterViewInit {
       ]
     }
   ];
-
   // Opciones dinámicas dependientes
   clientesFacturacionOptions: string[] = [];
   marcasOptions: string[] = [];
   productosOptions: string[] = [];
-
   // Formulario reactivo
   planMediosForm = new FormGroup({
     numeroPlan: new FormControl({ value: 'Auto', disabled: true }, Validators.required),
@@ -91,21 +88,18 @@ export class PlanMediosCreate implements AfterViewInit {
     fechaInicio: new FormControl('', Validators.required),
     fechaFin: new FormControl('', Validators.required)
   });
-
   // Observables para autocompletes
   filteredPaisesFacturacion!: Observable<string[]>;
   filteredClientes!: Observable<string[]>;
   filteredClientesActuacion!: Observable<string[]>;
   filteredMarcas!: Observable<string[]>;
   filteredProductos!: Observable<string[]>;
-
   minFechaInicio = new Date();
   minFechaFin: Date | null = null;
-
   // Modo edición
   editMode = false;
+  copyMode = false;
   editId: string | null = null;
-
   // NUEVO: Parámetros dinámicos
   tablaParametros: any[] = [];
 
@@ -160,16 +154,16 @@ export class PlanMediosCreate implements AfterViewInit {
         }))
     }));
   }
-    obtenerNombresPaises(idsPaises: string): string[] {
-      console.log(`IDs de países: ${idsPaises}`);
-      if (!idsPaises) return [];
+  obtenerNombresPaises(idsPaises: string): string[] {
+    console.log(`IDs de países: ${idsPaises}`);
+    if (!idsPaises) return [];
 
-      return idsPaises
-        .split(',')                             // ["4", "3"]
-        .map(id => Number(id.trim()))           // [4, 3]
-        .map(id => this.tablaParametros.find(p => p.campo_Id === id)?.campo_Val)
-        .filter((val): val is string => !!val); // Type guard para asegurar que no hay undefined
-    }
+    return idsPaises
+      .split(',')                          
+      .map(id => Number(id.trim()))          
+      .map(id => this.tablaParametros.find(p => p.campo_Id === id)?.campo_Val)
+      .filter((val): val is string => !!val); 
+  }
 
   // NUEVO: Inicializa la lógica del formulario (lo que estaba en el constructor)
   initFormLogic() {
@@ -178,13 +172,11 @@ export class PlanMediosCreate implements AfterViewInit {
       startWith(''),
       map(value => this._filter(value || '', this.paises))
     );
-
     // 2. Autocomplete: Cliente / Anunciante
     this.filteredClientes = this.planMediosForm.get('clienteAnunciante')!.valueChanges.pipe(
       startWith(''),
       map(value => this._filter(value || '', this.clientesBackend.map(c => c.nombre)))
     );
-
     // 3. Cuando cambia cliente anunciante, actualizar clientes de facturación y limpiar dependientes
     this.planMediosForm.get('clienteAnunciante')!.valueChanges.subscribe((cliente: string | null) => {
       const clienteObj = this.clientesBackend.find(c => c.nombre === cliente);
@@ -195,13 +187,11 @@ export class PlanMediosCreate implements AfterViewInit {
       this.planMediosForm.get('marca')!.setValue('');
       this.planMediosForm.get('producto')!.setValue('');
     });
-
     // 4. Autocomplete: Cliente Facturación (dependiente de cliente anunciante)
     this.filteredClientesActuacion = this.planMediosForm.get('clienteFueActuacion')!.valueChanges.pipe(
       startWith(''),
       map(value => this._filter(value || '', this.clientesFacturacionOptions))
     );
-
     // 5. Cuando cambia cliente de facturación, actualizar marcas y limpiar dependientes
     this.planMediosForm.get('clienteFueActuacion')!.valueChanges.subscribe((facturacion: string | null) => {
       const clienteObj = this.clientesBackend.find(c => c.nombre === this.planMediosForm.get('clienteAnunciante')!.value);
@@ -211,13 +201,11 @@ export class PlanMediosCreate implements AfterViewInit {
       this.planMediosForm.get('marca')!.setValue('');
       this.planMediosForm.get('producto')!.setValue('');
     });
-
     // 6. Autocomplete: Marca (dependiente de cliente de facturación)
     this.filteredMarcas = this.planMediosForm.get('marca')!.valueChanges.pipe(
       startWith(''),
       map(value => this._filter(value || '', this.marcasOptions))
     );
-
     // 7. Cuando cambia marca, actualizar productos
     this.planMediosForm.get('marca')!.valueChanges.subscribe((marca: string | null) => {
       const clienteObj = this.clientesBackend.find(c => c.nombre === this.planMediosForm.get('clienteAnunciante')!.value);
@@ -226,14 +214,11 @@ export class PlanMediosCreate implements AfterViewInit {
       this.productosOptions = marcaObj ? marcaObj.productos : [];
       this.planMediosForm.get('producto')!.setValue('');
     });
-
     // 8. Autocomplete: Producto (dependiente de marca)
     this.filteredProductos = this.planMediosForm.get('producto')!.valueChanges.pipe(
       startWith(''),
       map(value => this._filter(value || '', this.productosOptions))
     );
-
-    
     // 9. Restricción de fechas
     this.planMediosForm.get('fechaInicio')!.valueChanges.subscribe((fechaInicioRaw: any) => {
       let fechaInicio: Date | null = null;
@@ -276,13 +261,22 @@ export class PlanMediosCreate implements AfterViewInit {
       this.planMediosForm.get('fechaFin')!.enable();
       this.planMediosForm.get('fechaFin')!.updateValueAndValidity(); // Actualiza el estado del control
     });
+    let pathActual = '';
+
+    this.route.url.subscribe(segments => {
+    pathActual = segments.map(s => s.path).join('/');
+    
+    if (pathActual.includes('plan-medios-copiar')) {
+      this.copyMode = true;
+    } else if (pathActual.includes('plan-medios-editar')) {
+      this.editMode = true;
+    }
+  });
 
     // --- Lógica de edición ---
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
-      console.log(id);
       if (id) {
-        this.editMode = true;
         this.editId = id;
         this.planMediosService.consultarPlanDeMedios(Number(id))
         .pipe(
@@ -313,37 +307,59 @@ export class PlanMediosCreate implements AfterViewInit {
           this.productosOptions = marcaObj ? marcaObj.productos : [];
 
           console.log(this.obtenerNombresPaises(plan.idsPaisesPauta))
-          
+          const getValue = (tabla: string, value: string, parentId?: number) => {
+            console.log(`Buscando ID en tabla: ${tabla}, valor: ${value}, parentId: ${parentId}`);
+            if (!value) return null;
+            const found = this.tablaParametros.find(
+              p => p.tabla === tabla && p.campo_Id === value
+            );
+            return found ? found.campo_Val : null;
+          };
           // Ahora sí, setea los valores del formulario (asegúrate de hacerlo después de poblar las opciones)
           setTimeout(() => {
             this.planMediosForm.patchValue({
-              numeroPlan: plan.numeroPlan,
+              numeroPlan: this.copyMode ? 'AUTO' : plan.numeroPlan,
               version: plan.version,
-              paisFacturacion: this.tablaParametros.find(m => m.campo_Id ===  plan.idPaisFacturacion)?.campo_Val || '',
+              paisFacturacion: getValue('Paises', plan.idPaisFacturacion),
               paisesPauta: this.obtenerNombresPaises(plan.paisesPauta),
-              clienteAnunciante: this.tablaParametros.find(m => m.campo_Id ===  plan.idClienteAnunciante)?.campo_Val || '',
-              clienteFueActuacion:this.tablaParametros.find(m => m.campo_Id ===  plan.idClienteFacturacion)?.campo_Val || '',
-              marca: this.tablaParametros.find(m => m.campo_Id ===  plan.idMarca)?.campo_Val || '',
-              producto: this.tablaParametros.find(m => m.campo_Id ===  plan.idProducto)?.campo_Val || '',
+              clienteAnunciante: getValue('ClientesAnunciante', plan.idClienteAnunciante),
+              clienteFueActuacion: getValue('ClientesFacturacion', plan.idClienteFacturacion),
+              marca: getValue('Marcas', plan.idMarca),
+              producto: getValue('Productos', plan.idProducto),
               campana: plan.campania,
               fechaInicio: plan.fechaInicio,
               fechaFin: plan.fechaFin
             });
           });
 
-          // Deshabilita campos no editables en modo edición
-          this.planMediosForm.get('numeroPlan')?.disable();
-          this.planMediosForm.get('version')?.disable();
-          this.planMediosForm.get('paisFacturacion')?.disable();
-          this.planMediosForm.get('clienteAnunciante')?.disable();
-          this.planMediosForm.get('clienteFueActuacion')?.disable();
-          this.planMediosForm.get('marca')?.disable();
-          this.planMediosForm.get('producto')?.disable();
-          // Habilita solo los campos editables
-          this.planMediosForm.get('paisesPauta')?.enable();
-          this.planMediosForm.get('campana')?.enable();
-          this.planMediosForm.get('fechaInicio')?.enable();
-          this.planMediosForm.get('fechaFin')?.enable();
+            if (this.editMode) {
+                this.planMediosForm.get('numeroPlan')?.disable();
+                this.planMediosForm.get('version')?.disable();
+                this.planMediosForm.get('paisFacturacion')?.disable();
+                this.planMediosForm.get('clienteAnunciante')?.disable();
+                this.planMediosForm.get('clienteFueActuacion')?.disable();
+                this.planMediosForm.get('marca')?.disable();
+                this.planMediosForm.get('producto')?.disable();
+                // Habilita solo los campos editables
+                this.planMediosForm.get('paisesPauta')?.enable();
+                this.planMediosForm.get('campana')?.enable();
+                this.planMediosForm.get('fechaInicio')?.enable();
+                this.planMediosForm.get('fechaFin')?.enable();
+            }
+
+            if (this.copyMode) {
+                this.planMediosForm.get('numeroPlan')?.disable();
+                this.planMediosForm.get('version')?.disable();
+                this.planMediosForm.get('paisFacturacion')?.enable();
+                this.planMediosForm.get('clienteAnunciante')?.enable();
+                this.planMediosForm.get('clienteFueActuacion')?.enable();
+                this.planMediosForm.get('marca')?.enable();
+                this.planMediosForm.get('producto')?.enable();
+                this.planMediosForm.get('paisesPauta')?.enable();
+                this.planMediosForm.get('campana')?.enable();
+                this.planMediosForm.get('fechaInicio')?.enable();
+                this.planMediosForm.get('fechaFin')?.enable();
+            }
         }
           },
           error: (error) => {
@@ -366,6 +382,7 @@ export class PlanMediosCreate implements AfterViewInit {
         this.planMediosForm.get('fechaFin')?.enable();
       }
     });
+
   }
 
   ngAfterViewInit() {
@@ -391,11 +408,13 @@ export class PlanMediosCreate implements AfterViewInit {
 
       // Busca los IDs reales usando el campo_Id de la data de tablaParametros
       const getId = (tabla: string, value: string, parentId?: number) => {
+        console.log(`Buscando ID en tabla: ${tabla}, valor: ${value}, parentId: ${parentId}`);
         if (!value) return null;
         if (parentId !== undefined) {
           const found = this.tablaParametros.find(
             p => p.tabla === tabla && p.campo_Val === value && p.campo_Padre_Id === parentId
           );
+          console.log(found)
           return found ? found.campo_Id : null;
         }
         const found = this.tablaParametros.find(
@@ -404,39 +423,23 @@ export class PlanMediosCreate implements AfterViewInit {
         return found ? found.campo_Id : null;
       };
 
+       
+
       // IDs principales (campo_Id)
       const idPaisFacturacion = getId('Paises', safe(formValue.paisFacturacion));
       const idClienteAnunciante = getId('ClientesAnunciante', safe(formValue.clienteAnunciante));
       const idClienteFacturacion = getId('ClientesFacturacion', safe(formValue.clienteFueActuacion), idClienteAnunciante);
       const idMarca = getId('Marcas', safe(formValue.marca), idClienteFacturacion);
       const idProducto = getId('Productos', safe(formValue.producto), idMarca);
-
+      console.log(idClienteAnunciante)
       // IDs de países de pauta (array de campo_Id)
       const idsPaisesPauta = (formValue.paisesPauta || []).map((pais: string | null) =>
         getId('Paises', safe(pais))
       ).filter((id: number | null) => id !== null);
 
-      // Formatea fechas a Date
-      const parseDate = (date: any): Date => {
-        if (!date) return new Date();
-        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) return new Date(date);
-        if (date instanceof Date) return date;
-        const d = new Date(date);
-        return isNaN(d.getTime()) ? new Date() : d;
-      };
-
       // Construye el body para el backend con NumeroPlan
       let lastNumeroPlan = 1000;
-      const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-      if (!this.editMode && planesGuardados.length > 0) {
-        const max = Math.max(
-          ...planesGuardados
-            .map(p => parseInt(p.numeroPlan, 10))
-            .filter(n => !isNaN(n))
-        );
-        if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
-      }
-
+      
       // Construye el body SOLO con los campo_Id
       const body = {
         NumeroPlan: lastNumeroPlan.toString(),
@@ -474,27 +477,7 @@ export class PlanMediosCreate implements AfterViewInit {
           }
         });
       } else {
-        // --- Modo creación: primero guarda en localStorage ---
-        console.log(formValue);
-        const nuevoPlan: PlanMediosLocal = {
-          id: Date.now().toString(),
-          numeroPlan: lastNumeroPlan.toString(),
-          version: formValue.version ?? '',
-          paisFacturacion: formValue.paisFacturacion ?? '',
-          paisesPauta: formValue.paisesPauta ?? [],
-          clienteAnunciante: formValue.clienteAnunciante ?? '',
-          clienteFueActuacion: formValue.clienteFueActuacion ?? '',
-          marca: formValue.marca ?? '',
-          producto: formValue.producto ?? '',
-          campana: formValue.campana ?? '',
-          fechaInicio: formValue.fechaInicio ?? '',
-          fechaFin: formValue.fechaFin ?? '',
-          estado : true, // Asumiendo que el estado es siempre true al crear
-          tipoIngresoPlan: '', // Nuevo campo: 'Plan de Medios' o 'Flow Chart'
-          fechaCreacion: Date.now().toString() 
-        };
-        planesGuardados.push(nuevoPlan);
-        localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
+        console.log("copia",formValue);
         // Luego manda la solicitud al backend
         this.planMediosService.crearPlanMedios(body).subscribe({
           next: (resp) => {
@@ -522,8 +505,6 @@ export class PlanMediosCreate implements AfterViewInit {
   cancelar() {
     this.router.navigate(['/plan-medios-consulta']);
   }
-
- 
 }
  
 

@@ -591,46 +591,66 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   onRowDoubleClick(row: Resultado) {
     // Busca todas las versiones para ese número de plan en los datos actuales de la grilla
-    const versiones = this.dataSource.data
-      .filter(r => r.numeroPlan === row.numeroPlan)
-      .map(plan => ({
-        id: plan.id,
-        numeroPlan: plan.numeroPlan,
-        version: plan.version,
-        pais: plan.pais,
-        anunciante: plan.anunciante,
-        cliente: plan.cliente,
-        marca: plan.marca,
-        producto: plan.producto,
-        fechaInicio: plan.fechaInicio,
-        fechaFin: plan.fechaFin,
-        campania: plan.campania,
-        fechaCreacion: plan.fechaCreacion,
-        estado: plan.estado,
-        // IDs para mantener consistencia
-        idPaisFacturacion: plan.idPaisFacturacion,
-        idClienteAnunciante: plan.idClienteAnunciante,
-        idClienteFacturacion: plan.idClienteFacturacion,
-        idMarca: plan.idMarca,
-        idProducto: plan.idProducto,
-        idEstadoRegistro: plan.idEstadoRegistro
-      }))
-      .sort((a, b) => parseInt(b.version, 10) - parseInt(a.version, 10));
+    console.log('Abriendo diálogo de versiones para el plan:', row.numeroPlan);
+    
+     this.planMediosService.consultarPaginadoWithDetailsPlan( Number(row.numeroPlan) ,this.pageIndex + 1, this.pageSize)
+      .pipe(
+        retry(2), // Reintentar 2 veces en caso de error
+        catchError((error) => {
+          return of([]);
+        })
+      )
+      .subscribe({
+        next: (response: { items: PlanMediosConDetalles[], totalCount: number, pageSize: number, totalPages: number, page: number }) => {
+          console.log('Datos obtenidos del backend:', response);
+          const versiones = response.items
+        .filter(r => r.numeroPlan === row.numeroPlan)
+        .map(plan => ({
+          id: plan.idPlan,
+          numeroPlan: plan.numeroPlan,
+          version: plan.version,
+          pais: plan.idPaisFacturacion,
+          anunciante: plan.idClienteAnunciante,
+          cliente: plan.idClienteAnunciante,
+          marca: plan.idMarca,
+          producto: plan.idProducto,
+          fechaInicio: plan.fechaInicio,
+          fechaFin: plan.fechaFin,
+          campania: plan.campania,
+          fechaCreacion: plan.fechaCreacion,
+          estado: plan.idEstadoRegistro,
+          // IDs para mantener consistencia
+          idPaisFacturacion: plan.idPaisFacturacion,
+          idClienteAnunciante: plan.idClienteAnunciante,
+          idClienteFacturacion: plan.idClienteFacturacion,
+          idMarca: plan.idMarca,
+          idProducto: plan.idProducto,
+          idEstadoRegistro: plan.idEstadoRegistro
+        })
+      );
 
-    const dialogRef = this.dialog.open(VersionesPlanDialog, {
-      width: '85vw',
-      maxWidth: '1100px',
-      height: '75vh',
-      maxHeight: '700px',
-      data: { versiones, selectedRow: row },
-      disableClose: true,
-      panelClass: 'centered-modal'
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result === true) {
-        this.recargarTabla(); // <-- Recarga el listado general
-      }
-    });
+        const dialogRef = this.dialog.open(VersionesPlanDialog, {
+          width: '85vw',
+          maxWidth: '1100px',
+          height: '75vh',
+          maxHeight: '700px',
+          data: { versiones, selectedRow: row },
+          disableClose: true,
+          panelClass: 'centered-modal'
+        });
+        dialogRef.afterClosed().subscribe(result => {
+          if (result === true) {
+            this.recargarTabla(); // <-- Recarga el listado general
+          }
+        });
+        },
+        error: (error) => {
+          // Este caso no debería ocurrir por el catchError, pero por seguridad
+          console.error('Error no manejado:', error);
+          this.isLoading = false;
+        }
+      });
+    
     this.selectedRow = null;
   }
 
@@ -1184,6 +1204,7 @@ export class VersionesPlanDialog implements AfterViewInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     public dialogRef: MatDialogRef<VersionesPlanDialog>,
+    private planMediosService: PlanMediosService,
     @Inject(MAT_DIALOG_DATA) public data: { versiones: any[], selectedRow?: any }
   ) {
     this.datosOriginales = data.versiones; // Guardar datos originales
@@ -1357,29 +1378,8 @@ export class VersionesPlanDialog implements AfterViewInit {
     });
     dialogRef.afterClosed().subscribe(confirmado => {
       if (confirmado) {
-        const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-        const original = planesGuardados.find(p => p.id === this.selectedRow!.id);
-        if (!original) return;
-        let lastNumeroPlan = 1000;
-        if (planesGuardados.length > 0) {
-          const max = Math.max(
-            ...planesGuardados
-              .map(p => parseInt(p.numeroPlan, 10))
-              .filter(n => !isNaN(n))
-          );
-          if (!isNaN(max) && max >= 1000) lastNumeroPlan = max + 1;
-        }
-        const nuevoPlan = {
-          ...original,
-          id: Date.now().toString(),
-          numeroPlan: lastNumeroPlan.toString(),
-          version: "1",
-          fechaCreacion: new Date().toISOString().slice(0, 10) // Nueva fecha de creación
-        };
-        planesGuardados.push(nuevoPlan);
-        localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
-        this.snackBar.open('Plan copiado correctamente', '', { duration: 2000 });
-        this.dialogRef.close(true); // <-- Cierra el popup y notifica al padre
+        this.dialogRef.close(true);
+        this.router.navigate(['/plan-medios-copiar', this.selectedRow.id]);
       }
     });
   }
@@ -1389,31 +1389,18 @@ export class VersionesPlanDialog implements AfterViewInit {
     if (!this.selectedRow) return;
     this.openConfirmDialog('¿Deseas crear una nueva versión de este plan?').afterClosed().subscribe(result => {
       if (result) {
-        const planesGuardados: any[] = JSON.parse(localStorage.getItem('planesMedios') || '[]');
-        // Buscar el plan original por id
-        const original = planesGuardados.find(p => p.id === this.selectedRow!.id);
-        if (!original) return;
-        // Calcular nueva versión (consecutivo)
-        let nuevaVersion = 1;
-        const versiones = planesGuardados
-          .filter(p => p.numeroPlan === original.numeroPlan)
-          .map(p => parseInt(p.version, 10))
-          .filter(n => !isNaN(n));
-        if (versiones.length > 0) {
-          nuevaVersion = Math.max(...versiones) + 1;
-        }
-        // Mantener el mismo numeroPlan, solo cambia el id y la version
-        const nuevoPlan = {
-          ...original,
-          id: Date.now().toString(),
-          version: nuevaVersion.toString(),
-          fechaCreacion: new Date().toISOString().slice(0, 10) // Nueva fecha de creación
-        };
-        planesGuardados.push(nuevoPlan);
-        localStorage.setItem('planesMedios', JSON.stringify(planesGuardados));
-        this.snackBar.open('Nueva versión creada correctamente', '', { duration: 2000 });
-        this.recargarTabla(this.selectedRow!.numeroPlan);
-        this.selectedRow = null; // <-- Limpia la selección después de nueva versión
+        this.planMediosService.newVersion(this.selectedRow.id, 0)
+        .subscribe({
+          next: (nuevoPlan) => {
+            this.snackBar.open('Nueva versión creada correctamente', '', { duration: 2000 });
+            this.recargarTabla(this.selectedRow!.numeroPlan);
+            this.selectedRow = null; // <-- Limpia la selección después de nueva versión
+          },
+          error: (err) => {
+            console.error('Error al crear nueva versión', err);
+          }
+        });
+        
       }
     }); 
   }

@@ -70,30 +70,31 @@ export class PlanMediosService {
     return this.consultarPaginado(1, 1000);
   }
 
-  /**
-   * Obtener parámetros de tabla específica
-   */
   obtenerParametrosTabla(tabla: string): Observable<any> {
     return this.http.get(`${this.config.apiUrl}/api/TablaParametros/by-tabla/${tabla}`);
   }
 
-  /**
-   * Obtener todos los parámetros de todas las tablas
-   */
   obtenerTodosParametros(): Observable<any> {
     return this.http.get(`${this.config.apiUrl}/api/TablaParametros`);
   }
 
-  /**
-   * Nuevo método: consultar paginado usando el endpoint with-details
-   */
   consultarPaginadoWithDetails(page: number = 1, pageSize: number = 10): Observable<any> {
     const url = `${this.config.apiUrl}/api/PlanMedios/with-details?page=${page}&pageSize=${pageSize}`;
+    return this.http.get<any>(url);
+  }
+
+  consultarPaginadoWithDetailsPlan(numeroPlan:number = 1 ,page: number = 1, pageSize: number = 10): Observable<any> {
+    const url = `${this.config.apiUrl}/api/PlanMedios/with-details-plan/${numeroPlan}/versiones?page=${page}&pageSize=${pageSize}`;
     return this.http.get<any>(url);
   }
 
   consultarPlanDeMedios(id: number = 1): Observable<any> {
     const url = `${this.config.apiUrl}/api/PlanMedios/${id}`;
     return this.http.get<any>(url);
+  }
+
+  newVersion(id: number, idUsuarioCreador: number): Observable<any> {
+    const url = `${this.config.apiUrl}/api/PlanMedios/${id}/new-version?idUsuarioCreador=${idUsuarioCreador}`;
+    return this.http.post<any>(url, {});
   }
 }
