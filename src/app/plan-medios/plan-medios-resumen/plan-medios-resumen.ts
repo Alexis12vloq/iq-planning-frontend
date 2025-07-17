@@ -532,10 +532,10 @@ export class PlanMediosResumen implements OnInit {
 
     dialogRef.afterClosed().subscribe((result: any) => {
       if (result && result.accion === 'editar') {
-        console.log('✏️ Acción: Editar medio');
+        console.log('✏️ Acción: Editar medio con planMedioItemId:', medio.planMedioItemId);
         this.editarMedio(medio);
       } else if (result && result.accion === 'eliminar') {
-        console.log('🗑️ Acción: Eliminar medio');
+        console.log('🗑️ Acción: Eliminar medio con planMedioItemId:', medio.planMedioItemId);
         this.eliminarMedio(medio);
       }
     });
@@ -857,6 +857,10 @@ export class PlanMediosResumen implements OnInit {
         medioExistente.soi = medioExistente.salidas > 0 ? Math.round(medioExistente.valorNeto / medioExistente.salidas) : 0;
         // Combinar spots por fecha
         medioExistente.spotsPorFecha = { ...medioExistente.spotsPorFecha, ...spotsPorFecha };
+        // Mantener el planMedioItemId del primer item (importante para eliminación)
+        if (!medioExistente.planMedioItemId) {
+          medioExistente.planMedioItemId = item.planMedioItemId;
+        }
       } else {
         mediosMap.set(claveAgrupacion, {
           nombre: medio,
@@ -2494,23 +2498,26 @@ export class ModalConfirmarEliminacionComponent {
   ) { }
 
   confirmarEliminacion(): void {
-    // Buscar pauta en localStorage para obtener planMedioItemId
-    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const pautaAEliminar = pautas.find((pauta: any) =>
-      pauta.planId === this.data.planId &&
-      pauta.medio === this.data.medio.nombre &&
-      pauta.proveedor === this.data.medio.proveedor
-    );
+    // Obtener planMedioItemId desde el medio directamente
+    const planMedioItemId = this.data.medio.planMedioItemId;
+    
+    if (!planMedioItemId) {
+      console.error('❌ No se encontró planMedioItemId en el medio:', this.data.medio);
+      this.snackBar.open('❌ Error: No se puede eliminar el medio', '', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
 
-    if (pautaAEliminar && pautaAEliminar.planMedioItemId) {
-      // Eliminar del backend si tiene planMedioItemId
-      console.log('📤 Eliminando PlanMedioItem del backend ID:', pautaAEliminar.planMedioItemId);
+    console.log('📤 Eliminando PlanMedioItem del backend ID:', planMedioItemId);
 
-      this.backendMediosService.eliminarPlanMedioItem(pautaAEliminar.planMedioItemId).subscribe(
-        (response) => {
-          console.log('✅ PlanMedioItem eliminado del backend:', response);
+    this.backendMediosService.eliminarPlanMedioItem(planMedioItemId).subscribe(
+      (response) => {
+        console.log('✅ PlanMedioItem eliminado del backend:', response);
 
-          // También eliminar de localStorage
+        if (response.success) {
+          // Eliminar también de localStorage
           this.eliminarDeLocalStorage();
 
           this.snackBar.open('✅ Medio eliminado correctamente', '', {
@@ -2519,42 +2526,38 @@ export class ModalConfirmarEliminacionComponent {
           });
 
           this.dialogRef.close({ shouldRefresh: true });
-        },
-        (error: any) => {
-          console.error('❌ Error eliminando PlanMedioItem del backend:', error);
-
-          // Fallback: eliminar solo de localStorage
-          this.eliminarDeLocalStorage();
-
-          this.snackBar.open('⚠️ Medio eliminado (solo local - error en backend)', '', {
+        } else {
+          console.error('❌ Backend reportó error:', response.message);
+          this.snackBar.open(`❌ Error: ${response.message}`, '', {
             duration: 3000,
-            panelClass: ['warning-snackbar']
+            panelClass: ['error-snackbar']
           });
-
-          this.dialogRef.close({ shouldRefresh: true });
         }
-      );
-    } else {
-      // No tiene planMedioItemId, eliminar solo de localStorage
-      this.eliminarDeLocalStorage();
-
-      this.snackBar.open('✅ Medio eliminado correctamente (solo local)', '', {
-        duration: 2000,
-        panelClass: ['success-snackbar']
-      });
-
-      this.dialogRef.close({ shouldRefresh: true });
-    }
+      },
+      (error: any) => {
+        console.error('❌ Error eliminando PlanMedioItem del backend:', error);
+        this.snackBar.open('❌ Error eliminando medio del servidor', '', {
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    );
   }
 
   private eliminarDeLocalStorage(): void {
     const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const pautasFiltradas = pautas.filter((pauta: any) =>
-      !(pauta.planId === this.data.planId &&
+    const pautasFiltradas = pautas.filter((pauta: any) => {
+      // Si el medio tiene planMedioItemId, filtrar por ese ID
+      if (this.data.medio.planMedioItemId && pauta.planMedioItemId) {
+        return pauta.planMedioItemId !== this.data.medio.planMedioItemId;
+      }
+      // Fallback: filtrar por planId, medio y proveedor
+      return !(pauta.planId === this.data.planId &&
         pauta.medio === this.data.medio.nombre &&
-        pauta.proveedor === this.data.medio.proveedor)
-    );
+        pauta.proveedor === this.data.medio.proveedor);
+    });
 
     localStorage.setItem('respuestasPautas', JSON.stringify(pautasFiltradas));
+    console.log('🧹 Medio eliminado de localStorage');
   }
 } 

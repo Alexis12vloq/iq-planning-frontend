@@ -8,10 +8,7 @@ import { APP_CONFIG, AppConfig } from '../../shared/app-config';
 })
 export class PlanMediosService {
   private readonly backendUrls = [
-    'https://localhost:7223/api/planmedios/consultar',
-    'http://localhost:5000/api/planmedios/consultar',
-    'http://localhost:5001/api/planmedios/consultar',
-    'http://localhost:7000/api/planmedios/consultar'
+    'https://iq-planningapi20250714104214-dnebf8aqhnerdjba.mexicocentral-01.azurewebsites.net'
   ];
 
   private apiUrl = this.backendUrls[0];
