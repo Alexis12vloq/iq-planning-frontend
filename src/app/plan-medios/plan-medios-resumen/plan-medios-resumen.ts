@@ -61,7 +61,7 @@ export class PlanMediosResumen implements OnInit {
   semanasConFechas: Array<{nombre: string, fechaInicio: string, fechaFin: string, fechaCompacta: string}> = [];
   dataSource: FilaMedio[] = [];
   planId: string | undefined; // Almacenar el ID del plan
-  flowChartAsociado: boolean = false; // Flag para saber si ya está asociado al flowchart
+  // Variable eliminada: flowChartAsociado - ya no es necesaria
   
   // Propiedades para navegación por meses
   mesesDisponibles: Array<{nombre: string, anio: number, fechaInicio: string, fechaFin: string}> = [];
@@ -202,15 +202,8 @@ export class PlanMediosResumen implements OnInit {
     this.calcularSemanasConFechas();
     this.prepararDataSource();
     
-    // Verificar si el flowchart ya está asociado
-    if (this.planId) {
-      const flowChartFlags = JSON.parse(localStorage.getItem('flowChartFlags') || '{}');
-      this.flowChartAsociado = flowChartFlags[this.planId] || false;
-    }
-    
     console.log('📋 Resumen final configurado:', this.resumenPlan);
     console.log('📋 Período seleccionado:', this.periodoSeleccionado);
-    console.log('📊 FlowChart asociado:', this.flowChartAsociado);
   }
 
   ngOnInit(): void {
@@ -732,20 +725,7 @@ export class PlanMediosResumen implements OnInit {
     });
   }
 
-  onAsociarFlowChart(): void {
-    // Sincronizar datos del resumen con el FlowChart
-    this.sincronizarResumenConFlowChart();
-    
-    // Marcar como asociado al flowchart
-    this.flowChartAsociado = true;
-    
-    // Guardar el flag en localStorage
-    if (this.planId) {
-      const flowChartFlags = JSON.parse(localStorage.getItem('flowChartFlags') || '{}');
-      flowChartFlags[this.planId] = true;
-      localStorage.setItem('flowChartFlags', JSON.stringify(flowChartFlags));
-    }
-    
+  onIrAFlowChart(): void {
     // Preparar datos para enviar al flowchart
     const datosFlowChart = {
       planId: this.planId,
@@ -776,14 +756,7 @@ export class PlanMediosResumen implements OnInit {
     
     localStorage.setItem('flowChartData', JSON.stringify(flowChartStorage));
     
-    // Mostrar confirmación
-    this.snackBar.open('FlowChart asociado correctamente', '', { 
-      duration: 2000,
-      horizontalPosition: 'right',
-      verticalPosition: 'bottom'
-    });
-    
-    // Navegar al flowchart
+    // Navegar directamente al flowchart
     this.router.navigate(['/flow-chart'], { 
       state: { 
         planData: this.resumenPlan,
@@ -793,72 +766,7 @@ export class PlanMediosResumen implements OnInit {
     });
   }
 
-  /**
-   * Sincroniza los datos del resumen con el localStorage del FlowChart
-   */
-  private sincronizarResumenConFlowChart(): void {
-    if (!this.planId) return;
-
-    console.log('🔄 Sincronizando datos del Resumen con FlowChart...');
-    
-    // Obtener pautas existentes del FlowChart
-    const pautasFlowChart = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    
-    // Convertir medios del resumen al formato del FlowChart
-    this.periodoSeleccionado.medios.forEach(medio => {
-      // Verificar si ya existe una pauta para este medio
-      const pautaExistente = pautasFlowChart.find((pauta: any) => 
-        pauta.planId === this.planId && 
-        pauta.medio === medio.nombre && 
-        pauta.proveedor === medio.proveedor
-      );
-      
-      if (!pautaExistente) {
-        // Crear nueva pauta del FlowChart basada en el resumen
-        const nuevaPauta = {
-          id: `pauta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          planId: this.planId,
-          medio: medio.nombre,
-          proveedor: medio.proveedor,
-          proveedorId: medio.proveedorId,
-          valorTotal: medio.valorNeto,
-          totalSpots: medio.salidas,
-          tarifa: medio.tarifa,
-          fechaCreacion: new Date().toISOString(),
-          fechaModificacion: new Date().toISOString(),
-          datos: {
-            tarifa: medio.tarifa,
-            spotsPorSemana: this.convertirSpotsPorFechaAArray(medio.spotsPorFecha) || [0, 0, 0, 0, 0],
-            valorTotal: medio.valorNeto,
-            totalSpots: medio.salidas
-          }
-        };
-        
-        pautasFlowChart.push(nuevaPauta);
-        console.log('✅ Pauta creada desde resumen:', nuevaPauta);
-      } else {
-        // Actualizar pauta existente con datos del resumen
-        pautaExistente.valorTotal = medio.valorNeto;
-        pautaExistente.totalSpots = medio.salidas;
-        pautaExistente.tarifa = medio.tarifa;
-        pautaExistente.fechaModificacion = new Date().toISOString();
-        
-        if (pautaExistente.datos) {
-          pautaExistente.datos.tarifa = medio.tarifa;
-          pautaExistente.datos.spotsPorSemana = this.convertirSpotsPorFechaAArray(medio.spotsPorFecha) || [0, 0, 0, 0, 0];
-          pautaExistente.datos.valorTotal = medio.valorNeto;
-          pautaExistente.datos.totalSpots = medio.salidas;
-        }
-        
-        console.log('✅ Pauta actualizada desde resumen:', pautaExistente);
-      }
-    });
-    
-    // Guardar las pautas actualizadas
-    localStorage.setItem('respuestasPautas', JSON.stringify(pautasFlowChart));
-    
-    console.log('💾 Datos sincronizados con FlowChart');
-  }
+  // Método sincronizarResumenConFlowChart eliminado - ya no es necesario
 
   onAprobarPlan(): void {
     if (this.resumenPlan.aprobado) {
