@@ -241,7 +241,7 @@ export class PlanMediosResumen implements OnInit {
     
     // Log para verificar que las tarifas están actualizadas
     this.periodoSeleccionado.medios.forEach(medio => {
-      console.log(`📊 Medio: ${medio.nombre}, Proveedor: ${medio.proveedor}, Tarifa: ${medio.tarifa}`);
+      console.log(`📊 Medio: ${medio.nombre}, Proveedor: ${medio.proveedor}, Tarifa: $${medio.tarifa}`);
     });
   }
 
@@ -673,26 +673,19 @@ export class PlanMediosResumen implements OnInit {
           // Actualización específica para cambios de tarifa
           console.log('🔄 Actualizando vista para cambios de tarifa');
           
-          // Actualizar inmediatamente la tarifa en el modelo local
+          // Actualizar inmediatamente la tarifa en el modelo local (para respuesta inmediata)
           this.actualizarTarifaEnModelo(result.medioActualizadoId || medio.planMedioItemId, result.nuevaTarifa);
           
           // Recargar datos desde el backend para obtener valores actualizados
+          console.log('🔄 Recargando datos desde backend para confirmar cambios');
           this.recargarResumen();
           
-          // Usar el método específico para refrescar la vista
-          setTimeout(() => {
-            this.refrescarVistaMedio();
-            // Marcar que hay cambios para detectar cambios futuros
-            this.cambiosPendientes = false;
-          }, 100);
+          // Marcar que hay cambios para detectar cambios futuros
+          this.cambiosPendientes = false;
         } else {
           // Recarga normal
           this.recargarResumen();
-          
-          setTimeout(() => {
-            this.prepararDataSource();
-            this.cambiosPendientes = false;
-          }, 200);
+          this.cambiosPendientes = false;
         }
       }
     });
@@ -732,8 +725,12 @@ export class PlanMediosResumen implements OnInit {
       if (result && result.shouldRefresh) {
         console.log('✅ Medio eliminado, recargando resumen');
         this.recargarResumen();
-        // Marcar cambios pendientes tras eliminar medio
-        this.cambiosPendientes = true;
+        
+        // ✅ EJECUTAR GUARDAR RESUMEN AUTOMÁTICAMENTE DESPUÉS DE ELIMINAR
+        console.log('💾 Ejecutando Guardar Resumen automáticamente tras eliminar medio...');
+        setTimeout(() => {
+          this.guardarResumen();
+        }, 1000); // Pequeño delay para asegurar que la recarga termine
       }
     });
   }
@@ -1106,12 +1103,6 @@ export class PlanMediosResumen implements OnInit {
           console.log(`✅ Cargados exitosamente ${planMedioItems.length} medios desde servidor`);
           console.log('📊 DataSource actualizado con nuevos datos');
           this.cargandoDatos = false;
-
-          // Forzar detección de cambios para actualizar la vista
-          setTimeout(() => {
-            this.prepararDataSource();
-            console.log('🔄 DataSource refrescado para actualizar vista');
-          }, 50);
         } else {
           // Plan existe pero sin medios - crear período vacío para que funcione el resumen
           const periodoVacio = this.crearPeriodoVacio(this.resumenPlan.fechaInicio, this.resumenPlan.fechaFin);
@@ -1336,23 +1327,7 @@ export class PlanMediosResumen implements OnInit {
     }
   }
 
-  // Método específico para refrescar la vista cuando se actualiza un medio
-  private refrescarVistaMedio(): void {
-    console.log('🔄 Refrescando vista específicamente para cambios de medio');
-    
-    // Refrescar el dataSource inmediatamente
-    this.prepararDataSource();
-    
-    // Forzar detección de cambios con múltiples actualizaciones
-    const intervalos = [50, 150, 300, 500];
-    
-    intervalos.forEach((delay, index) => {
-      setTimeout(() => {
-        this.prepararDataSource();
-        console.log(`🔄 Actualización ${index + 1} del dataSource completada`);
-      }, delay);
-    });
-  }
+
 
 
 
@@ -2001,16 +1976,23 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   private cargarMediosExistentes(): void {
-    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    this.mediosExistentes = pautas
-      .filter((pauta: any) => pauta.planId === this.data.planData.id)
-      .map((pauta: any) => ({
-        medio: pauta.medio,
-        proveedor: pauta.proveedor,
-        tarifa: pauta.datos?.tarifa || 0
-      }));
+    // Priorizar datos del backend (desde el componente padre)
+    if (this.data.mediosExistentes) {
+      this.mediosExistentes = this.data.mediosExistentes;
+      console.log('📋 Medios existentes cargados desde backend:', this.mediosExistentes);
+    } else {
+      // Fallback: cargar desde localStorage para compatibilidad temporal
+      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      this.mediosExistentes = pautas
+        .filter((pauta: any) => pauta.planId === this.data.planData.id)
+        .map((pauta: any) => ({
+          medio: pauta.medio,
+          proveedor: pauta.proveedor,
+          tarifa: pauta.datos?.tarifa || 0
+        }));
 
-    console.log('📋 Medios existentes cargados:', this.mediosExistentes);
+      console.log('📋 Medios existentes cargados desde localStorage (fallback):', this.mediosExistentes);
+    }
   }
 
   onMedioChange(medio: MedioBackend): void {
@@ -2209,34 +2191,35 @@ export class ModalAgregarMedioComponent implements OnInit {
     // Guardar en el backend
     this.backendMediosService.crearPlanMedioItem(crearRequest).subscribe(
       (response: PlanMedioItemBackend) => {
-        console.log('✅ PlanMedioItem creado en backend:', response);
+                  console.log('✅ PlanMedioItem creado en backend:', response);
 
-        // También guardar en localStorage para compatibilidad
-        const nuevaPauta: RespuestaPauta = {
-          id: `pauta-${response.planMedioItemId}`,
-          planId: this.data.planData.id,
-          plantillaId: 'simple',
-          paisFacturacion: 'Perú',
-          medio: medioSeleccionado.nombre,
-          proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
-          proveedorId: valores.proveedor,
-          planMedioItemId: response.planMedioItemId, // Agregar ID del backend
-          datos: {
-            tarifa: Number(valores.tarifa),
-            spotsPorFecha: {}
-          },
-          fechaCreacion: response.fechaRegistro || new Date().toISOString(),
-          fechaModificacion: response.fechaModificacion,
-          valorTotal: 0,
-          valorNeto: 0,
-          totalSpots: 0,
-          diasSeleccionados: [],
-          totalDiasSeleccionados: 0
-        };
+          // LocalStorage solo para compatibilidad temporal (TODO: eliminar cuando todo esté migrado)
+          const nuevaPauta: RespuestaPauta = {
+            id: `pauta-${response.planMedioItemId}`,
+            planId: this.data.planData.id,
+            plantillaId: 'simple',
+            paisFacturacion: 'Perú',
+            medio: medioSeleccionado.nombre,
+            proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
+            proveedorId: valores.proveedor,
+            planMedioItemId: response.planMedioItemId, // Agregar ID del backend
+            datos: {
+              tarifa: Number(valores.tarifa),
+              spotsPorFecha: {}
+            },
+            fechaCreacion: response.fechaRegistro || new Date().toISOString(),
+            fechaModificacion: response.fechaModificacion,
+            valorTotal: 0,
+            valorNeto: 0,
+            totalSpots: 0,
+            diasSeleccionados: [],
+            totalDiasSeleccionados: 0
+          };
 
-        const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-        pautas.push(nuevaPauta);
-        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+          const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+          pautas.push(nuevaPauta);
+          localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+          console.log('ℹ️ Guardado en localStorage para compatibilidad temporal');
 
         this.snackBar.open('✅ Medio agregado correctamente', '', {
           duration: 2000,
@@ -2248,37 +2231,13 @@ export class ModalAgregarMedioComponent implements OnInit {
       (error: any) => {
         console.error('❌ Error creando PlanMedioItem en backend:', error);
 
-        // Fallback: guardar solo en localStorage
-        const nuevaPauta: RespuestaPauta = {
-          id: `pauta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          planId: this.data.planData.id,
-          plantillaId: 'simple',
-          paisFacturacion: 'Perú',
-          medio: medioSeleccionado.nombre,
-          proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
-          proveedorId: valores.proveedor,
-          datos: {
-            tarifa: Number(valores.tarifa),
-            spotsPorFecha: {}
-          },
-          fechaCreacion: new Date().toISOString(),
-          valorTotal: 0,
-          valorNeto: 0,
-          totalSpots: 0,
-          diasSeleccionados: [],
-          totalDiasSeleccionados: 0
-        };
+                  // Error en backend - no se puede agregar el medio
+          this.snackBar.open('❌ Error al agregar medio en el servidor', '', {
+            duration: 3000,
+            panelClass: ['error-snackbar']
+          });
 
-        const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-        pautas.push(nuevaPauta);
-        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-
-        this.snackBar.open('⚠️ Medio agregado (solo local - error en backend)', '', {
-          duration: 3000,
-          panelClass: ['warning-snackbar']
-        });
-
-        this.dialogRef.close({ shouldRefresh: true });
+          // No cerrar el diálogo en caso de error para que el usuario pueda intentar de nuevo
       }
     );
   }
@@ -2845,43 +2804,18 @@ export class ModalEditarMedioComponent implements OnInit {
       return;
     }
 
-    // Buscar pauta en localStorage usando planMedioItemId como identificador principal
-    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    
-    console.log('📊 BUSCANDO PAUTA EN LOCALSTORAGE');
-    console.log('📊 Total pautas:', pautas.length);
-    console.log('📊 planMedioItemId buscado:', this.data.medio.planMedioItemId);
-    console.log('📊 planId buscado:', this.data.planId);
-    console.log('📊 medio buscado:', this.data.medio.nombre);
-    console.log('📊 proveedor buscado:', this.data.medio.proveedor);
-    
-    const pautaIndex = pautas.findIndex((pauta: any) => {
-      // Priorizar búsqueda por planMedioItemId si está disponible
-      if (this.data.medio.planMedioItemId && pauta.planMedioItemId) {
-        const coincide = pauta.planMedioItemId === this.data.medio.planMedioItemId;
-        console.log(`📊 Comparando por planMedioItemId: ${pauta.planMedioItemId} === ${this.data.medio.planMedioItemId} = ${coincide}`);
-        return coincide;
-      }
-      // Fallback: buscar por combinación de plan, medio y proveedor
-      const coincide = pauta.planId === this.data.planId &&
-             pauta.medio === this.data.medio.nombre &&
-             pauta.proveedor === this.data.medio.proveedor;
-      console.log(`📊 Comparando por combinación: ${pauta.planId}==${this.data.planId} && ${pauta.medio}==${this.data.medio.nombre} && ${pauta.proveedor}==${this.data.medio.proveedor} = ${coincide}`);
-      return coincide;
-    });
+    // Verificar que tenemos el planMedioItemId para actualizar en el backend
+    if (this.data.medio.planMedioItemId) {
+      console.log('📊 ACTUALIZANDO DIRECTAMENTE EN BACKEND');
+      console.log('📊 planMedioItemId:', this.data.medio.planMedioItemId);
+      console.log('📊 Nueva tarifa:', valores.tarifa);
 
-    console.log('📊 Índice de pauta encontrado:', pautaIndex);
-
-    if (pautaIndex !== -1) {
-      const pauta = pautas[pautaIndex];
-
-      // Si tiene planMedioItemId, actualizar en el backend
-      if (pauta.planMedioItemId) {
+              // Actualizar directamente en el backend (sin localStorage)
         const actualizarRequest: ActualizarPlanMedioItemRequest = {
-          planMedioItemId: pauta.planMedioItemId,
+          planMedioItemId: this.data.medio.planMedioItemId,
           planMedioId: Number(this.data.planId),
-          version: 1, // TODO: Obtener versión real
-          medioId: this.data.medio.medioId || 1, // TODO: Obtener medioId real
+          version: this.data.resumenPlan?.version || 1,
+          medioId: this.data.medio.medioId || 1, // TODO: Obtener medioId real desde el backend
           proveedorId: Number(valores.proveedor),
           tarifa: Number(valores.tarifa),
           dataJson: JSON.stringify({
@@ -2892,106 +2826,45 @@ export class ModalEditarMedioComponent implements OnInit {
           usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
         };
 
-        console.log('📤 ENVIANDO REQUEST AL BACKEND:', actualizarRequest);
-        console.log('📤 URL del servicio:', 'actualizarPlanMedioItem');
-        console.log('📤 Datos a enviar:', JSON.stringify(actualizarRequest, null, 2));
+      console.log('📤 ENVIANDO REQUEST AL BACKEND:', actualizarRequest);
+      console.log('📤 URL del servicio:', 'actualizarPlanMedioItem');
+      console.log('📤 Datos a enviar:', JSON.stringify(actualizarRequest, null, 2));
 
-        this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
-          (response: PlanMedioItemBackend) => {
-            console.log('✅ RESPUESTA DEL BACKEND:', response);
-            console.log('✅ Tarifa actualizada en backend:', response.tarifa);
+      this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
+        (response: PlanMedioItemBackend) => {
+          console.log('✅ RESPUESTA DEL BACKEND:', response);
+          console.log('✅ Tarifa actualizada en backend:', response.tarifa);
 
-            // Actualizar también en localStorage
-            this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado, response);
+          this.snackBar.open('✅ Tarifa actualizada y spots reiniciados automáticamente', '', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
 
-            this.snackBar.open('✅ Tarifa actualizada y spots reiniciados automáticamente', '', {
-              duration: 3000,
-              panelClass: ['success-snackbar']
-            });
+          this.dialogRef.close({ 
+            shouldRefresh: true, 
+            medioActualizado: true,
+            nuevaTarifa: Number(valores.tarifa),
+            medioActualizadoId: this.data.medio.planMedioItemId
+          });
+        },
+        (error: any) => {
+          console.error('❌ ERROR COMPLETO DEL BACKEND:', error);
+          console.error('❌ Status:', error.status);
+          console.error('❌ Message:', error.message);
+          console.error('❌ Error body:', error.error);
 
-            this.dialogRef.close({ 
-              shouldRefresh: true, 
-              medioActualizado: true,
-              nuevaTarifa: Number(valores.tarifa),
-              medioActualizadoId: pauta.planMedioItemId
-            });
-          },
-          (error: any) => {
-            console.error('❌ ERROR COMPLETO DEL BACKEND:', error);
-            console.error('❌ Status:', error.status);
-            console.error('❌ Message:', error.message);
-            console.error('❌ Error body:', error.error);
-
-            // Fallback: actualizar solo en localStorage
-            this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
-
-            this.snackBar.open('⚠️ Tarifa actualizada y spots reiniciados (solo local - error en backend)', '', {
-              duration: 4000,
-              panelClass: ['warning-snackbar']
-            });
-
-            this.dialogRef.close({ 
-              shouldRefresh: true, 
-              medioActualizado: true,
-              nuevaTarifa: Number(valores.tarifa),
-              medioActualizadoId: pauta.planMedioItemId
-            });
-          }
-        );
-      } else {
-        // No tiene planMedioItemId, actualizar solo en localStorage
-        this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
-
-        this.snackBar.open('✅ Tarifa actualizada y spots reiniciados (solo local)', '', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
-
-        this.dialogRef.close({ 
-          shouldRefresh: true, 
-          medioActualizado: true,
-          nuevaTarifa: Number(valores.tarifa),
-          medioActualizadoId: pauta.planMedioItemId
-        });
-      }
+          this.snackBar.open('❌ Error actualizando tarifa en el servidor', '', {
+            duration: 4000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      );
     } else {
-      this.snackBar.open('❌ Error: No se pudo encontrar el medio para actualizar', '', {
+      this.snackBar.open('❌ Error: No se puede actualizar - falta ID del medio', '', {
         duration: 3000,
         panelClass: ['error-snackbar']
       });
     }
-  }
-
-  private actualizarPautaEnLocalStorage(pautaIndex: number, valores: any, proveedorSeleccionado: any, response?: PlanMedioItemBackend): void {
-    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-
-    // Actualizar proveedor y tarifa
-    pautas[pautaIndex].proveedor = proveedorSeleccionado ? proveedorSeleccionado.VENDOR : this.data.medio.proveedor;
-    pautas[pautaIndex].proveedorId = valores.proveedor;
-    pautas[pautaIndex].datos = pautas[pautaIndex].datos || {};
-    pautas[pautaIndex].datos.tarifa = Number(valores.tarifa);
-
-    // Reiniciar spots y valores cuando se actualiza la tarifa
-    pautas[pautaIndex].datos.spotsPorFecha = {}; // Reiniciar spots por fecha
-    pautas[pautaIndex].totalSpots = 0; // Reiniciar spots totales
-    pautas[pautaIndex].valorTotal = 0; // Reiniciar valor total
-    pautas[pautaIndex].valorNeto = 0; // Reiniciar valor neto
-
-    // Actualizar fechas
-    if (response) {
-      pautas[pautaIndex].fechaModificacion = response.fechaModificacion;
-    } else {
-      pautas[pautaIndex].fechaModificacion = new Date().toISOString();
-    }
-
-    localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-    
-    console.log('✅ Pauta actualizada en localStorage:', {
-      medio: this.data.medio.nombre,
-      proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : this.data.medio.proveedor,
-      nuevaTarifa: Number(valores.tarifa),
-      pautaIndex: pautaIndex
-    });
   }
 }
 
