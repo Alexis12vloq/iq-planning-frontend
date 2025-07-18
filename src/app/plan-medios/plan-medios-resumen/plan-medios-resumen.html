@@ -131,7 +131,7 @@
                 <tr *ngIf="fila.tipo === 'nombre'" class="fila-medio" 
                     (dblclick)="onAccionMedio(fila.medio)" 
                     title="Doble click para ver opciones">
-                  <td>{{ fila.nombre }}</td>
+                  <td></td>
                   <td>{{ fila.medio?.proveedor || 'Sin proveedor' }}</td>
                   <td [attr.colspan]="semanasConFechas.length">
                     <!-- Quitar los checks, dejar en blanco -->
@@ -143,8 +143,8 @@
                 
                 <!-- Fila de spots -->
                 <tr *ngIf="fila.tipo === 'spots' && fila.medio" class="fila-spots">
-                  <td>{{ fila.nombre }}</td>
                   <td></td>
+                  <td>{{ fila.nombre }}</td>
                   <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="spots-cell">
                     <input 
                       type="number" 
@@ -161,8 +161,8 @@
                 
                 <!-- Fila de inversiones -->
                 <tr *ngIf="fila.tipo === 'inversiones' && fila.medio" class="fila-inversiones">
-                  <td>{{ fila.nombre }} (Tarifa: {{ fila.medio.tarifa | currency:'USD':'symbol-narrow':'1.0-0' }})</td>
                   <td></td>
+                  <td>{{ fila.nombre }} (Tarifa: {{ fila.medio.tarifa | currency:'USD':'symbol-narrow':'1.0-0' }})</td>
                   <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="inversiones-cell">
                     {{ calcularInversionSemana(fila.medio, semanaIndex) | currency:'USD':'symbol-narrow':'1.0-0' }}
                   </td>

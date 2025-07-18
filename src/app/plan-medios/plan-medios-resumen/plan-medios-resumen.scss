@@ -286,24 +286,24 @@
 
 
   .col-medios {
-    width: 18%; // Porcentaje del ancho total (reducido 2%)
-    min-width: 180px;
+    width: 12%; // Reducido de 18% a 12% (ahorro de 6%)
+    min-width: 120px;
   }
 
   .col-proveedor {
-    width: 13%; // Porcentaje del ancho total (reducido 2%)
-    min-width: 130px;
+    width: 16%; // Aumentado de 13% a 16% (ganancia de 3%)
+    min-width: 160px;
   }
 
   .col-semanas {
     text-align: center;
-    width: 40%; // Porcentaje del ancho total para el área de semanas (reducido 5%)
-    min-width: 400px;
+    width: 42%; // Aumentado de 40% a 42% (ganancia de 2%)
+    min-width: 420px;
   }
   
   // Las fechas se distribuyen dentro del porcentaje asignado
   .fechas-subheader .col-fecha {
-    width: calc(40% / var(--num-semanas, 5)); // Distribución dentro del porcentaje actualizado
+    width: calc(42% / var(--num-semanas, 5)); // Distribución dentro del porcentaje actualizado
     min-width: 70px;
   }
 
@@ -313,19 +313,19 @@
   }
 
   .col-valor-mensual {
-    width: 12%; // Porcentaje del ancho total (nueva columna)
+    width: 12%; // Mantenido igual
     min-width: 120px;
     text-align: right;
   }
 
   .col-total {
-    width: 11%; // Porcentaje del ancho total (reducido 1%)
-    min-width: 110px;
+    width: 12%; // Aumentado de 11% a 12% (ganancia de 1%)
+    min-width: 120px;
     text-align: right;
   }
 
   .col-soi {
-    width: 6%; // Porcentaje del ancho total (reducido 2%)
+    width: 6%; // Mantenido igual
     min-width: 60px;
     text-align: right;
   }
@@ -466,6 +466,11 @@
     }
     
     td:first-child {
+      background-color: white;
+      border-right: 1px solid #e0e0e0;
+    }
+    
+    td:nth-child(2) {
       color: #0066cc;
       font-weight: 500;
       font-size: 13px;
@@ -476,12 +481,20 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       
       td:first-child {
+        background-color: #f5f5f5;
+      }
+      
+      td:nth-child(2) {
         color: #004499;
       }
     }
 
     &:active {
       background-color: #e8f4fd;
+      
+      td:first-child {
+        background-color: #e8f4fd;
+      }
     }
   }
 
@@ -496,7 +509,11 @@
     }
     
     td:first-child {
-      padding-left: 20px;
+      background-color: #f9f9f9;
+      border-right: 1px solid #e0e0e0;
+    }
+    
+    td:nth-child(2) {
       color: #666;
       font-weight: 500;
     }
@@ -528,7 +545,11 @@
     }
     
     td:first-child {
-      padding-left: 20px;
+      background-color: #f5f5f5;
+      border-right: 1px solid #e0e0e0;
+    }
+    
+    td:nth-child(2) {
       color: #666;
       font-weight: 500;
     }
@@ -788,4 +809,39 @@
       min-width: 60px;
       max-width: 120px;
     }
+  } 
+
+  .validation-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f44336;
+    font-size: 14px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    background-color: #ffebee;
+    border-radius: 4px;
+    border-left: 4px solid #f44336;
+  }
+
+  .validation-message mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  // Estilos para mat-error
+  ::ng-deep .mat-mdc-form-field-error {
+    color: #f44336;
+    font-size: 12px;
+  }
+
+  // Estilos para campos con error
+  ::ng-deep .mat-mdc-form-field.mat-form-field-invalid .mat-mdc-text-field-wrapper {
+    border-color: #f44336 !important;
+  }
+
+  ::ng-deep .mat-mdc-form-field.mat-form-field-invalid .mat-mdc-floating-label {
+    color: #f44336 !important;
   } 

@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild, ElementRef, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -207,11 +207,11 @@ export class PlanMediosResumen implements OnInit {
 
       // Agregar filas para cada proveedor del medio
       mediosDelGrupo.forEach(medio => {
-        // Fila del proveedor (siempre identada para mostrar que es un sub-item)
+        // Fila del proveedor (va en la columna PROVEEDOR)
         filas.push({
           tipo: 'nombre',
           medio: { ...medio },
-          nombre: `  ${medio.proveedor || 'Sin proveedor'}`,
+          nombre: medio.proveedor || 'Sin proveedor',
           semanas: medio.semanas,
           soi: medio.soi
         });
@@ -284,6 +284,29 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onPeriodoChange(periodo: PeriodoPlan): void {
+    // Validar cambios pendientes antes de cambiar período
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: 'cambiar-periodo' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          this.ejecutarCambioPeriodo(periodo);
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarCambioPeriodo(periodo);
+        }
+      });
+    } else {
+      this.ejecutarCambioPeriodo(periodo);
+    }
+  }
+
+  private ejecutarCambioPeriodo(periodo: PeriodoPlan): void {
     this.periodoSeleccionado = periodo;
     this.calcularMesesDisponibles();
     this.calcularSemanasConFechas();
@@ -292,6 +315,29 @@ export class PlanMediosResumen implements OnInit {
 
   // Funciones de navegación por meses
   mesAnterior(): void {
+    // Validar cambios pendientes antes de navegar
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: 'navegar-mes-anterior' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          this.ejecutarMesAnterior();
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarMesAnterior();
+        }
+      });
+    } else {
+      this.ejecutarMesAnterior();
+    }
+  }
+
+  private ejecutarMesAnterior(): void {
     if (this.mesActualIndex > 0) {
       this.mesActualIndex--;
       this.mesActual = this.mesesDisponibles[this.mesActualIndex];
@@ -302,6 +348,29 @@ export class PlanMediosResumen implements OnInit {
   }
 
   mesSiguiente(): void {
+    // Validar cambios pendientes antes de navegar
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: 'navegar-mes-siguiente' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          this.ejecutarMesSiguiente();
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarMesSiguiente();
+        }
+      });
+    } else {
+      this.ejecutarMesSiguiente();
+    }
+  }
+
+  private ejecutarMesSiguiente(): void {
     if (this.mesActualIndex < this.mesesDisponibles.length - 1) {
       this.mesActualIndex++;
       this.mesActual = this.mesesDisponibles[this.mesActualIndex];
@@ -531,6 +600,29 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onAccionMedio(medio: any): void {
+    // Validar cambios pendientes antes de abrir acciones del medio
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: 'acciones-medio' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          this.ejecutarAccionMedio(medio);
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarAccionMedio(medio);
+        }
+      });
+    } else {
+      this.ejecutarAccionMedio(medio);
+    }
+  }
+
+  private ejecutarAccionMedio(medio: any): void {
     console.log('⚡ Abriendo modal de acciones para medio:', medio);
 
     const dialogRef = this.dialog.open(ModalAccionesMedioComponent, {
@@ -598,10 +690,62 @@ export class PlanMediosResumen implements OnInit {
   }
 
   onDescargaFlow(): void {
-    console.log('Descarga Flow clicked');
+    // Validar cambios pendientes antes de descargar
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: 'descarga-flow' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          this.ejecutarDescargaFlow();
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarDescargaFlow();
+        }
+      });
+    } else {
+      this.ejecutarDescargaFlow();
+    }
+  }
+
+  private ejecutarDescargaFlow(): void {
+    console.log('🔄 Ejecutando descarga FlowChart');
+    // TODO: Implementar lógica de descarga
+    this.snackBar.open('📥 Descarga FlowChart iniciada', '', {
+      duration: 2000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top'
+    });
   }
 
   onAgregarMedio(): void {
+    // Validar cambios pendientes antes de agregar medio
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: 'agregar-medio' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          this.ejecutarAgregarMedio();
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarAgregarMedio();
+        }
+      });
+    } else {
+      this.ejecutarAgregarMedio();
+    }
+  }
+
+  private ejecutarAgregarMedio(): void {
     const planData = {
       id: this.planId, // Usar el ID almacenado
       numeroPlan: this.resumenPlan.numeroPlan,
@@ -701,15 +845,38 @@ export class PlanMediosResumen implements OnInit {
   // Método sincronizarResumenConFlowChart eliminado - ya no es necesario
 
   onAprobarPlan(): void {
+    // Validar cambios pendientes antes de aprobar
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: 'aprobar-plan' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          this.ejecutarAprobarPlan();
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarAprobarPlan();
+        }
+      });
+    } else {
+      this.ejecutarAprobarPlan();
+    }
+  }
+
+  private ejecutarAprobarPlan(): void {
     if (this.resumenPlan.aprobado) {
-      this.snackBar.open('Plan aprobado exitosamente', 'Cerrar', {
+      this.snackBar.open('✅ Plan aprobado exitosamente', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
         panelClass: ['success-snackbar']
       });
     } else {
-      this.snackBar.open('El plan debe ser revisado. No se puede aprobar en este momento.', 'Cerrar', {
+      this.snackBar.open('⚠️ El plan debe ser revisado. No se puede aprobar en este momento.', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
@@ -763,9 +930,32 @@ export class PlanMediosResumen implements OnInit {
   }
 
   async exportarPDF() {
+    // Validar cambios pendientes antes de exportar
+    if (this.cambiosPendientes) {
+      const dialogRef = this.dialog.open(ModalConfirmarCambiosPendientesComponent, {
+        width: '400px',
+        data: { ruta: 'exportar-pdf' },
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result && result.accion === 'guardar') {
+          this.guardarResumen();
+          this.ejecutarExportarPDF();
+        } else if (result && result.accion === 'continuar') {
+          this.cambiosPendientes = false;
+          this.ejecutarExportarPDF();
+        }
+      });
+    } else {
+      this.ejecutarExportarPDF();
+    }
+  }
+
+  private async ejecutarExportarPDF() {
     try {
       // Mostrar mensaje de carga
-      this.snackBar.open('Generando FlowChart...', '', {
+      this.snackBar.open('📄 Generando FlowChart...', '', {
         duration: undefined,
         horizontalPosition: 'center',
         verticalPosition: 'top'
@@ -805,7 +995,7 @@ export class PlanMediosResumen implements OnInit {
 
       // Cerrar mensaje de carga y mostrar mensaje de éxito
       this.snackBar.dismiss();
-      this.snackBar.open('FlowChart generado exitosamente', 'Cerrar', {
+      this.snackBar.open('✅ FlowChart generado exitosamente', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
@@ -813,7 +1003,7 @@ export class PlanMediosResumen implements OnInit {
       });
     } catch (error) {
       console.error('Error al generar FlowChart:', error);
-      this.snackBar.open('Error al generar el FlowChart', 'Cerrar', {
+      this.snackBar.open('❌ Error al generar el FlowChart', 'Cerrar', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'top',
@@ -1491,6 +1681,9 @@ export class PlanMediosResumen implements OnInit {
                 </mat-option>
               </mat-select>
               <mat-hint *ngIf="cargandoMedios">Cargando medios...</mat-hint>
+              <mat-error *ngIf="medioForm.get('medio')?.hasError('required')">
+                El medio es obligatorio
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field class="full-width" *ngIf="medioForm.get('medio')?.value">
@@ -1504,17 +1697,32 @@ export class PlanMediosResumen implements OnInit {
               <mat-hint *ngIf="!cargandoProveedores && proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0">
                 Todos los proveedores de este medio ya están agregados
               </mat-hint>
+              <mat-error *ngIf="medioForm.get('proveedor')?.hasError('required')">
+                El proveedor es obligatorio
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field class="full-width">
               <mat-label>Tarifa</mat-label>
-              <input matInput type="number" formControlName="tarifa" step="0.01">
+              <input matInput type="number" formControlName="tarifa" step="0.01" min="0.01">
+              <mat-error *ngIf="medioForm.get('tarifa')?.hasError('required')">
+                La tarifa es obligatoria
+              </mat-error>
+              <mat-error *ngIf="medioForm.get('tarifa')?.hasError('min')">
+                La tarifa debe ser mayor a 0
+              </mat-error>
             </mat-form-field>
 
             <!-- Mensaje de validación de duplicado -->
             <div class="validation-message" *ngIf="existeCombinacion">
               <mat-icon color="warn">warning</mat-icon>
               <span>Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan</span>
+            </div>
+
+            <!-- Mensaje de validación de formulario -->
+            <div class="validation-message" *ngIf="medioForm.invalid && medioForm.touched">
+              <mat-icon color="warn">error</mat-icon>
+              <span>Por favor completa todos los campos obligatorios</span>
             </div>
           </form>
         </mat-card-content>
@@ -1667,9 +1875,9 @@ export class ModalAgregarMedioComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.medioForm = this.fb.group({
-      medio: [''],
-      proveedor: [''],
-      tarifa: [0]
+      medio: ['', [Validators.required]],
+      proveedor: ['', [Validators.required]],
+      tarifa: [0, [Validators.required, Validators.min(0.01)]]
     });
   }
 
@@ -1823,125 +2031,162 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   guardarMedio(): void {
-    if (this.medioForm.valid && !this.existeCombinacion) {
-      const valores = this.medioForm.value;
-      const medioSeleccionado = valores.medio as MedioBackend;
-      const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+    // Marcar todos los campos como tocados para mostrar errores
+    this.medioForm.markAllAsTouched();
 
-      // Verificar una vez más antes de guardar
-      const combinacionExiste = this.mediosExistentes.some(me =>
-        me.medio === medioSeleccionado.nombre &&
-        me.proveedor === proveedorSeleccionado?.VENDOR &&
-        Math.abs(me.tarifa - valores.tarifa) < 0.01
-      );
-
-      if (combinacionExiste) {
-        this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe', '', {
-          duration: 3000,
-          panelClass: ['error-snackbar']
-        });
-        return;
+    // Validar campos obligatorios
+    if (this.medioForm.invalid) {
+      let mensajeError = 'Por favor completa todos los campos obligatorios:';
+      
+      if (this.medioForm.get('medio')?.hasError('required')) {
+        mensajeError += ' Medio';
+      }
+      if (this.medioForm.get('proveedor')?.hasError('required')) {
+        mensajeError += ' Proveedor';
+      }
+      if (this.medioForm.get('tarifa')?.hasError('required')) {
+        mensajeError += ' Tarifa';
+      }
+      if (this.medioForm.get('tarifa')?.hasError('min')) {
+        mensajeError = 'La tarifa debe ser mayor a 0';
       }
 
-      // Preparar request para el backend
-      const crearRequest: CrearPlanMedioItemRequest = {
-        planMedioId: Number(this.data.planData.id), // ID del plan
-        version: Number(this.data.planData.version || 1), // Versión del plan
-        medioId: medioSeleccionado.medioId,
-        proveedorId: Number(valores.proveedor),
-        tarifa: Number(valores.tarifa),
-        dataJson: JSON.stringify({
-          spotsPorFecha: {},
-          totalSpots: 0,
-          valorTotal: 0
-        }),
-        usuarioRegistro: 'SYSTEM' // TODO: Obtener usuario actual
-      };
+      this.snackBar.open(`❌ ${mensajeError}`, '', {
+        duration: 4000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
 
-      console.log('📤 Enviando request al backend:', crearRequest);
-
-      // Guardar en el backend
-      this.backendMediosService.crearPlanMedioItem(crearRequest).subscribe(
-        (response: PlanMedioItemBackend) => {
-          console.log('✅ PlanMedioItem creado en backend:', response);
-
-          // También guardar en localStorage para compatibilidad
-          const nuevaPauta: RespuestaPauta = {
-            id: `pauta-${response.planMedioItemId}`,
-            planId: this.data.planData.id,
-            plantillaId: 'simple',
-            paisFacturacion: 'Perú',
-            medio: medioSeleccionado.nombre,
-            proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
-            proveedorId: valores.proveedor,
-            planMedioItemId: response.planMedioItemId, // Agregar ID del backend
-            datos: {
-              tarifa: Number(valores.tarifa),
-              spotsPorFecha: {}
-            },
-            fechaCreacion: response.fechaRegistro || new Date().toISOString(),
-            fechaModificacion: response.fechaModificacion,
-            valorTotal: 0,
-            valorNeto: 0,
-            totalSpots: 0,
-            diasSeleccionados: [],
-            totalDiasSeleccionados: 0
-          };
-
-          const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-          pautas.push(nuevaPauta);
-          localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-
-          this.snackBar.open('✅ Medio agregado correctamente', '', {
-            duration: 2000,
-            panelClass: ['success-snackbar']
-          });
-
-          this.dialogRef.close({ shouldRefresh: true });
-        },
-        (error: any) => {
-          console.error('❌ Error creando PlanMedioItem en backend:', error);
-
-          // Fallback: guardar solo en localStorage
-          const nuevaPauta: RespuestaPauta = {
-            id: `pauta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            planId: this.data.planData.id,
-            plantillaId: 'simple',
-            paisFacturacion: 'Perú',
-            medio: medioSeleccionado.nombre,
-            proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
-            proveedorId: valores.proveedor,
-            datos: {
-              tarifa: Number(valores.tarifa),
-              spotsPorFecha: {}
-            },
-            fechaCreacion: new Date().toISOString(),
-            valorTotal: 0,
-            valorNeto: 0,
-            totalSpots: 0,
-            diasSeleccionados: [],
-            totalDiasSeleccionados: 0
-          };
-
-          const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-          pautas.push(nuevaPauta);
-          localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-
-          this.snackBar.open('⚠️ Medio agregado (solo local - error en backend)', '', {
-            duration: 3000,
-            panelClass: ['warning-snackbar']
-          });
-
-          this.dialogRef.close({ shouldRefresh: true });
-        }
-      );
-
-    } else if (this.existeCombinacion) {
-      this.snackBar.open('❌ Esta combinación ya existe en el plan', '', {
+    // Validar combinación duplicada
+    if (this.existeCombinacion) {
+      this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan', '', {
         duration: 3000,
         panelClass: ['error-snackbar']
       });
+      return;
     }
+
+    const valores = this.medioForm.value;
+    const medioSeleccionado = valores.medio as MedioBackend;
+    const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+
+    // Validar que se hayan seleccionado medio y proveedor
+    if (!medioSeleccionado || !proveedorSeleccionado) {
+      this.snackBar.open('❌ Error: Medio o proveedor no encontrado', '', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    // Verificar una vez más antes de guardar
+    const combinacionExiste = this.mediosExistentes.some(me =>
+      me.medio === medioSeleccionado.nombre &&
+      me.proveedor === proveedorSeleccionado?.VENDOR &&
+      Math.abs(me.tarifa - valores.tarifa) < 0.01
+    );
+
+    if (combinacionExiste) {
+      this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe', '', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    // Preparar request para el backend
+    const crearRequest: CrearPlanMedioItemRequest = {
+      planMedioId: Number(this.data.planData.id), // ID del plan
+      version: Number(this.data.planData.version || 1), // Versión del plan
+      medioId: medioSeleccionado.medioId,
+      proveedorId: Number(valores.proveedor),
+      tarifa: Number(valores.tarifa),
+      dataJson: JSON.stringify({
+        spotsPorFecha: {},
+        totalSpots: 0,
+        valorTotal: 0
+      }),
+      usuarioRegistro: 'SYSTEM' // TODO: Obtener usuario actual
+    };
+
+    console.log('📤 Enviando request al backend:', crearRequest);
+
+    // Guardar en el backend
+    this.backendMediosService.crearPlanMedioItem(crearRequest).subscribe(
+      (response: PlanMedioItemBackend) => {
+        console.log('✅ PlanMedioItem creado en backend:', response);
+
+        // También guardar en localStorage para compatibilidad
+        const nuevaPauta: RespuestaPauta = {
+          id: `pauta-${response.planMedioItemId}`,
+          planId: this.data.planData.id,
+          plantillaId: 'simple',
+          paisFacturacion: 'Perú',
+          medio: medioSeleccionado.nombre,
+          proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
+          proveedorId: valores.proveedor,
+          planMedioItemId: response.planMedioItemId, // Agregar ID del backend
+          datos: {
+            tarifa: Number(valores.tarifa),
+            spotsPorFecha: {}
+          },
+          fechaCreacion: response.fechaRegistro || new Date().toISOString(),
+          fechaModificacion: response.fechaModificacion,
+          valorTotal: 0,
+          valorNeto: 0,
+          totalSpots: 0,
+          diasSeleccionados: [],
+          totalDiasSeleccionados: 0
+        };
+
+        const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+        pautas.push(nuevaPauta);
+        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+
+        this.snackBar.open('✅ Medio agregado correctamente', '', {
+          duration: 2000,
+          panelClass: ['success-snackbar']
+        });
+
+        this.dialogRef.close({ shouldRefresh: true });
+      },
+      (error: any) => {
+        console.error('❌ Error creando PlanMedioItem en backend:', error);
+
+        // Fallback: guardar solo en localStorage
+        const nuevaPauta: RespuestaPauta = {
+          id: `pauta-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          planId: this.data.planData.id,
+          plantillaId: 'simple',
+          paisFacturacion: 'Perú',
+          medio: medioSeleccionado.nombre,
+          proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
+          proveedorId: valores.proveedor,
+          datos: {
+            tarifa: Number(valores.tarifa),
+            spotsPorFecha: {}
+          },
+          fechaCreacion: new Date().toISOString(),
+          valorTotal: 0,
+          valorNeto: 0,
+          totalSpots: 0,
+          diasSeleccionados: [],
+          totalDiasSeleccionados: 0
+        };
+
+        const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+        pautas.push(nuevaPauta);
+        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+
+        this.snackBar.open('⚠️ Medio agregado (solo local - error en backend)', '', {
+          duration: 3000,
+          panelClass: ['warning-snackbar']
+        });
+
+        this.dialogRef.close({ shouldRefresh: true });
+      }
+    );
   }
 }
 
@@ -2201,16 +2446,31 @@ export class ModalAccionesMedioComponent {
             </mat-option>
           </mat-select>
           <mat-hint *ngIf="cargandoProveedores">Cargando proveedores...</mat-hint>
+          <mat-error *ngIf="editarForm.get('proveedor')?.hasError('required')">
+            El proveedor es obligatorio
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field class="full-width">
           <mat-label>Tarifa</mat-label>
-          <input matInput type="number" formControlName="tarifa" step="0.01">
+          <input matInput type="number" formControlName="tarifa" step="0.01" min="0.01">
+          <mat-error *ngIf="editarForm.get('tarifa')?.hasError('required')">
+            La tarifa es obligatoria
+          </mat-error>
+          <mat-error *ngIf="editarForm.get('tarifa')?.hasError('min')">
+            La tarifa debe ser mayor a 0
+          </mat-error>
         </mat-form-field>
 
         <div class="validation-message" *ngIf="existeCombinacion">
           <mat-icon color="warn">warning</mat-icon>
           <span>Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan</span>
+        </div>
+
+        <!-- Mensaje de validación de formulario -->
+        <div class="validation-message" *ngIf="editarForm.invalid && editarForm.touched">
+          <mat-icon color="warn">error</mat-icon>
+          <span>Por favor completa todos los campos obligatorios</span>
         </div>
 
         <!-- Mensaje de advertencia sobre reinicio de spots -->
@@ -2340,8 +2600,8 @@ export class ModalEditarMedioComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.editarForm = this.fb.group({
-      proveedor: [data.medio.proveedorId || ''],
-      tarifa: [data.medio.tarifa || 0]
+      proveedor: [data.medio.proveedorId || '', [Validators.required]],
+      tarifa: [data.medio.tarifa || 0, [Validators.required, Validators.min(0.01)]]
     });
   }
 
@@ -2439,91 +2699,131 @@ export class ModalEditarMedioComponent implements OnInit {
   }
 
   guardarCambios(): void {
-    if (this.editarForm.valid && !this.existeCombinacion) {
-      const valores = this.editarForm.value;
-      const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+    // Marcar todos los campos como tocados para mostrar errores
+    this.editarForm.markAllAsTouched();
 
-      // Buscar pauta en localStorage usando planMedioItemId como identificador principal
-      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    // Validar campos obligatorios
+    if (this.editarForm.invalid) {
+      let mensajeError = 'Por favor completa todos los campos obligatorios:';
       
-      const pautaIndex = pautas.findIndex((pauta: any) => {
-        // Priorizar búsqueda por planMedioItemId si está disponible
-        if (this.data.medio.planMedioItemId && pauta.planMedioItemId) {
-          return pauta.planMedioItemId === this.data.medio.planMedioItemId;
-        }
-        // Fallback: buscar por combinación de plan, medio y proveedor
-        return pauta.planId === this.data.planId &&
-               pauta.medio === this.data.medio.nombre &&
-               pauta.proveedor === this.data.medio.proveedor;
-      });
-
-      if (pautaIndex !== -1) {
-        const pauta = pautas[pautaIndex];
-
-        // Si tiene planMedioItemId, actualizar en el backend
-        if (pauta.planMedioItemId) {
-          const actualizarRequest: ActualizarPlanMedioItemRequest = {
-            planMedioItemId: pauta.planMedioItemId,
-            planMedioId: Number(this.data.planId),
-            version: 1, // TODO: Obtener versión real
-            medioId: this.data.medio.medioId || 1, // TODO: Obtener medioId real
-            proveedorId: Number(valores.proveedor),
-            tarifa: Number(valores.tarifa),
-            dataJson: JSON.stringify({
-              spotsPorFecha: {}, // Reiniciar spots a vacío
-              totalSpots: 0, // Reiniciar spots a 0
-              valorTotal: 0 // Reiniciar valor total a 0
-            }),
-            usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
-          };
-
-          console.log('📤 Actualizando PlanMedioItem en backend:', actualizarRequest);
-
-          this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
-            (response: PlanMedioItemBackend) => {
-              console.log('✅ PlanMedioItem actualizado en backend:', response);
-
-              // Actualizar también en localStorage
-              this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado, response);
-
-              this.snackBar.open('✅ Tarifa actualizada y spots reiniciados automáticamente', '', {
-                duration: 3000,
-                panelClass: ['success-snackbar']
-              });
-
-              this.dialogRef.close({ shouldRefresh: true });
-            },
-            (error: any) => {
-              console.error('❌ Error actualizando PlanMedioItem en backend:', error);
-
-              // Fallback: actualizar solo en localStorage
-              this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
-
-              this.snackBar.open('⚠️ Tarifa actualizada y spots reiniciados (solo local - error en backend)', '', {
-                duration: 4000,
-                panelClass: ['warning-snackbar']
-              });
-
-              this.dialogRef.close({ shouldRefresh: true });
-            }
-          );
-        } else {
-          // No tiene planMedioItemId, actualizar solo en localStorage
-          this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
-
-          this.snackBar.open('✅ Tarifa actualizada y spots reiniciados (solo local)', '', {
-            duration: 3000,
-            panelClass: ['success-snackbar']
-          });
-
-          this.dialogRef.close({ shouldRefresh: true });
-        }
-      } else {
-        this.snackBar.open('❌ Error: No se pudo encontrar el medio para actualizar', '', {
-          duration: 3000,
-          panelClass: ['error-snackbar']
-        });
+      if (this.editarForm.get('proveedor')?.hasError('required')) {
+        mensajeError += ' Proveedor';
       }
+      if (this.editarForm.get('tarifa')?.hasError('required')) {
+        mensajeError += ' Tarifa';
+      }
+      if (this.editarForm.get('tarifa')?.hasError('min')) {
+        mensajeError = 'La tarifa debe ser mayor a 0';
+      }
+
+      this.snackBar.open(`❌ ${mensajeError}`, '', {
+        duration: 4000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    // Validar combinación duplicada
+    if (this.existeCombinacion) {
+      this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan', '', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    const valores = this.editarForm.value;
+    const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+
+    // Validar que se haya seleccionado un proveedor
+    if (!proveedorSeleccionado) {
+      this.snackBar.open('❌ Error: Proveedor no encontrado', '', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    // Buscar pauta en localStorage usando planMedioItemId como identificador principal
+    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+    
+    const pautaIndex = pautas.findIndex((pauta: any) => {
+      // Priorizar búsqueda por planMedioItemId si está disponible
+      if (this.data.medio.planMedioItemId && pauta.planMedioItemId) {
+        return pauta.planMedioItemId === this.data.medio.planMedioItemId;
+      }
+      // Fallback: buscar por combinación de plan, medio y proveedor
+      return pauta.planId === this.data.planId &&
+             pauta.medio === this.data.medio.nombre &&
+             pauta.proveedor === this.data.medio.proveedor;
+    });
+
+    if (pautaIndex !== -1) {
+      const pauta = pautas[pautaIndex];
+
+      // Si tiene planMedioItemId, actualizar en el backend
+      if (pauta.planMedioItemId) {
+        const actualizarRequest: ActualizarPlanMedioItemRequest = {
+          planMedioItemId: pauta.planMedioItemId,
+          planMedioId: Number(this.data.planId),
+          version: 1, // TODO: Obtener versión real
+          medioId: this.data.medio.medioId || 1, // TODO: Obtener medioId real
+          proveedorId: Number(valores.proveedor),
+          tarifa: Number(valores.tarifa),
+          dataJson: JSON.stringify({
+            spotsPorFecha: {}, // Reiniciar spots a vacío
+            totalSpots: 0, // Reiniciar spots a 0
+            valorTotal: 0 // Reiniciar valor total a 0
+          }),
+          usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
+        };
+
+        console.log('📤 Actualizando PlanMedioItem en backend:', actualizarRequest);
+
+        this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
+          (response: PlanMedioItemBackend) => {
+            console.log('✅ PlanMedioItem actualizado en backend:', response);
+
+            // Actualizar también en localStorage
+            this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado, response);
+
+            this.snackBar.open('✅ Tarifa actualizada y spots reiniciados automáticamente', '', {
+              duration: 3000,
+              panelClass: ['success-snackbar']
+            });
+
+            this.dialogRef.close({ shouldRefresh: true });
+          },
+          (error: any) => {
+            console.error('❌ Error actualizando PlanMedioItem en backend:', error);
+
+            // Fallback: actualizar solo en localStorage
+            this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
+
+            this.snackBar.open('⚠️ Tarifa actualizada y spots reiniciados (solo local - error en backend)', '', {
+              duration: 4000,
+              panelClass: ['warning-snackbar']
+            });
+
+            this.dialogRef.close({ shouldRefresh: true });
+          }
+        );
+      } else {
+        // No tiene planMedioItemId, actualizar solo en localStorage
+        this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
+
+        this.snackBar.open('✅ Tarifa actualizada y spots reiniciados (solo local)', '', {
+          duration: 3000,
+          panelClass: ['success-snackbar']
+        });
+
+        this.dialogRef.close({ shouldRefresh: true });
+      }
+    } else {
+      this.snackBar.open('❌ Error: No se pudo encontrar el medio para actualizar', '', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
     }
   }
 
@@ -2802,7 +3102,7 @@ export class ModalConfirmarEliminacionComponent {
         <mat-icon color="warn">edit</mat-icon>
         <div class="message-text">
           <p class="main-message">Tienes cambios sin guardar en el resumen</p>
-          <p class="sub-message">Si sales de esta página, perderás todos los cambios realizados en los spots.</p>
+          <p class="sub-message">{{ obtenerMensajeAccion() }}</p>
         </div>
       </div>
 
@@ -2955,6 +3255,22 @@ export class ModalConfirmarCambiosPendientesComponent {
     private dialogRef: MatDialogRef<ModalConfirmarCambiosPendientesComponent>,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) { }
+
+  obtenerMensajeAccion(): string {
+    const mensajes: { [key: string]: string } = {
+      'agregar-medio': 'Si agregas un nuevo medio, perderás los cambios de spots no guardados.',
+      'descarga-flow': 'Si descargas el FlowChart, perderás los cambios de spots no guardados.',
+      'aprobar-plan': 'Si apruebas el plan, perderás los cambios de spots no guardados.',
+      'exportar-pdf': 'Si exportas el PDF, perderás los cambios de spots no guardados.',
+      'navegar-mes-anterior': 'Si navegas al mes anterior, perderás los cambios de spots no guardados.',
+      'navegar-mes-siguiente': 'Si navegas al mes siguiente, perderás los cambios de spots no guardados.',
+      'cambiar-periodo': 'Si cambias de período, perderás los cambios de spots no guardados.',
+      'acciones-medio': 'Si realizas acciones en el medio, perderás los cambios de spots no guardados.',
+      'default': 'Si continúas con esta acción, perderás todos los cambios realizados en los spots.'
+    };
+
+    return mensajes[this.data?.ruta] || mensajes['default'];
+  }
 
   guardarYSalir(): void {
     this.dialogRef.close({ accion: 'guardar' });
