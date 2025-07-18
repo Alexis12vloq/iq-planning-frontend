@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { APP_CONFIG, AppConfig } from '../../shared/app-config';
 
@@ -74,16 +74,115 @@ export class PlanMediosService {
   obtenerTodosParametros(): Observable<any> {
     return this.http.get(`${this.config.apiUrl}/api/TablaParametros`);
   }
+  formatDate(fecha: string | Date): string {
+    if (!fecha) return '';
+    
+    const date = typeof fecha === 'string' ? new Date(fecha) : fecha;
+    if (isNaN(date.getTime())) return '';
 
-  consultarPaginadoWithDetails(page: number = 1, pageSize: number = 10): Observable<any> {
-    const url = `${this.config.apiUrl}/api/PlanMedios/with-details?page=${page}&pageSize=${pageSize}`;
-    return this.http.get<any>(url);
+    return date.toISOString().slice(0, 10); // Devuelve la fecha en formato yyyy-MM-dd
+  }
+  formatDateCreacion(fecha: string | Date): string {
+  if (!fecha) return '';
+
+  if (typeof fecha === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(fecha)) {
+    const [dia, mes, anio] = fecha.split('/');
+    return `${anio}-${mes}-${dia}`; // yyyy-MM-dd
   }
 
-  consultarPaginadoWithDetailsPlan(numeroPlan:number = 1 ,page: number = 1, pageSize: number = 10): Observable<any> {
-    const url = `${this.config.apiUrl}/api/PlanMedios/with-details-plan/${numeroPlan}/versiones?page=${page}&pageSize=${pageSize}`;
-    return this.http.get<any>(url);
+  const date = new Date(fecha);
+  if (isNaN(date.getTime())) return '';
+
+  return date.toISOString().slice(0, 10); // yyyy-MM-dd
+}
+  consultarPaginadoWithDetails(
+    page: number = 1,
+    pageSize: number = 10,
+    filtros: any
+  ): Observable<any> {
+      const hayFiltros =
+      filtros.numeroPlan ||
+      filtros.version ||
+      filtros.anunciante ||
+      filtros.cliente ||
+      filtros.marca ||
+      filtros.producto ||
+      filtros.fechaInicio ||
+      filtros.fechaFin;
+
+    // Si hay filtros, reiniciar la página a 1
+    if (hayFiltros) {
+      page = 1;
+    }
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+
+    // Mapeo directo al DTO esperado en backend
+    if (filtros.numeroPlan) {
+      params = params.set('numeroPlan', filtros.numeroPlan);
+    }
+
+    if (filtros.version) {
+      params = params.set('version', filtros.version);
+    }
+
+    if (filtros.anunciante) {
+      params = params.set('idClienteAnunciante', filtros.anunciante);
+    }
+
+    if (filtros.cliente) {
+      params = params.set('idClienteFacturacion', filtros.cliente);
+    }
+
+    if (filtros.marca) {
+      params = params.set('idMarca', filtros.marca);
+    }
+
+    if (filtros.producto) {
+      params = params.set('idProducto', filtros.producto);
+    }
+
+    if (filtros.fechaInicio) {
+      params = params.set('fechaInicio', this.formatDate(filtros.fechaInicio));
+    }
+
+    if (filtros.fechaFin) {
+      params = params.set('fechaFin', this.formatDate(filtros.fechaFin));
+    }
+
+    const url = `${this.config.apiUrl}/api/PlanMedios/with-details`;
+    return this.http.get<any>(url, { params });
   }
+
+
+  consultarPaginadoWithDetailsPlan(
+    numeroPlan: number,
+    page: number = 1,
+    pageSize: number = 10,
+    filtros: any = {}
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+    console.log(filtros)
+    // Filtros opcionales
+    if (filtros.version) {
+      params = params.set('version', filtros.version);
+    }
+
+    if (filtros.fechaCreacion) {
+      const fechaFormateada = this.formatDateCreacion(filtros.fechaCreacion); // "2025-07-18"
+      console.log(fechaFormateada)
+      if (fechaFormateada) {
+        params = params.set('fechaCreacion', fechaFormateada);
+      }
+    }
+
+    const url = `${this.config.apiUrl}/api/PlanMedios/with-details-plan/${numeroPlan}/versiones`;
+    return this.http.get<any>(url, { params });
+  }
+
 
   consultarPlanDeMedios(id: number = 1): Observable<any> {
     const url = `${this.config.apiUrl}/api/PlanMedios/${id}`;

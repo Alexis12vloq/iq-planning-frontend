@@ -59,7 +59,7 @@
         <!-- Fecha Fin -->
         <mat-form-field appearance="fill" class="form-field fecha">
           <mat-label>Fecha Fin</mat-label>
-          <input matInput [matDatepicker]="pickerFin" formControlName="fechaFin" [min]="minFechaFin" [disabled]="!filtroForm.get('fechaInicio')?.value" />
+          <input matInput [matDatepicker]="pickerFin" formControlName="fechaFin" [min]="minFechaFin"  />
           <mat-datepicker-toggle matSuffix [for]="pickerFin"></mat-datepicker-toggle>
           <mat-datepicker #pickerFin></mat-datepicker>
         </mat-form-field>

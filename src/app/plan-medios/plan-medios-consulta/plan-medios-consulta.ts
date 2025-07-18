@@ -150,6 +150,18 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     fechaCreacion: 'Fecha Creación',
     estado: 'Estado'
   };
+  filtros = {
+    numeroPlan: '',
+    version: '',
+    anunciante: '',
+    cliente: '',
+    marca: '',
+    producto: '',
+    fechaInicio: '',
+    fechaFin: ''
+  };
+  tablaParametros: any[] = [];
+  isResetting: boolean = false;
 
   isLoading = false;
   estadoConexion: 'conectado' | 'error' | 'verificando' = 'verificando';
@@ -157,37 +169,42 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   constructor(private router: Router, private dialog: MatDialog, private snackBar: MatSnackBar, private planMediosService: PlanMediosService) {
     // Los observables se inicializarán después de cargar los datos del backend
 
-    // Lógica de fechas igual que en creación
     this.filtroForm.get('fechaInicio')!.valueChanges.subscribe((fechaInicioRaw: any) => {
-      let fechaInicio: Date | null = null;
-      if (fechaInicioRaw && typeof fechaInicioRaw === 'object' && typeof (fechaInicioRaw as Date).getTime === 'function') {
-        fechaInicio = fechaInicioRaw as Date;
-      } else if (typeof fechaInicioRaw === 'string' && fechaInicioRaw) {
-        const parsed = new Date(Date.parse(fechaInicioRaw));
-        if (!isNaN(parsed.getTime())) {
-          fechaInicio = parsed;
-        }
+      console.log(this.filtroForm)
+  if (this.isResetting) return; 
+
+  let fechaInicio: Date | null = null;
+  if (fechaInicioRaw && typeof fechaInicioRaw === 'object' && typeof (fechaInicioRaw as Date).getTime === 'function') {
+    fechaInicio = fechaInicioRaw as Date;
+  } else if (typeof fechaInicioRaw === 'string' && fechaInicioRaw) {
+    const parsed = new Date(Date.parse(fechaInicioRaw));
+    if (!isNaN(parsed.getTime())) {
+      fechaInicio = parsed;
+    }
+  }
+
+  if (fechaInicio) {
+    this.minFechaFin = fechaInicio;
+    const fechaFinRaw = this.filtroForm.get('fechaFin')!.value;
+    let fechaFin: Date | null = null;
+    if (fechaFinRaw && typeof fechaFinRaw === 'object' && typeof (fechaFinRaw as Date).getTime === 'function') {
+      fechaFin = fechaFinRaw as Date;
+    } else if (typeof fechaFinRaw === 'string' && fechaFinRaw) {
+      const parsedFin = new Date(Date.parse(fechaFinRaw));
+      if (!isNaN(parsedFin.getTime())) {
+        fechaFin = parsedFin;
       }
-      if (fechaInicio) {
-        this.minFechaFin = fechaInicio;
-        const fechaFinRaw = this.filtroForm.get('fechaFin')!.value;
-        let fechaFin: Date | null = null;
-        if (fechaFinRaw && typeof fechaFinRaw === 'object' && typeof (fechaFinRaw as Date).getTime === 'function') {
-          fechaFin = fechaFinRaw as Date;
-        } else if (typeof fechaFinRaw === 'string' && fechaFinRaw) {
-          const parsedFin = new Date(Date.parse(fechaFinRaw));
-          if (!isNaN(parsedFin.getTime())) {
-            fechaFin = parsedFin;
-          }
-        }
-        if (!fechaFin || (fechaFin instanceof Date && fechaFin < fechaInicio)) {
-          this.filtroForm.get('fechaFin')!.setValue('');
-        }
-      } else {
-        this.minFechaFin = null;
-        this.filtroForm.get('fechaFin')!.setValue('');
-      }
+    }
+
+    if (!fechaFin || (fechaFin instanceof Date && fechaFin < fechaInicio)) {
+      this.filtroForm.get('fechaFin')!.setValue('');
+    }
+  } else {
+    this.minFechaFin = null;
+    this.filtroForm.get('fechaFin')!.setValue('');
+  }
     });
+
   }
 
   private _filter(value: string, options: string[]): string[] {
@@ -291,6 +308,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
       )
       .subscribe((parametros: TablaParametro[]) => {
         this.procesarParametros(parametros);
+        this.tablaParametros = parametros;
         // Después de cargar parámetros, cargar los datos del backend
         this.consultarBackend();
       });
@@ -392,42 +410,16 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
 
   buscar() {
     // Aplicar filtros localmente sobre los datos del backend
-    this.aplicarFiltrosLocalmente();
+      this.buscarBackend();
+
+    // this.aplicarFiltrosLocalmente();
   }
 
   // Método original de búsqueda local (renombrado para mantener funcionalidad)
   buscarLocal() {
     this.isLoading = true;
     setTimeout(() => {
-      // Filtra la data según los valores del formulario
-      const filtros = this.filtroForm.value;
-      let filtrados = this.allResultados;
-
-      if (filtros.numeroPlan) {
-        filtrados = filtrados.filter(r => r.numeroPlan.includes(filtros.numeroPlan as string));
-      }
-      if (filtros.anunciante) {
-        filtrados = filtrados.filter(r => r.anunciante.toLowerCase().includes((filtros.anunciante as string).toLowerCase()));
-      }
-      if (filtros.cliente) {
-        filtrados = filtrados.filter(r => r.cliente.toLowerCase().includes((filtros.cliente as string).toLowerCase()));
-      }
-      if (filtros.marca) {
-        filtrados = filtrados.filter(r => r.marca.toLowerCase().includes((filtros.marca as string).toLowerCase()));
-      }
-      if (filtros.producto) {
-        filtrados = filtrados.filter(r => r.producto.toLowerCase().includes((filtros.producto as string).toLowerCase()));
-      }
-      if (filtros.fechaInicio) {
-        filtrados = filtrados.filter(r => r.fechaInicio === this.formatDate(filtros.fechaInicio));
-      }
-      if (filtros.fechaFin) {
-        filtrados = filtrados.filter(r => r.fechaFin === this.formatDate(filtros.fechaFin));
-      }
-
-      // Ordenar por fecha de creación descendente (más reciente primero)
-      filtrados = filtrados.sort((a: any, b: any) => new Date(b.fechaCreacion || b.id).getTime() - new Date(a.fechaCreacion || a.id).getTime());
-      this.dataSource.data = filtrados;
+      this.buscarBackend();
       this.isLoading = false;
     }, 400); // Simula carga visual
   }
@@ -440,21 +432,19 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     return d.toISOString().slice(0, 10);
   }
 
-  borrarFiltros() {
-    this.filtroForm.reset();
-    this.clientesOptionsSubject.next([]);
-    this.marcasOptionsSubject.next([]);
-    this.productosOptionsSubject.next([]);
-    // Mostrar todos los datos del backend sin filtros
-    this.aplicarFiltrosLocalmente();
-    
-    // Mantener el ordenamiento después de limpiar filtros
-    setTimeout(() => {
-      if (this.sortMat && this.dataSource) {
-        this.dataSource.sort = this.sortMat;
-      }
-    }, 100);
-  }
+    borrarFiltros() {
+      this.isResetting = true;
+
+      this.filtroForm.reset();
+      this.clientesOptionsSubject.next([]);
+      this.marcasOptionsSubject.next([]);
+      this.productosOptionsSubject.next([]);
+
+      this.pageIndex = 0;
+      this.pageSize = 5;
+
+    }
+
 
   get tieneFiltrosActivos(): boolean {
     return Object.values(this.filtroForm.value).some(v => v !== null && v !== '');
@@ -592,8 +582,8 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
   onRowDoubleClick(row: Resultado) {
     // Busca todas las versiones para ese número de plan en los datos actuales de la grilla
     console.log('Abriendo diálogo de versiones para el plan:', row.numeroPlan);
-    
-     this.planMediosService.consultarPaginadoWithDetailsPlan( Number(row.numeroPlan) ,this.pageIndex + 1, this.pageSize)
+    let filtros = {};
+     this.planMediosService.consultarPaginadoWithDetailsPlan( Number(row.numeroPlan) ,this.pageIndex + 1, this.pageSize , filtros)
       .pipe(
         retry(2), // Reintentar 2 veces en caso de error
         catchError((error) => {
@@ -773,7 +763,7 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     
     
     // --- CAMBIO: Usar pageIndex y pageSize ---
-    this.planMediosService.consultarPaginadoWithDetails(this.pageIndex + 1, this.pageSize)
+  this.planMediosService.consultarPaginadoWithDetails(this.pageIndex + 1 , this.pageSize, this.filtros)
       .pipe(
         retry(2), // Reintentar 2 veces en caso de error
         catchError((error) => {
@@ -929,6 +919,41 @@ export class PlanMediosConsulta implements OnInit, AfterViewInit {
     if (this.sortMat) {
       this.dataSource.sort = this.sortMat;
     }
+  }
+  getId = (tabla: string, value: string, parentId?: number) => {
+        console.log(`Buscando ID en tabla: ${tabla}, valor: ${value}, parentId: ${parentId}`);
+        if (!value) return null;
+        if (parentId !== undefined) {
+          const found = this.tablaParametros.find(
+            p => p.tabla === tabla && p.campo_Val === value && p.campo_Padre_Id === parentId
+          );
+          console.log(found)
+          return found ? found.campo_Id : null;
+        }
+        const found = this.tablaParametros.find(
+          p => p.tabla === tabla && p.campo_Val === value
+        );
+        return found ? found.campo_Id : null;
+  };
+  buscarBackend() {
+    const filtros = this.filtroForm.value;
+      // IDs principales (campo_Id)
+    const safe = (v: string | null) => v ?? '';
+    const idClienteAnunciante = this.getId('ClientesAnunciante', safe(filtros.anunciante || ''));
+    const idClienteFacturacion = this.getId('ClientesFacturacion', safe(filtros.cliente || ''), idClienteAnunciante);
+    const idMarca = this.getId('Marcas', safe(filtros.marca || ''), idClienteFacturacion);
+    const idProducto = this.getId('Productos', safe(filtros.producto || ''), idMarca);
+
+    this.filtros.numeroPlan = filtros.numeroPlan || '';
+    this.filtros.version = filtros.version || '';
+    this.filtros.anunciante = idClienteAnunciante || '';
+    this.filtros.cliente = idClienteFacturacion || '';
+    this.filtros.marca = idMarca || '';
+    this.filtros.producto = idProducto || '';
+    this.filtros.fechaInicio = filtros.fechaInicio || '';
+    this.filtros.fechaFin = filtros.fechaFin || '';
+
+    this.consultarBackend();
   }
 
   /**
@@ -1247,9 +1272,14 @@ export class VersionesPlanDialog implements AfterViewInit {
       setTimeout(() => this.aplicarFiltros(), 100);
     });
     
-    this.filtroForm.get('fechaCreacion')!.valueChanges.subscribe(() => {
-      setTimeout(() => this.aplicarFiltros(), 100);
-  });
+    this.filtroForm.get('fechaCreacion')!.valueChanges.subscribe((valor: any) => {
+      const valorString = typeof valor === 'string' ? valor : '';
+      
+      if (valorString.length === 10) {
+        setTimeout(() => this.aplicarFiltros(), 100);
+      }
+    });
+
 }
 
       soloNumerosYSlashVersion(event: KeyboardEvent): void {
@@ -1371,30 +1401,7 @@ formatearFecha(fecha: string | Date): string {
   }
 
   aplicarFiltros() {
-    let datosFiltrados = [...this.datosOriginales];
-    
-    const filtros = this.filtroForm.value;
-    
-    // Filtrar por versión
-    if (filtros.version && typeof filtros.version === 'string' && filtros.version.trim() !== '') {
-      datosFiltrados = datosFiltrados.filter(item => 
-        item.version.toString().toLowerCase().includes(filtros.version!.toLowerCase())
-      );
-    }
-    
-    // Filtrar por fecha de creación
-    if (filtros.fechaCreacion) {
-      console.log(datosFiltrados);  
-      console.log(filtros.fechaCreacion);
-      const fechaFiltro = this.formatDate(filtros.fechaCreacion);
-      console.log(fechaFiltro)
-      datosFiltrados = datosFiltrados.filter(item => {
-        const fechaCreacionFormateada = item.fechaCreacion ? item.fechaCreacion.substring(0, 10) : '';
-        return fechaCreacionFormateada === fechaFiltro;
-      });
-    }
-    
-    this.dataSource.data = datosFiltrados;
+    this.recargarTabla(this.data.selectedRow.numeroPlan,1, this.pageSize); // Recarga la tabla con la nueva página
   }
 
   limpiarFiltros() {
@@ -1514,55 +1521,56 @@ formatearFecha(fecha: string | Date): string {
   
   recargarTabla(id: string , pageIndex: number = 1, pageSize: number = 10): void {
     this.isLoading = true;
-    setTimeout(() => {
-      this.planMediosService.consultarPaginadoWithDetailsPlan( Number(id) ,pageIndex, pageSize)
-      .pipe(
-        retry(2), // Reintentar 2 veces en caso de error
-        catchError((error) => {
-          return of([]);
-        })
-      )
-      .subscribe({
-        next: (response: { items: PlanMediosConDetalles[], totalCount: number, pageSize: number, totalPages: number, page: number }) => {
-          console.log('Datos obtenidos del backend:', response);
-        const versiones = response.items
-        .filter(r => r.numeroPlan === id)
-        .map(plan => ({
-          id: plan.idPlan,
-          numeroPlan: plan.numeroPlan,
-          version: plan.version,
-          pais: plan.idPaisFacturacion,
-          anunciante: plan.idClienteAnunciante,
-          cliente: plan.idClienteAnunciante,
-          marca: plan.idMarca,
-          producto: plan.idProducto,
-          fechaInicio: plan.fechaInicio,
-          fechaFin: plan.fechaFin,
-          campania: plan.campania,
-          fechaCreacion: plan.fechaCreacion,
-          estado: plan.idEstadoRegistro,
-          // IDs para mantener consistencia
-          idPaisFacturacion: plan.idPaisFacturacion,
-          idClienteAnunciante: plan.idClienteAnunciante,
-          idClienteFacturacion: plan.idClienteFacturacion,
-          idMarca: plan.idMarca,
-          idProducto: plan.idProducto,
-          idEstadoRegistro: plan.idEstadoRegistro
-        })
-      );
-        this.dataSource.data = versiones;
+    let filtros = this.filtroForm;
+    console.log('Recargando tabla con filtros:', filtros.value);
+    this.planMediosService.consultarPaginadoWithDetailsPlan( Number(id) ,pageIndex, pageSize ,filtros.value)
+    .pipe(
+      retry(2), // Reintentar 2 veces en caso de error
+      catchError((error) => {
+        return of([]);
+      })
+    )
+    .subscribe({
+      next: (response: { items: PlanMediosConDetalles[], totalCount: number, pageSize: number, totalPages: number, page: number }) => {
+        console.log('Datos obtenidos del backend:', response);
+      const versiones = response.items
+      .filter(r => r.numeroPlan === id)
+      .map(plan => ({
+        id: plan.idPlan,
+        numeroPlan: plan.numeroPlan,
+        version: plan.version,
+        pais: plan.idPaisFacturacion,
+        anunciante: plan.idClienteAnunciante,
+        cliente: plan.idClienteAnunciante,
+        marca: plan.idMarca,
+        producto: plan.idProducto,
+        fechaInicio: plan.fechaInicio,
+        fechaFin: plan.fechaFin,
+        campania: plan.campania,
+        fechaCreacion: plan.fechaCreacion,
+        estado: plan.idEstadoRegistro,
+        // IDs para mantener consistencia
+        idPaisFacturacion: plan.idPaisFacturacion,
+        idClienteAnunciante: plan.idClienteAnunciante,
+        idClienteFacturacion: plan.idClienteFacturacion,
+        idMarca: plan.idMarca,
+        idProducto: plan.idProducto,
+        idEstadoRegistro: plan.idEstadoRegistro
+      })
+    );
+      this.dataSource.data = versiones;
+      this.isLoading = false;
+      
+      
+      },
+      error: (error) => {
+        // Este caso no debería ocurrir por el catchError, pero por seguridad
+        console.error('Error no manejado:', error);
         this.isLoading = false;
-       
-       
-        },
-        error: (error) => {
-          // Este caso no debería ocurrir por el catchError, pero por seguridad
-          console.error('Error no manejado:', error);
-          this.isLoading = false;
-        }
-      });
+      }
+    });
      
-    }, 400); // Simula carga
+   // Simula carga
   }
 
   
