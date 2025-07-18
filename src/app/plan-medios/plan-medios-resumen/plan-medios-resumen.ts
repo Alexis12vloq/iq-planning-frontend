@@ -1434,7 +1434,12 @@ export class PlanMediosResumen implements OnInit {
     // Recalcular SOI
     medio.soi = medio.salidas > 0 ? Math.round(medio.valorNeto / medio.salidas) : 0;
 
-    // Actualizar totales del período
+    console.log(`🔄 ACTUALIZANDO SPOTS: ${medio.nombre} ${semanaActual.nombre}`);
+    console.log(`📊 Valor antes: ${medio.valorNeto - (nuevoSpots * medio.tarifa)}`);
+    console.log(`📊 Valor después: ${medio.valorNeto}`);
+    console.log(`📊 Spots totales: ${medio.salidas}`);
+
+    // Actualizar totales del período - esto recalcula todo el dataSource
     this.actualizarTotalesPeriodo();
 
     // Marcar que hay cambios pendientes
@@ -1446,8 +1451,7 @@ export class PlanMediosResumen implements OnInit {
     //   this.actualizarSpotsEnBackend(medio);
     // }
 
-    // Eliminar snackBar para mantener el foco en el input
-    // Solo console.log para debugging
+    // Logs para debugging
     console.log(`✅ Spots actualizados para ${medio.nombre} ${semanaActual.nombre} (${fechaClave}): ${nuevoSpots}`);
     console.log(`✅ Nueva inversión total: ${medio.valorNeto}`);
     console.log(`✅ Spots por fecha:`, medio.spotsPorFecha);

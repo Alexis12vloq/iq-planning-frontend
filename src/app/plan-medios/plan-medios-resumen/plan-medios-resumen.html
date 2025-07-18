@@ -124,7 +124,7 @@
                   <td [attr.colspan]="semanasConFechas.length"></td>
                   <td class="valor-mensual">{{ fila.valorMensual | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td class="valor-total">{{ fila.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-                  <td class="valor-soi">{{ calcularPorcentaje(fila.valorNeto || 0) | number:'1.1-1' }}%</td>
+                  <td class="valor-soi">{{ fila.soi | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 </tr>
                 
                 <!-- Fila del proveedor -->
