@@ -33,6 +33,8 @@ interface FilaMedio {
   nombre?: string;
   salidas?: number;
   valorNeto?: number;
+  valorMensual?: number;
+  totalSpots?: number;
   semanas?: boolean[];
   soi?: number;
 }
@@ -186,23 +188,30 @@ export class PlanMediosResumen implements OnInit {
 
     // Iterar sobre cada grupo de medios
     mediosAgrupados.forEach((mediosDelGrupo, nombreMedio) => {
-      // Agregar fila de encabezado del medio (solo si hay más de un proveedor)
-      if (mediosDelGrupo.length > 1) {
-        filas.push({
-          tipo: 'encabezado-medio',
-          nombre: nombreMedio,
-          semanas: [],
-          soi: 0
-        });
-      }
+      // ✅ SIEMPRE agregar fila de encabezado del medio (incluso con un solo proveedor)
+      // Calcular totales de la agrupación
+      const valorTotalAgrupacion = mediosDelGrupo.reduce((total, medio) => total + medio.valorNeto, 0);
+      const valorMensualAgrupacion = mediosDelGrupo.reduce((total, medio) => total + this.calcularValorMensual(medio), 0);
+      const spotsAgrupacion = mediosDelGrupo.reduce((total, medio) => total + this.calcularSpotsMensual(medio), 0);
+      const soiAgrupacion = spotsAgrupacion > 0 ? Math.round(valorMensualAgrupacion / spotsAgrupacion) : 0;
+
+      filas.push({
+        tipo: 'encabezado-medio',
+        nombre: nombreMedio,
+        semanas: [],
+        soi: soiAgrupacion,
+        valorNeto: valorTotalAgrupacion,
+        valorMensual: valorMensualAgrupacion,
+        totalSpots: spotsAgrupacion
+      });
 
       // Agregar filas para cada proveedor del medio
       mediosDelGrupo.forEach(medio => {
-        // Fila del proveedor
+        // Fila del proveedor (siempre identada para mostrar que es un sub-item)
         filas.push({
           tipo: 'nombre',
           medio: { ...medio },
-          nombre: mediosDelGrupo.length > 1 ? `  ${medio.proveedor || 'Sin proveedor'}` : medio.nombre,
+          nombre: `  ${medio.proveedor || 'Sin proveedor'}`,
           semanas: medio.semanas,
           soi: medio.soi
         });

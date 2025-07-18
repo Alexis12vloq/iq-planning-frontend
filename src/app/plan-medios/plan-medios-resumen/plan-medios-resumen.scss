@@ -426,6 +426,34 @@
   }
 
   // Estilos para las filas específicas
+  .fila-encabezado-medio {
+    background-color: #1a2732;
+    
+    td {
+      padding: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      background-color: #1a2732;
+      border-color: #2d3a45;
+    }
+    
+    td:first-child {
+      font-weight: 700;
+      color: white;
+    }
+
+    .valor-mensual, .valor-total {
+      color: white;
+      font-weight: 700;
+    }
+
+    .valor-soi {
+      color: white;
+      font-weight: 600;
+    }
+  }
+
   .fila-medio {
     background-color: white;
     cursor: pointer;
@@ -458,6 +486,59 @@
   }
 
   // Estilos para hover mejorado en las filas
+
+  .fila-spots {
+    background-color: #f9f9f9;
+    
+    td {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    
+    td:first-child {
+      padding-left: 20px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .spots-input {
+      width: 100%;
+      max-width: 60px;
+      padding: 4px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      text-align: center;
+      font-size: 11px;
+      
+      &:focus {
+        outline: none;
+        border-color: #2196f3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+      }
+    }
+  }
+
+  .fila-inversiones {
+    background-color: #f5f5f5;
+    color: #333;
+    
+    td {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    
+    td:first-child {
+      padding-left: 20px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .inversiones-cell {
+      text-align: center;
+      font-weight: 500;
+      color: #2196f3;
+    }
+  }
 
   .fila-salidas {
     background-color: #f9f9f9;

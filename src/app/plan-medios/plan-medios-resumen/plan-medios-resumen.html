@@ -120,7 +120,11 @@
                 <!-- Fila de encabezado del medio -->
                 <tr *ngIf="fila.tipo === 'encabezado-medio'" class="fila-encabezado-medio">
                   <td>{{ fila.nombre }}</td>
-                  <td colspan="9"></td>
+                  <td></td>
+                  <td [attr.colspan]="semanasConFechas.length"></td>
+                  <td class="valor-mensual">{{ fila.valorMensual | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+                  <td class="valor-total">{{ fila.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+                  <td class="valor-soi">{{ calcularPorcentaje(fila.valorNeto || 0) | number:'1.1-1' }}%</td>
                 </tr>
                 
                 <!-- Fila del proveedor -->
