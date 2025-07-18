@@ -191,7 +191,7 @@ export class PlanMediosResumen implements OnInit {
     mediosAgrupados.forEach((mediosDelGrupo, nombreMedio) => {
       // ✅ SIEMPRE agregar fila de encabezado del medio (incluso con un solo proveedor)
       // Calcular totales de la agrupación
-      const valorTotalAgrupacion = mediosDelGrupo.reduce((total, medio) => total + medio.valorNeto, 0);
+      const valorTotalAgrupacion = mediosDelGrupo.reduce((total, medio) => total + this.calcularValorTotal(medio), 0);
       const valorMensualAgrupacion = mediosDelGrupo.reduce((total, medio) => total + this.calcularValorMensual(medio), 0);
       const spotsAgrupacion = mediosDelGrupo.reduce((total, medio) => total + this.calcularSpotsMensual(medio), 0);
       const soiAgrupacion = spotsAgrupacion > 0 ? Math.round(valorMensualAgrupacion / spotsAgrupacion) : 0;
@@ -237,13 +237,6 @@ export class PlanMediosResumen implements OnInit {
 
     // Establecer variable CSS para el número de semanas
     this.establecerVariableCSSNumSemanas();
-    
-    console.log('📊 DataSource preparado con', this.dataSource.length, 'filas');
-    
-    // Log para verificar que las tarifas están actualizadas
-    this.periodoSeleccionado.medios.forEach(medio => {
-      console.log(`📊 Medio: ${medio.nombre}, Proveedor: ${medio.proveedor}, Tarifa: $${medio.tarifa}`);
-    });
   }
 
 
@@ -251,7 +244,6 @@ export class PlanMediosResumen implements OnInit {
   private establecerVariableCSSNumSemanas(): void {
     const numSemanas = this.semanasColumnas.length;
     document.documentElement.style.setProperty('--num-semanas', numSemanas.toString());
-    console.log(`📊 Establecida variable CSS --num-semanas: ${numSemanas}`);
   }
 
   obtenerClaseFila(fila: FilaMedio): string {
@@ -275,7 +267,7 @@ export class PlanMediosResumen implements OnInit {
 
   calcularPorcentaje(valorMedio: number): number {
     // Calcular la suma total de todos los medios
-    const totalMedios = this.periodoSeleccionado.medios.reduce((total, medio) => total + medio.valorNeto, 0);
+    const totalMedios = this.periodoSeleccionado.medios.reduce((total, medio) => total + this.calcularValorTotal(medio), 0);
 
     if (totalMedios === 0) {
       return 0;
@@ -283,8 +275,6 @@ export class PlanMediosResumen implements OnInit {
 
     // Calcular el porcentaje basado en la suma de los medios
     const porcentaje = (valorMedio / totalMedios) * 100;
-
-    console.log(`📊 Calculando porcentaje: ${valorMedio} / ${totalMedios} = ${porcentaje.toFixed(1)}%`);
 
     return porcentaje;
   }
@@ -1410,7 +1400,6 @@ export class PlanMediosResumen implements OnInit {
     // Obtener la fecha específica de la semana
     const semanaActual = this.semanasConFechas[semanaIndex];
     if (!semanaActual) {
-      console.error('No se encontró la semana en el índice:', semanaIndex);
       return;
     }
 
@@ -1426,36 +1415,17 @@ export class PlanMediosResumen implements OnInit {
     // Recalcular salidas totales sumando todos los spots guardados
     medio.salidas = Object.values(medio.spotsPorFecha).reduce((total: number, spots: number) => total + (spots || 0), 0);
 
-    // Recalcular inversiones totales
-    if (medio.tarifa) {
-      medio.valorNeto = medio.salidas * medio.tarifa;
-    }
+    // Recalcular inversiones totales USANDO LA TARIFA
+    medio.valorNeto = medio.salidas * (medio.tarifa || 0);
 
     // Recalcular SOI
     medio.soi = medio.salidas > 0 ? Math.round(medio.valorNeto / medio.salidas) : 0;
 
-    console.log(`🔄 ACTUALIZANDO SPOTS: ${medio.nombre} ${semanaActual.nombre}`);
-    console.log(`📊 Valor antes: ${medio.valorNeto - (nuevoSpots * medio.tarifa)}`);
-    console.log(`📊 Valor después: ${medio.valorNeto}`);
-    console.log(`📊 Spots totales: ${medio.salidas}`);
-
-    // Actualizar totales del período - esto recalcula todo el dataSource
+    // Actualizar totales del período
     this.actualizarTotalesPeriodo();
 
     // Marcar que hay cambios pendientes
     this.cambiosPendientes = true;
-
-    // *** GUARDADO AUTOMÁTICO DESHABILITADO ***
-    // Ahora solo se guarda cuando el usuario presiona "Guardar Resumen"
-    // if (medio.planMedioItemId) {
-    //   this.actualizarSpotsEnBackend(medio);
-    // }
-
-    // Logs para debugging
-    console.log(`✅ Spots actualizados para ${medio.nombre} ${semanaActual.nombre} (${fechaClave}): ${nuevoSpots}`);
-    console.log(`✅ Nueva inversión total: ${medio.valorNeto}`);
-    console.log(`✅ Spots por fecha:`, medio.spotsPorFecha);
-    console.log(`⚠️ Cambios pendientes: ${this.cambiosPendientes}`);
   }
 
   // Método para actualizar spots en el backend
@@ -1528,7 +1498,7 @@ export class PlanMediosResumen implements OnInit {
 
   // Método para actualizar totales del período
   private actualizarTotalesPeriodo(): void {
-    const totalInversionNeta = this.periodoSeleccionado.medios.reduce((total, medio) => total + medio.valorNeto, 0);
+    const totalInversionNeta = this.periodoSeleccionado.medios.reduce((total, medio) => total + this.calcularValorTotal(medio), 0);
     const iva = Math.round(totalInversionNeta * 0.19);
     const totalInversion = totalInversionNeta + iva;
 
@@ -1647,6 +1617,21 @@ export class PlanMediosResumen implements OnInit {
     return valorMensual;
   }
 
+  // Método para calcular el valor total de un medio (basado en spots actuales)
+  calcularValorTotal(medio?: MedioPlan): number {
+    if (!medio || !medio.spotsPorFecha) {
+      return 0;
+    }
+
+    // Calcular el valor total sumando todos los spots por fecha
+    let valorTotal = 0;
+    Object.values(medio.spotsPorFecha).forEach(spots => {
+      valorTotal += spots * (medio.tarifa || 0);
+    });
+
+    return valorTotal;
+  }
+
   // Método para calcular los spots mensuales de un medio
   calcularSpotsMensual(medio?: MedioPlan): number {
     if (!medio || !medio.spotsPorFecha || !this.semanasConFechas) {
@@ -1674,10 +1659,27 @@ export class PlanMediosResumen implements OnInit {
     }, 0);
   }
 
+  // Método para calcular el total de inversión neta total
+  calcularTotalInversionTotal(): number {
+    if (!this.periodoSeleccionado.medios || this.periodoSeleccionado.medios.length === 0) {
+      return 0;
+    }
+
+    return this.periodoSeleccionado.medios.reduce((total, medio) => {
+      return total + this.calcularValorTotal(medio);
+    }, 0);
+  }
+
   // Método para calcular el IVA mensual
   calcularIvaMensual(): number {
     const inversionNetaMensual = this.calcularTotalInversionMensual();
     return Math.round(inversionNetaMensual * 0.19);
+  }
+
+  // Método para calcular el IVA total
+  calcularIvaTotal(): number {
+    const inversionNetaTotal = this.calcularTotalInversionTotal();
+    return Math.round(inversionNetaTotal * 0.19);
   }
 
   // Método para calcular el total mensual (inversión + IVA)
@@ -1685,6 +1687,28 @@ export class PlanMediosResumen implements OnInit {
     const inversionNetaMensual = this.calcularTotalInversionMensual();
     const ivaMensual = this.calcularIvaMensual();
     return inversionNetaMensual + ivaMensual;
+  }
+
+  // Método para calcular el total general (inversión + IVA)
+  calcularTotalGeneral(): number {
+    const inversionNetaTotal = this.calcularTotalInversionTotal();
+    const ivaTotal = this.calcularIvaTotal();
+    return inversionNetaTotal + ivaTotal;
+  }
+
+  // Método para calcular el porcentaje SOI para filas de encabezado de medio
+  calcularPorcentajeSOI(valorNeto: number): number {
+    // Calcular el porcentaje basado en el valor total del plan
+    const totalInversionNeta = this.periodoSeleccionado.medios.reduce((total, medio) => total + this.calcularValorTotal(medio), 0);
+    
+    if (totalInversionNeta === 0) {
+      return 0;
+    }
+
+    // Calcular el porcentaje basado en la inversión neta total
+    const porcentaje = (valorNeto / totalInversionNeta) * 100;
+    
+    return porcentaje;
   }
 }
 

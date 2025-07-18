@@ -124,7 +124,7 @@
                   <td [attr.colspan]="semanasConFechas.length"></td>
                   <td class="valor-mensual">{{ fila.valorMensual | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td class="valor-total">{{ fila.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-                  <td class="valor-soi">{{ fila.soi | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+                  <td class="valor-soi">{{ calcularPorcentajeSOI(fila.valorNeto || 0) | number:'1.1-1' }}%</td>
                 </tr>
                 
                 <!-- Fila del proveedor -->
@@ -137,8 +137,8 @@
                     <!-- Quitar los checks, dejar en blanco -->
                   </td>
                   <td class="valor-mensual">{{ calcularValorMensual(fila.medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-                  <td class="valor-total">{{ fila.medio?.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-                  <td class="valor-soi">{{ calcularPorcentaje(fila.medio?.valorNeto || 0) | number:'1.1-1' }}%</td>
+                  <td class="valor-total">{{ calcularValorTotal(fila.medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+                  <td class="valor-soi">{{ calcularPorcentaje(calcularValorTotal(fila.medio)) | number:'1.1-1' }}%</td>
                 </tr>
                 
                 <!-- Fila de spots -->
@@ -167,7 +167,7 @@
                     {{ calcularInversionSemana(fila.medio, semanaIndex) | currency:'USD':'symbol-narrow':'1.0-0' }}
                   </td>
                   <td class="valor-mensual">{{ calcularValorMensual(fila.medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-                  <td class="valor-total">{{ fila.medio.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+                  <td class="valor-total">{{ calcularValorTotal(fila.medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td></td>
                 </tr>
                 
@@ -194,7 +194,7 @@
               <td></td>
               <td [attr.colspan]="semanasConFechas.length"></td>
               <td class="valor-mensual">{{ calcularTotalInversionMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-              <td class="valor-total">{{ periodoSeleccionado.totalInversionNeta | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+              <td class="valor-total">{{ calcularTotalInversionTotal() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
             <tr class="fila-iva">
@@ -202,7 +202,7 @@
               <td></td>
               <td [attr.colspan]="semanasConFechas.length"></td>
               <td class="valor-mensual">{{ calcularIvaMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-              <td class="valor-total">{{ periodoSeleccionado.iva | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+              <td class="valor-total">{{ calcularIvaTotal() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
             <tr class="fila-total-inversion">
@@ -210,7 +210,7 @@
               <td></td>
               <td [attr.colspan]="semanasConFechas.length"></td>
               <td class="valor-mensual">{{ calcularTotalMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
-              <td class="valor-total">{{ periodoSeleccionado.totalInversion | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
+              <td class="valor-total">{{ calcularTotalGeneral() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
               <td></td>
             </tr>
           </tfoot>
