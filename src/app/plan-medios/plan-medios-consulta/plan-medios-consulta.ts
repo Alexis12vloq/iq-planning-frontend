@@ -1080,7 +1080,7 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
       </div>
 
       <div class="mat-elevation-z8">
-        <table mat-table [dataSource]="dataSource" matSort>
+        <table class="center-table" mat-table [dataSource]="dataSource" matSort>
           <ng-container matColumnDef="fechaCreacion">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha Creación</th>
             <td mat-cell *matCellDef="let row" [class.selected-row]="selectedRow === row" (click)="selectRow(row)" (dblclick)="redirigir(row)">
@@ -1152,7 +1152,6 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     .selected-row {
       background-color: #e3f2fd !important;
     }
-    
     table {
       width: 100%;
       margin: 0 auto;
@@ -1165,7 +1164,7 @@ import { Component as NgComponent, Inject, AfterViewInit } from '@angular/core';
     
     td {
       cursor: pointer;
-      text-align: center !important;
+      text-align: start !important;
     }
     
     th {
