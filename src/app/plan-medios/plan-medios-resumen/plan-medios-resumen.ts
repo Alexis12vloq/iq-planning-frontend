@@ -238,6 +238,11 @@ export class PlanMediosResumen implements OnInit {
     this.establecerVariableCSSNumSemanas();
     
     console.log('📊 DataSource preparado con', this.dataSource.length, 'filas');
+    
+    // Log para verificar que las tarifas están actualizadas
+    this.periodoSeleccionado.medios.forEach(medio => {
+      console.log(`📊 Medio: ${medio.nombre}, Proveedor: ${medio.proveedor}, Tarifa: ${medio.tarifa}`);
+    });
   }
 
 
@@ -646,6 +651,8 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private editarMedio(medio: any): void {
+    console.log('🔄 ABRIENDO MODAL EDITAR MEDIO:', medio);
+    
     const dialogRef = this.dialog.open(ModalEditarMedioComponent, {
       width: '500px',
       data: {
@@ -657,16 +664,58 @@ export class PlanMediosResumen implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe((result: any) => {
+      console.log('📊 RESULTADO DEL MODAL:', result);
+      
       if (result && result.shouldRefresh) {
         console.log('✅ Medio editado, recargando resumen');
-        this.recargarResumen();
         
-        // Forzar recreación del dataSource después de un pequeño delay
-        setTimeout(() => {
-          this.prepararDataSource();
-        }, 100);
+        if (result.medioActualizado) {
+          // Actualización específica para cambios de tarifa
+          console.log('🔄 Actualizando vista para cambios de tarifa');
+          
+          // Actualizar inmediatamente la tarifa en el modelo local
+          this.actualizarTarifaEnModelo(result.medioActualizadoId || medio.planMedioItemId, result.nuevaTarifa);
+          
+          // Recargar datos desde el backend para obtener valores actualizados
+          this.recargarResumen();
+          
+          // Usar el método específico para refrescar la vista
+          setTimeout(() => {
+            this.refrescarVistaMedio();
+            // Marcar que hay cambios para detectar cambios futuros
+            this.cambiosPendientes = false;
+          }, 100);
+        } else {
+          // Recarga normal
+          this.recargarResumen();
+          
+          setTimeout(() => {
+            this.prepararDataSource();
+            this.cambiosPendientes = false;
+          }, 200);
+        }
       }
     });
+  }
+
+  // Método para actualizar la tarifa directamente en el modelo local (temporal hasta que se recargue desde BD)
+  private actualizarTarifaEnModelo(planMedioItemId: number, nuevaTarifa: number): void {
+    if (!planMedioItemId || !nuevaTarifa) return;
+    
+    console.log('🔄 ACTUALIZANDO TARIFA EN MODELO LOCAL (TEMPORAL):', planMedioItemId, nuevaTarifa);
+    
+    // Buscar y actualizar en periodoSeleccionado
+    const medioEncontrado = this.periodoSeleccionado.medios.find(m => m.planMedioItemId === planMedioItemId);
+    if (medioEncontrado) {
+      console.log('✅ Medio encontrado en modelo, actualizando tarifa temporalmente:', medioEncontrado.nombre);
+      medioEncontrado.tarifa = nuevaTarifa;
+      
+      // Forzar actualización inmediata del dataSource
+      this.prepararDataSource();
+      console.log('✅ Tarifa actualizada temporalmente y dataSource refrescado');
+    } else {
+      console.log('❌ Medio no encontrado en modelo local');
+    }
   }
 
   private eliminarMedio(medio: any): void {
@@ -1026,12 +1075,23 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private cargarDatosDesdeBackend(planMedioId: number, version: number): void {
-    console.log('🔄 Consultando backend para plan:', planMedioId, 'versión:', version);
+    console.log('🔄 CONSULTANDO BACKEND para plan:', planMedioId, 'versión:', version);
     
     this.cargandoDatos = true;
     this.backendMediosService.getPlanMedioItemsPorPlan(planMedioId, version).subscribe(
       (planMedioItems: PlanMedioItemBackend[]) => {
-        console.log('📥 Respuesta del backend:', planMedioItems);
+        console.log('📥 RESPUESTA COMPLETA DEL BACKEND:', planMedioItems);
+        
+        // Log detallado de cada item para verificar las tarifas
+        planMedioItems.forEach((item, index) => {
+          console.log(`📊 Item ${index + 1}:`, {
+            planMedioItemId: item.planMedioItemId,
+            medioNombre: item.medioNombre,
+            proveedorNombre: item.proveedorNombre,
+            tarifa: item.tarifa,
+            dataJson: item.dataJson
+          });
+        });
         
         if (planMedioItems.length > 0) {
           const periodosConDatos = this.procesarPlanMedioItemsDesdeBackend(planMedioItems);
@@ -1044,7 +1104,14 @@ export class PlanMediosResumen implements OnInit {
 
           // Log de éxito sin notificación que pueda distraer
           console.log(`✅ Cargados exitosamente ${planMedioItems.length} medios desde servidor`);
+          console.log('📊 DataSource actualizado con nuevos datos');
           this.cargandoDatos = false;
+
+          // Forzar detección de cambios para actualizar la vista
+          setTimeout(() => {
+            this.prepararDataSource();
+            console.log('🔄 DataSource refrescado para actualizar vista');
+          }, 50);
         } else {
           // Plan existe pero sin medios - crear período vacío para que funcione el resumen
           const periodoVacio = this.crearPeriodoVacio(this.resumenPlan.fechaInicio, this.resumenPlan.fechaFin);
@@ -1061,7 +1128,10 @@ export class PlanMediosResumen implements OnInit {
         }
       },
       (error) => {
-        console.error('❌ Error cargando datos desde backend:', error);
+        console.error('❌ ERROR COMPLETO CARGANDO DATOS:', error);
+        console.error('❌ Status:', error.status);
+        console.error('❌ Message:', error.message);
+        console.error('❌ Error body:', error.error);
         
         // Crear período vacío funcional para poder agregar medios
         const periodoVacio = this.crearPeriodoVacio(this.resumenPlan.fechaInicio, this.resumenPlan.fechaFin);
@@ -1136,7 +1206,7 @@ export class PlanMediosResumen implements OnInit {
           medioExistente.planMedioItemId = item.planMedioItemId;
         }
       } else {
-        mediosMap.set(claveAgrupacion, {
+        const nuevoMedio = {
           nombre: medio,
           proveedor: proveedor,
           proveedorId: item.proveedorId.toString(),
@@ -1147,7 +1217,12 @@ export class PlanMediosResumen implements OnInit {
           tarifa: item.tarifa,
           spotsPorFecha: spotsPorFecha,
           planMedioItemId: item.planMedioItemId // Guardar referencia al backend
-        });
+        };
+
+        console.log('📊 CREANDO NUEVO MEDIO:', nuevoMedio);
+        console.log('📊 Tarifa del medio:', item.tarifa);
+
+        mediosMap.set(claveAgrupacion, nuevoMedio);
       }
     });
 
@@ -1254,10 +1329,29 @@ export class PlanMediosResumen implements OnInit {
       const version = this.resumenPlan.version;
 
       console.log('🔄 Recargando datos desde servidor...');
+      this.cargandoDatos = true;
       this.cargarDatosDesdeBackend(planNumerico, version);
     } else {
       console.error('❌ No hay ID de plan para recargar');
     }
+  }
+
+  // Método específico para refrescar la vista cuando se actualiza un medio
+  private refrescarVistaMedio(): void {
+    console.log('🔄 Refrescando vista específicamente para cambios de medio');
+    
+    // Refrescar el dataSource inmediatamente
+    this.prepararDataSource();
+    
+    // Forzar detección de cambios con múltiples actualizaciones
+    const intervalos = [50, 150, 300, 500];
+    
+    intervalos.forEach((delay, index) => {
+      setTimeout(() => {
+        this.prepararDataSource();
+        console.log(`🔄 Actualización ${index + 1} del dataSource completada`);
+      }, delay);
+    });
   }
 
 
@@ -2699,6 +2793,10 @@ export class ModalEditarMedioComponent implements OnInit {
   }
 
   guardarCambios(): void {
+    console.log('🔄 INICIANDO GUARDADO DE CAMBIOS');
+    console.log('📊 Datos del formulario:', this.editarForm.value);
+    console.log('📊 Medio original:', this.data.medio);
+
     // Marcar todos los campos como tocados para mostrar errores
     this.editarForm.markAllAsTouched();
 
@@ -2735,6 +2833,9 @@ export class ModalEditarMedioComponent implements OnInit {
     const valores = this.editarForm.value;
     const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
 
+    console.log('📊 Valores del formulario:', valores);
+    console.log('📊 Proveedor seleccionado:', proveedorSeleccionado);
+
     // Validar que se haya seleccionado un proveedor
     if (!proveedorSeleccionado) {
       this.snackBar.open('❌ Error: Proveedor no encontrado', '', {
@@ -2747,16 +2848,29 @@ export class ModalEditarMedioComponent implements OnInit {
     // Buscar pauta en localStorage usando planMedioItemId como identificador principal
     const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
     
+    console.log('📊 BUSCANDO PAUTA EN LOCALSTORAGE');
+    console.log('📊 Total pautas:', pautas.length);
+    console.log('📊 planMedioItemId buscado:', this.data.medio.planMedioItemId);
+    console.log('📊 planId buscado:', this.data.planId);
+    console.log('📊 medio buscado:', this.data.medio.nombre);
+    console.log('📊 proveedor buscado:', this.data.medio.proveedor);
+    
     const pautaIndex = pautas.findIndex((pauta: any) => {
       // Priorizar búsqueda por planMedioItemId si está disponible
       if (this.data.medio.planMedioItemId && pauta.planMedioItemId) {
-        return pauta.planMedioItemId === this.data.medio.planMedioItemId;
+        const coincide = pauta.planMedioItemId === this.data.medio.planMedioItemId;
+        console.log(`📊 Comparando por planMedioItemId: ${pauta.planMedioItemId} === ${this.data.medio.planMedioItemId} = ${coincide}`);
+        return coincide;
       }
       // Fallback: buscar por combinación de plan, medio y proveedor
-      return pauta.planId === this.data.planId &&
+      const coincide = pauta.planId === this.data.planId &&
              pauta.medio === this.data.medio.nombre &&
              pauta.proveedor === this.data.medio.proveedor;
+      console.log(`📊 Comparando por combinación: ${pauta.planId}==${this.data.planId} && ${pauta.medio}==${this.data.medio.nombre} && ${pauta.proveedor}==${this.data.medio.proveedor} = ${coincide}`);
+      return coincide;
     });
+
+    console.log('📊 Índice de pauta encontrado:', pautaIndex);
 
     if (pautaIndex !== -1) {
       const pauta = pautas[pautaIndex];
@@ -2778,11 +2892,14 @@ export class ModalEditarMedioComponent implements OnInit {
           usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
         };
 
-        console.log('📤 Actualizando PlanMedioItem en backend:', actualizarRequest);
+        console.log('📤 ENVIANDO REQUEST AL BACKEND:', actualizarRequest);
+        console.log('📤 URL del servicio:', 'actualizarPlanMedioItem');
+        console.log('📤 Datos a enviar:', JSON.stringify(actualizarRequest, null, 2));
 
         this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
           (response: PlanMedioItemBackend) => {
-            console.log('✅ PlanMedioItem actualizado en backend:', response);
+            console.log('✅ RESPUESTA DEL BACKEND:', response);
+            console.log('✅ Tarifa actualizada en backend:', response.tarifa);
 
             // Actualizar también en localStorage
             this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado, response);
@@ -2792,10 +2909,18 @@ export class ModalEditarMedioComponent implements OnInit {
               panelClass: ['success-snackbar']
             });
 
-            this.dialogRef.close({ shouldRefresh: true });
+            this.dialogRef.close({ 
+              shouldRefresh: true, 
+              medioActualizado: true,
+              nuevaTarifa: Number(valores.tarifa),
+              medioActualizadoId: pauta.planMedioItemId
+            });
           },
           (error: any) => {
-            console.error('❌ Error actualizando PlanMedioItem en backend:', error);
+            console.error('❌ ERROR COMPLETO DEL BACKEND:', error);
+            console.error('❌ Status:', error.status);
+            console.error('❌ Message:', error.message);
+            console.error('❌ Error body:', error.error);
 
             // Fallback: actualizar solo en localStorage
             this.actualizarPautaEnLocalStorage(pautaIndex, valores, proveedorSeleccionado);
@@ -2805,7 +2930,12 @@ export class ModalEditarMedioComponent implements OnInit {
               panelClass: ['warning-snackbar']
             });
 
-            this.dialogRef.close({ shouldRefresh: true });
+            this.dialogRef.close({ 
+              shouldRefresh: true, 
+              medioActualizado: true,
+              nuevaTarifa: Number(valores.tarifa),
+              medioActualizadoId: pauta.planMedioItemId
+            });
           }
         );
       } else {
@@ -2817,7 +2947,12 @@ export class ModalEditarMedioComponent implements OnInit {
           panelClass: ['success-snackbar']
         });
 
-        this.dialogRef.close({ shouldRefresh: true });
+        this.dialogRef.close({ 
+          shouldRefresh: true, 
+          medioActualizado: true,
+          nuevaTarifa: Number(valores.tarifa),
+          medioActualizadoId: pauta.planMedioItemId
+        });
       }
     } else {
       this.snackBar.open('❌ Error: No se pudo encontrar el medio para actualizar', '', {
@@ -2850,6 +2985,13 @@ export class ModalEditarMedioComponent implements OnInit {
     }
 
     localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+    
+    console.log('✅ Pauta actualizada en localStorage:', {
+      medio: this.data.medio.nombre,
+      proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : this.data.medio.proveedor,
+      nuevaTarifa: Number(valores.tarifa),
+      pautaIndex: pautaIndex
+    });
   }
 }
 
