@@ -8,6 +8,7 @@ import {
   PlanMedioItemBackend, 
   CrearPlanMedioItemRequest, 
   ActualizarPlanMedioItemRequest, 
+  PlanMedioItemUpdateDto,
   EliminarPlanMedioItemResponse 
 } from '../models/backend-models';
 
@@ -47,11 +48,18 @@ export class BackendMediosService {
     return this.http.post<PlanMedioItemBackend>(url, request);
   }
 
-  // Actualizar un PlanMedioItem existente
+  // Actualizar un PlanMedioItem existente (solo para JSON/spots)
   actualizarPlanMedioItem(request: ActualizarPlanMedioItemRequest): Observable<PlanMedioItemBackend> {
     const url = `${this.baseUrl}/api/PlanMedioItem/update-json`;
-    console.log('🔄 PATCH PlanMedioItem:', url, request);
+    console.log('🔄 PATCH PlanMedioItem (JSON):', url, request);
     return this.http.patch<PlanMedioItemBackend>(url, request);
+  }
+
+  // Actualizar un PlanMedioItem completo (para modificar medio)
+  updatePlanMedioItem(dto: PlanMedioItemUpdateDto): Observable<PlanMedioItemBackend> {
+    const url = `${this.baseUrl}/api/PlanMedioItem`;
+    console.log('🔄 PUT PlanMedioItem (Update):', url, dto);
+    return this.http.put<PlanMedioItemBackend>(url, dto);
   }
 
   // Eliminar un PlanMedioItem

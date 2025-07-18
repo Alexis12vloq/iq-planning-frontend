@@ -60,6 +60,18 @@ export interface ActualizarPlanMedioItemRequest {
   usuarioModifico: string;
 }
 
+// DTO para actualizar medio (PUT /api/PlanMedioItem)
+export interface PlanMedioItemUpdateDto {
+  planMedioItemId: number;
+  planMedioId: number;
+  version: number;
+  medioId?: number;
+  proveedorId?: number;
+  tarifa?: number;
+  dataJson?: string;
+  usuarioModifico?: string;
+}
+
 export interface EliminarPlanMedioItemResponse {
   success: boolean;
   message: string;

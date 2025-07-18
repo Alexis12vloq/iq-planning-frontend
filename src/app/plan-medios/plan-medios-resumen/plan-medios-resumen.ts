@@ -21,6 +21,7 @@ import {
   ProveedorBackend,
   CrearPlanMedioItemRequest,
   ActualizarPlanMedioItemRequest,
+  PlanMedioItemUpdateDto,
   PlanMedioItemBackend,
   SpotsPorFechaData
 } from '../models/backend-models';
@@ -2810,8 +2811,8 @@ export class ModalEditarMedioComponent implements OnInit {
       console.log('📊 planMedioItemId:', this.data.medio.planMedioItemId);
       console.log('📊 Nueva tarifa:', valores.tarifa);
 
-              // Actualizar directamente en el backend (sin localStorage)
-        const actualizarRequest: ActualizarPlanMedioItemRequest = {
+              // Actualizar directamente en el backend usando el método correcto (PUT)
+        const updateDto: PlanMedioItemUpdateDto = {
           planMedioItemId: this.data.medio.planMedioItemId,
           planMedioId: Number(this.data.planId),
           version: this.data.resumenPlan?.version || 1,
@@ -2826,11 +2827,11 @@ export class ModalEditarMedioComponent implements OnInit {
           usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
         };
 
-      console.log('📤 ENVIANDO REQUEST AL BACKEND:', actualizarRequest);
-      console.log('📤 URL del servicio:', 'actualizarPlanMedioItem');
-      console.log('📤 Datos a enviar:', JSON.stringify(actualizarRequest, null, 2));
+      console.log('📤 ENVIANDO REQUEST AL BACKEND (PUT UPDATE):', updateDto);
+      console.log('📤 URL del servicio:', 'updatePlanMedioItem');
+      console.log('📤 Datos a enviar:', JSON.stringify(updateDto, null, 2));
 
-      this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
+      this.backendMediosService.updatePlanMedioItem(updateDto).subscribe(
         (response: PlanMedioItemBackend) => {
           console.log('✅ RESPUESTA DEL BACKEND:', response);
           console.log('✅ Tarifa actualizada en backend:', response.tarifa);
