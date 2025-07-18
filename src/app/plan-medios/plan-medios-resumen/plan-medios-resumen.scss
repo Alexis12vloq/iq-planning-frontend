@@ -286,24 +286,24 @@
 
 
   .col-medios {
-    width: 12%; // Reducido de 18% a 12% (ahorro de 6%)
-    min-width: 120px;
+    width: 8%; // Reducido de 12% a 8% (ahorro de 4%)
+    min-width: 80px;
   }
 
   .col-proveedor {
-    width: 16%; // Aumentado de 13% a 16% (ganancia de 3%)
-    min-width: 160px;
+    width: 18%; // Aumentado de 16% a 18% (ganancia de 2%)
+    min-width: 180px;
   }
 
   .col-semanas {
     text-align: center;
-    width: 42%; // Aumentado de 40% a 42% (ganancia de 2%)
-    min-width: 420px;
+    width: 44%; // Aumentado de 42% a 44% (ganancia de 2%)
+    min-width: 440px;
   }
   
   // Las fechas se distribuyen dentro del porcentaje asignado
   .fechas-subheader .col-fecha {
-    width: calc(42% / var(--num-semanas, 5)); // Distribución dentro del porcentaje actualizado
+    width: calc(44% / var(--num-semanas, 5)); // Distribución dentro del porcentaje actualizado
     min-width: 70px;
   }
 
@@ -319,7 +319,7 @@
   }
 
   .col-total {
-    width: 12%; // Aumentado de 11% a 12% (ganancia de 1%)
+    width: 12%; // Mantenido igual
     min-width: 120px;
     text-align: right;
   }
