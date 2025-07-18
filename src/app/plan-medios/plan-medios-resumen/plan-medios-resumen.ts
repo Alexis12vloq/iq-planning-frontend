@@ -320,6 +320,10 @@ export class PlanMediosResumen implements OnInit {
     const fechaInicio = new Date(this.periodoSeleccionado.fechaInicio);
     const fechaFin = new Date(this.periodoSeleccionado.fechaFin);
 
+    // ✅ CORRECCIÓN: Sumar un día para compensar problema de zona horaria
+    fechaInicio.setDate(fechaInicio.getDate() + 1);
+    fechaFin.setDate(fechaFin.getDate() + 1);
+
     fechaInicio.setHours(0, 0, 0, 0);
     fechaFin.setHours(23, 59, 59, 999);
 
@@ -384,6 +388,10 @@ export class PlanMediosResumen implements OnInit {
       parseInt(fechaFinParts[0]) // día
     );
 
+    // ✅ CORRECCIÓN: Sumar un día para compensar problema de zona horaria
+    fechaInicio.setDate(fechaInicio.getDate() + 1);
+    fechaFin.setDate(fechaFin.getDate() + 1);
+
     // Asegurar que las fechas se parseen correctamente
     fechaInicio.setHours(0, 0, 0, 0);
     fechaFin.setHours(23, 59, 59, 999);
@@ -393,59 +401,58 @@ export class PlanMediosResumen implements OnInit {
       fechaFin: fechaFin.toISOString()
     });
 
-    // Encontrar el primer lunes de la semana que contiene la fecha de inicio
+    // ✅ SEMANAS COMPLETAS: Encontrar el lunes de la semana que contiene la fecha de inicio
     let inicioSemana = new Date(fechaInicio);
-
-    // Si la fecha de inicio no es lunes, ajustar al lunes de esa semana
-    const diaSemana = inicioSemana.getDay(); // 0=domingo, 1=lunes, etc.
-    if (diaSemana !== 1) {
-      // Calcular días hasta el lunes anterior
-      let diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1; // Si es domingo (0), retroceder 6 días
+    const diaSemanaInicio = inicioSemana.getDay(); // 0=domingo, 1=lunes, etc.
+    
+    // Retroceder hasta el lunes de esa semana (SIEMPRE mostrar semana completa)
+    if (diaSemanaInicio !== 1) {
+      let diasHastaLunes = diaSemanaInicio === 0 ? 6 : diaSemanaInicio - 1; // Si es domingo (0), retroceder 6 días
       inicioSemana.setDate(inicioSemana.getDate() - diasHastaLunes);
     }
 
-    // Si el lunes calculado es anterior a la fecha de inicio del mes, usar la fecha de inicio
-    if (inicioSemana < fechaInicio) {
-      inicioSemana = new Date(fechaInicio);
+    // ✅ SEMANAS COMPLETAS: Encontrar el domingo de la semana que contiene la fecha de fin
+    let finPlan = new Date(fechaFin);
+    const diaSemanaFin = finPlan.getDay(); // 0=domingo, 1=lunes, etc.
+    
+    // Avanzar hasta el domingo de esa semana (SIEMPRE mostrar semana completa)
+    if (diaSemanaFin !== 0) {
+      let diasHastaDomingo = 7 - diaSemanaFin; // Días que faltan para llegar al domingo
+      finPlan.setDate(finPlan.getDate() + diasHastaDomingo);
     }
+
+    console.log('📅 Semanas completas calculadas:', {
+      inicioSemanaCompleta: this.formatearFecha(inicioSemana),
+      finSemanaCompleta: this.formatearFecha(finPlan),
+      fechaOriginalInicio: this.formatearFecha(fechaInicio),
+      fechaOriginalFin: this.formatearFecha(fechaFin)
+    });
 
     let contadorSemana = 1;
 
-    // Generar semanas hasta cubrir todo el mes
-    while (inicioSemana <= fechaFin) {
+    // Generar semanas completas de lunes a domingo
+    while (inicioSemana <= finPlan) {
       const finSemana = new Date(inicioSemana);
       finSemana.setDate(inicioSemana.getDate() + 6); // Domingo de la misma semana
 
-      // Si la fecha fin de la semana supera la fecha fin del mes, ajustarla
-      if (finSemana > fechaFin) {
-        finSemana.setTime(fechaFin.getTime());
-      }
+      this.semanasConFechas.push({
+        nombre: `S${contadorSemana}`,
+        fechaInicio: this.formatearFecha(inicioSemana),
+        fechaFin: this.formatearFecha(finSemana),
+        fechaCompacta: this.formatearFechaCompacta(inicioSemana, finSemana)
+      });
 
-      // Solo agregar si hay intersección con el mes
-      if (inicioSemana <= fechaFin && finSemana >= fechaInicio) {
-        // Ajustar fechas para que no salgan del rango del mes
-        const fechaInicioReal = inicioSemana < fechaInicio ? fechaInicio : inicioSemana;
-        const fechaFinReal = finSemana > fechaFin ? fechaFin : finSemana;
+      this.semanasColumnas.push(`S${contadorSemana}`);
 
-        this.semanasConFechas.push({
-          nombre: `S${contadorSemana}`,
-          fechaInicio: this.formatearFecha(fechaInicioReal),
-          fechaFin: this.formatearFecha(fechaFinReal),
-          fechaCompacta: this.formatearFechaCompacta(fechaInicioReal, fechaFinReal)
-        });
+      console.log(`📅 Semana ${contadorSemana}: ${this.formatearFecha(inicioSemana)} - ${this.formatearFecha(finSemana)}`);
 
-        this.semanasColumnas.push(`S${contadorSemana}`);
-
-        console.log(`📅 Semana ${contadorSemana}: ${this.formatearFecha(fechaInicioReal)} - ${this.formatearFecha(fechaFinReal)}`);
-
-        contadorSemana++;
-      }
+      contadorSemana++;
 
       // Avanzar al próximo lunes
       inicioSemana.setDate(inicioSemana.getDate() + 7);
     }
 
-    console.log('📅 Semanas calculadas para', this.mesActual.nombre, ':', this.semanasConFechas);
+    console.log('📅 Semanas completas calculadas para', this.mesActual.nombre, ':', this.semanasConFechas);
     console.log('📅 Columnas de semanas:', this.semanasColumnas);
   }
 
@@ -995,6 +1002,10 @@ export class PlanMediosResumen implements OnInit {
     // Asegurar que las fechas se parseen correctamente
     const fechaIni = new Date(fechaInicio + 'T00:00:00.000Z');
     const fechaFinal = new Date(fechaFin + 'T00:00:00.000Z');
+
+    // ✅ CORRECCIÓN: Sumar un día para compensar problema de zona horaria
+    fechaIni.setDate(fechaIni.getDate() + 1);
+    fechaFinal.setDate(fechaFinal.getDate() + 1);
 
     const mesInicio = fechaIni.getUTCMonth(); // 0-11
     const mesFin = fechaFinal.getUTCMonth(); // 0-11
