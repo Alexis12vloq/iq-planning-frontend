@@ -47,7 +47,15 @@ export class BackendMediosService {
     console.log('🔄 POST PlanMedioItem:', url, request);
     return this.http.post<PlanMedioItemBackend>(url, request);
   }
-
+  
+  descargarTemplatePantalla(request: { paisId: number; medioId: number }): Observable<Blob> {
+    const url = `${this.baseUrl}/api/TemplatePantallaJson/download-template`;
+    console.log('⬇️ POST descargarTemplatePantalla:', url, request);
+    
+    return this.http.post(url, request, {
+      responseType: 'blob'  // 👈 Necesario para recibir archivos
+    });
+  }
   // Actualizar un PlanMedioItem existente (solo para JSON/spots)
   actualizarPlanMedioItem(request: ActualizarPlanMedioItemRequest): Observable<PlanMedioItemBackend> {
     const url = `${this.baseUrl}/api/PlanMedioItem/update-json`;

@@ -21,6 +21,8 @@ import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { PlantillaPauta, CampoPlantilla, RespuestaPauta, DiaCalendario } from '../models/plantilla-pauta.model';
 import { Inject } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
+import { CrearPlanMedioItemRequest, MedioBackend, PlanMedioItemBackend, ProveedorBackend } from '../models/backend-models';
+import { BackendMediosService } from '../services/backend-medios.service';
 
 interface GrupoMedio {
   medio: string;
@@ -1264,6 +1266,29 @@ export class FlowChart implements OnInit {
     }
   }
 
+  descargarPlantillaPopup(): void {
+    const planData = {};
+
+    console.log('🔄 Abriendo modal para Descargar Plantilla Medio:', planData);
+
+    const dialogRef = this.dialog.open(ModalDescargarPlantillaMedioComponent, {
+      width: '600px',
+      data: {
+        planData,
+        numSemanas: 1
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe((result: any) => {
+      if (result && result.shouldRefresh) {
+        console.log('✅ Medio agregado, recargando resumen');
+        // this.recargarResumen();
+        // Marcar cambios pendientes tras agregar medio
+        // this.cambiosPendientes = true;
+      }
+    });
+  }
   // Verificar si las plantillas están actualizadas
   private verificarPlantillas(): void {
     const plantillas = this.plantillaService.obtenerTodasLasPlantillas();
@@ -2685,3 +2710,319 @@ export class ModalCalendarioPautaComponent implements OnInit {
     console.log('📅 Calendario actualizado en memoria:', pautaActualizada);
   }
 } 
+
+  // Componente Modal para Descargar Plantilla Medio
+  @Component({
+    selector: 'app-modal-descargar-plantilla-medio',
+    standalone: true,
+    imports: [
+      CommonModule,
+      ReactiveFormsModule,
+      MatCardModule,
+      MatFormFieldModule,
+      MatInputModule,
+      MatSelectModule,
+      MatButtonModule,
+      MatIconModule,
+      MatDialogModule
+    ],
+    template: `
+      <div class="modal-header">
+        <h2 mat-dialog-title>
+          Descargar Plantilla de Medio
+        </h2>
+        <button mat-icon-button mat-dialog-close>
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="modal-header">
+          <h3 mat-dialog-title>
+            Pais: Mexico 
+          </h3>
+      </div>
+      <mat-dialog-content class="modal-content">
+        
+        <!-- Formulario Simplificado -->
+        <mat-card class="form-card">
+          <mat-card-header class="header"> 
+            <mat-card-title>Selecciona un Medio</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <form [formGroup]="medioForm">
+              <mat-form-field class="full-width">
+                <mat-label>Medios</mat-label>
+                <mat-select formControlName="medio" (selectionChange)="onMedioChange($event.value)" [disabled]="cargandoMedios">
+                  <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
+                    {{ medio.nombre }}
+                  </mat-option>
+                </mat-select>
+                <mat-hint *ngIf="cargandoMedios">Cargando medios...</mat-hint>
+                <mat-error *ngIf="medioForm.get('medio')?.hasError('required')">
+                  El medio es obligatorio
+                </mat-error>
+              </mat-form-field>
+              
+              <!-- Mensaje de validación de formulario -->
+              <div class="validation-message" *ngIf="medioForm.invalid && medioForm.touched">
+                <mat-icon color="warn">error</mat-icon>
+                <span>Por favor completa todos los campos obligatorios</span>
+              </div>
+            </form>
+          </mat-card-content>
+        </mat-card>
+      </mat-dialog-content>
+
+      <mat-dialog-actions class="modal-actions">
+        <button mat-button mat-dialog-close>Cancelar</button>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          [disabled]="!medioForm.valid || existeCombinacion"
+          (click)="guardarMedio()">
+          <mat-icon>download</mat-icon>
+          Descargar Plantilla
+        </button>
+      </mat-dialog-actions>
+    `,
+    styles: [`
+      .header{
+        margin-bottom: 16px;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .modal-header h3 {
+        font-size: 18px;
+        font-weight: 500;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .modal-content {
+        padding: 16px;
+        max-height: 70vh;
+        overflow-y: auto;
+      }
+
+      .plan-info {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 4px;
+      }
+
+      .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .label {
+        font-size: 12px;
+        color: #666;
+        font-weight: 500;
+      }
+
+      .value {
+        font-size: 14px;
+        color: #333;
+      }
+
+      .medios-existentes {
+        margin-bottom: 16px;
+        padding: 12px;
+        background: #e3f2fd;
+        border-radius: 4px;
+        border-left: 4px solid #2196f3;
+      }
+
+      .medios-existentes h4 {
+        font-size: 14px;
+        font-weight: 500;
+        margin: 0 0 8px 0;
+        color: #1976d2;
+      }
+
+      .medio-existente {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+        font-size: 13px;
+        color: #333;
+      }
+
+      .medio-existente mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: #2196f3;
+      }
+
+      .form-card {
+        margin-bottom: 16px;
+      }
+
+      .full-width {
+        width: 100%;
+        margin-bottom: 16px;
+      }
+
+      .validation-message {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #f44336;
+        font-size: 14px;
+        margin-top: 8px;
+      }
+
+      .validation-message mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .modal-actions {
+        padding: 16px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+    `]
+  })
+  export class ModalDescargarPlantillaMedioComponent implements OnInit {
+    medioForm!: FormGroup;
+    mediosDisponibles: MedioBackend[] = []; // Cambiar a array de MedioBackend
+    mediosExistentes: any[] = [];
+    existeCombinacion: boolean = false;
+    paisId: number = 5; // Por defecto 5 semanas
+    cargandoMedios: boolean = true;
+    cargandoProveedores: boolean = false;
+
+    constructor(
+      private fb: FormBuilder,
+      private backendMediosService: BackendMediosService,
+      private dialogRef: MatDialogRef<ModalDescargarPlantillaMedioComponent>,
+      private snackBar: MatSnackBar,
+      @Inject(MAT_DIALOG_DATA) public data: any
+    ) {
+      this.medioForm = this.fb.group({
+        medio: ['', [Validators.required]],
+      });
+    }
+
+    ngOnInit(): void {
+      
+      this.cargarMediosDesdeBackend();
+
+      this.medioForm.valueChanges.subscribe(() => {
+        // this.validarCombinacionDuplicada();
+      });
+    }
+
+    onMedioChange(medio: MedioBackend): void {
+      if (medio && medio.medioId) {
+        this.cargandoProveedores = true;
+        console.log('🔄 Cargando proveedores para medio:', medio.nombre, 'ID:', medio.medioId);
+        this.medioForm.patchValue({ proveedor: '', tarifa: 0 });
+      }
+    }
+
+    // Método para cargar medios desde el backend
+    private cargarMediosDesdeBackend(): void {
+      this.cargandoMedios = true;
+      console.log('🔄 Cargando medios desde el backend...');
+
+      this.backendMediosService.getMedios().subscribe(
+        (medios: MedioBackend[]) => {
+          console.log('✅ Medios del backend obtenidos:', medios);
+          this.mediosDisponibles = medios.filter(m => m.estado); // Solo medios activos
+          this.cargandoMedios = false;
+        },
+        (error: any) => {
+          console.error('❌ Error cargando medios del backend:', error);
+          this.mediosDisponibles = [];
+          this.cargandoMedios = false;
+          
+          // Mostrar error al usuario
+          this.snackBar.open('❌ Error cargando medios desde el servidor', 'Cerrar', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
+        }
+      );
+    }
+
+    guardarMedio(): void {
+      // Marcar todos los campos como tocados para mostrar errores
+      this.medioForm.markAllAsTouched();
+
+      // Validar campos obligatorios
+      if (this.medioForm.invalid) {
+        let mensajeError = 'Por favor completa todos los campos obligatorios:';
+        
+        if (this.medioForm.get('medio')?.hasError('required')) {
+          mensajeError += ' Medio';
+        }
+       
+        this.snackBar.open(`❌ ${mensajeError}`, '', {
+          duration: 4000,
+          panelClass: ['error-snackbar']
+        });
+        return;
+      }
+
+      const valores = this.medioForm.value;
+      const medioSeleccionado = valores.medio as MedioBackend;
+
+      // Preparar request para el backend
+      const crearRequest: any = {
+        paisId: 5,
+        medioId: medioSeleccionado.medioId,
+      };
+
+      console.log('📤 Enviando request al backend:', crearRequest);
+
+      // Guardar en el backend
+      this.backendMediosService.descargarTemplatePantalla(crearRequest).subscribe(
+          (blob: Blob) => {
+            // ✅ Crear un enlace para descargar el archivo
+            const a = document.createElement('a');
+            const objectUrl = URL.createObjectURL(blob);
+            a.href = objectUrl;
+            a.download = `Template_${medioSeleccionado.nombre}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(objectUrl);
+
+            this.snackBar.open('✅ Plantilla descargada correctamente', '', {
+              duration: 2000,
+              panelClass: ['success-snackbar']
+            });
+
+            // Si usas un dialog, puedes cerrarlo aquí si aplica
+            this.dialogRef?.close({ shouldRefresh: false });
+          },
+          (error: any) => {
+            console.error('❌ Error al descargar plantilla:', error);
+            this.snackBar.open('❌ Error al descargar la plantilla', '', {
+              duration: 3000,
+              panelClass: ['error-snackbar']
+            });
+          }
+        );
+
+    }
+  }
