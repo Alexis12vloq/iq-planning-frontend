@@ -152,7 +152,8 @@ export class FlowChart implements OnInit {
     const mediosYProveedores = navigation?.extras?.state?.['mediosYProveedores'];
 
     if (!rawPlanData) {
-      this.router.navigate(['/plan-medios-resumen']);
+      console.log('⚠️ No hay datos del plan, navegando a plan-medios-consulta');
+      this.router.navigateByUrl('/plan-medios-consulta');
       return;
     }
 
@@ -464,7 +465,7 @@ export class FlowChart implements OnInit {
   }
 
   // Cargar plantilla dinámica desde el backend
-  cargarPlantillaPorMedio(medio: string): void {
+    cargarPlantillaPorMedio(medio: string): void {
     this.cargandoPlantilla = true;
     this.errorPlantilla = null;
     this.plantillaActual = null;
@@ -591,7 +592,7 @@ export class FlowChart implements OnInit {
       if (isNaN(planMedioItemId)) {
         this.snackBar.open('Error: ID de item inválido', '', { duration: 3000, panelClass: ['error-snackbar'] });
         return;
-      }
+  }
 
       this.backendMediosService.eliminarPlanMedioItemFlowchart(planMedioItemId).subscribe({
         next: (response) => {
@@ -599,15 +600,15 @@ export class FlowChart implements OnInit {
           
           // Eliminar de memoria local después del éxito en backend
           this.pautasGuardadas = this.pautasGuardadas.filter(item => item.id !== pautaId);
-          this.itemsPauta = this.itemsPauta.filter(item => item.id !== pautaId);
+        this.itemsPauta = this.itemsPauta.filter(item => item.id !== pautaId);
           
           // Limpiar programación del item eliminado
           delete this.programacionItems[pautaId];
           
           this.snackBar.open('✅ Item eliminado exitosamente', '', { 
-            duration: 2000,
-            panelClass: ['success-snackbar']
-          });
+          duration: 2000,
+          panelClass: ['success-snackbar']
+        });
           
           // Recargar datos para asegurar consistencia
           this.recargarDatosFlowChart();
@@ -616,10 +617,10 @@ export class FlowChart implements OnInit {
         error: (error) => {
           console.error('❌ Error eliminando item del backend:', error);
           this.snackBar.open('❌ Error al eliminar el item', '', { 
-            duration: 3000,
-            panelClass: ['error-snackbar']
-          });
-        }
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
       });
     }
   }
@@ -672,27 +673,27 @@ export class FlowChart implements OnInit {
             verticalPosition: 'top'
           });
         }
-        
-        // Cargar items como lista simple
-        this.cargarItemsPauta();
-        
+      
+      // Cargar items como lista simple
+      this.cargarItemsPauta();
+      
         // Diagnóstico de datos cargados
         setTimeout(() => {
           this.diagnosticarEstadoDatos();
         }, 100);
-        
+      
         // Forzar detección de cambios
+      this.cdr.detectChanges();
+      setTimeout(() => {
         this.cdr.detectChanges();
-        setTimeout(() => {
-          this.cdr.detectChanges();
           console.log('🔄 Items cargados en vista:', this.itemsPauta.length);
-        }, 0);
+      }, 0);
       },
       error: (error: any) => {
         console.error('❌ Error cargando items FlowChart desde backend:', error);
         // Fallback a datos vacíos
-        this.pautasGuardadas = [];
-        this.itemsPauta = [];
+      this.pautasGuardadas = [];
+      this.itemsPauta = [];
         this.cdr.detectChanges();
         
         this.snackBar.open('⚠️ No se pudieron cargar los items del FlowChart', 'Cerrar', {
@@ -809,36 +810,21 @@ export class FlowChart implements OnInit {
 
   onRegresar(): void {
     console.log('📋 === REGRESANDO A PLAN MEDIOS RESUMEN ===');
-    console.log('📋 Datos originales en FlowChart:');
-    console.log('📋 this.planData.id:', this.planData?.id, 'tipo:', typeof this.planData?.id);
-    console.log('📋 this.planData.numeroPlan:', this.planData?.numeroPlan, 'tipo:', typeof this.planData?.numeroPlan);
-    console.log('📋 this.planData.version:', this.planData?.version, 'tipo:', typeof this.planData?.version);
     
-    // Preparar solo los datos básicos del plan para recargar
-    const planDataBasico = {
-      id: this.planData?.id,
-      numeroPlan: String(this.planData?.numeroPlan || ''), // Asegurar que sea string
-      version: this.planData?.version,
-      cliente: this.planData?.cliente || '',
-      producto: this.planData?.producto || '',
-      campana: this.planData?.campana || '',
-      fechaInicio: this.planData?.fechaInicio || '',
-      fechaFin: this.planData?.fechaFin || ''
-    };
-    
-    console.log('📋 Plan Data básico para recarga:', planDataBasico);
-    console.log('📋 planDataBasico.id:', planDataBasico.id, 'tipo:', typeof planDataBasico.id);
-    console.log('📋 planDataBasico.numeroPlan:', planDataBasico.numeroPlan, 'tipo:', typeof planDataBasico.numeroPlan);
-    
-    // Regresar al resumen para que recargue desde el backend
-    this.router.navigate(['/plan-medios-resumen'], {
-      state: { 
-        planData: planDataBasico,
-        fromFlowChart: true,
-        shouldReload: true
-      }
+    // ✅ NAVEGACIÓN DIRECTA Y SIMPLE - COMO FUNCIONABA ANTES
+    console.log('🔄 Navegando directamente a plan-medios-resumen');
+    this.router.navigate(['/plan-medios-resumen']).then(success => {
+      console.log('✅ Navegación exitosa:', success);
+    }).catch(error => {
+      console.error('❌ Error navegación:', error);
+      // Fallback: recarga completa
+      window.location.href = '/plan-medios-resumen';
     });
   }
+
+
+
+
 
   trackByCampo(index: number, campo: any): string {
     return campo.name || index.toString();
@@ -1343,7 +1329,7 @@ export class FlowChart implements OnInit {
     this.snackBar.open('Cache de plantillas dinámicas limpiado', '', {
       duration: 2000,
       panelClass: ['info-snackbar']
-    });
+      });
     console.log('🧹 Cache de plantillas dinámicas limpiado');
   }
 
@@ -1360,7 +1346,7 @@ export class FlowChart implements OnInit {
             console.log(`✅ ${medio}: ${plantilla.fields.length} campos`, plantilla.fields.map(c => c.name));
           } else {
             console.warn(`❌ ${medio}: No encontrado`);
-          }
+    }
         },
         error: (error) => {
           console.error(`💥 ${medio}: Error`, error);
@@ -1679,7 +1665,8 @@ export class FlowChart implements OnInit {
       data: { 
         planData: this.planData,
         action: 'create',
-        mediosDisponibles: this.mediosDisponibles
+        mediosDisponibles: this.mediosDisponibles,
+        itemsExistentes: this.itemsPauta // ✅ PASAR ITEMS EXISTENTES para filtro de proveedores
       },
       disableClose: true
     });
@@ -2065,7 +2052,8 @@ export class FlowChart implements OnInit {
         planData: this.planData,
         action: 'edit',
         pautaData: item,
-        mediosDisponibles: this.mediosDisponibles
+        mediosDisponibles: this.mediosDisponibles,
+        itemsExistentes: this.itemsPauta // ✅ PASAR ITEMS EXISTENTES para filtro de proveedores
       },
       disableClose: true
     });
@@ -2207,15 +2195,22 @@ export class FlowChart implements OnInit {
               <mat-label>Proveedor</mat-label>
               <mat-select 
                 formControlName="proveedor"
-                [disabled]="data.action === 'edit' || cargandoProveedores">
-                <mat-option *ngFor="let proveedor of proveedoresDisponibles" [value]="proveedor.id">
+                [disabled]="data.action === 'edit'"
+                [placeholder]="cargandoProveedores ? 'Cargando proveedores...' : 'Seleccionar proveedor'">
+                <mat-option *ngFor="let proveedor of proveedoresFiltrados" [value]="proveedor.id">
                   {{ proveedor.VENDOR }}
                 </mat-option>
               </mat-select>
-              <mat-hint *ngIf="cargandoProveedores">Cargando proveedores...</mat-hint>
+              <mat-icon matSuffix *ngIf="data.action === 'edit'">lock</mat-icon>
+              <!-- ✅ HINTS ESPECÍFICOS POR MODO -->
+              <mat-hint *ngIf="cargandoProveedores && data.action !== 'edit'">Cargando proveedores...</mat-hint>
               <mat-hint *ngIf="data.action === 'edit'" class="edit-hint">
                 <mat-icon class="hint-icon">lock</mat-icon>
                 El proveedor no se puede cambiar durante la edición
+              </mat-hint>
+              <mat-hint *ngIf="data.action === 'create' && !cargandoProveedores && proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0" class="warning-hint">
+                <mat-icon class="hint-icon">warning</mat-icon>
+                Todos los proveedores para este medio ya están en uso
               </mat-hint>
             </mat-form-field>
           </form>
@@ -2306,7 +2301,7 @@ export class FlowChart implements OnInit {
                     </mat-option>
                   </mat-select>
                 </mat-form-field>
-                
+
                 </ng-container>
               </ng-container>
             </div>
@@ -2533,6 +2528,23 @@ export class FlowChart implements OnInit {
       color: #d32f2f !important;
       font-weight: 500 !important;
     }
+
+    /* ✅ HINT DE WARNING PARA PROVEEDORES */
+    .warning-hint {
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      font-size: 11px !important;
+      color: #f57c00 !important;
+      font-weight: 500 !important;
+    }
+
+    .warning-hint .hint-icon {
+      font-size: 14px !important;
+      width: 14px !important;
+      height: 14px !important;
+      color: #ff9800 !important;
+    }
   `]
 })
 export class ModalNuevaPautaComponent implements OnInit {
@@ -2547,6 +2559,8 @@ export class ModalNuevaPautaComponent implements OnInit {
   todosLosMedios: MedioBackend[] = [];
   mediosDisponibles: MedioBackend[] = [];
   proveedoresDisponibles: any[] = [];
+  proveedoresFiltrados: any[] = []; // ✅ FILTRADOS para evitar duplicados
+  mediosExistentes: any[] = []; // ✅ ITEMS YA CREADOS para validar duplicados
   
   // Estados de carga
   cargandoMedios: boolean = true;
@@ -2588,6 +2602,9 @@ export class ModalNuevaPautaComponent implements OnInit {
     // Cargar medios desde backend
     this.cargarMediosDisponibles();
     
+    // ✅ CARGAR MEDIOS EXISTENTES para filtro de proveedores
+    this.cargarMediosExistentes();
+    
     // En modo edición, los datos se cargarán después de que se carguen los medios
   }
 
@@ -2598,11 +2615,11 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.backendMediosService.getMedios().subscribe({
       next: (medios) => {
         this.todosLosMedios = medios.filter(m => m.estado); // Solo medios activos
-        this.filtrarMediosDisponibles();
+    this.filtrarMediosDisponibles();
         console.log('✅ Medios cargados:', this.todosLosMedios.length);
-        
+    
         // ✅ CARGAR DATOS EN MODO EDICIÓN
-        if (this.data.action === 'edit' && this.data.pautaData) {
+    if (this.data.action === 'edit' && this.data.pautaData) {
           this.cargarDatosEdicion();
         }
       },
@@ -2613,7 +2630,7 @@ export class ModalNuevaPautaComponent implements OnInit {
       },
       complete: () => {
         this.cargandoMedios = false;
-      }
+    }
     });
   }
 
@@ -2667,15 +2684,25 @@ export class ModalNuevaPautaComponent implements OnInit {
       
       // Callback después de cargar proveedores
       const proveedorIdBuscado = this.data.pautaData.proveedorId;
-      const proveedorExistente = this.proveedoresDisponibles.find(p => {
-        // Convertir ambos a string para comparación robusta
+      
+      // ✅ BUSCAR EN FILTRADOS Y DISPONIBLES (para modo edición)
+      let proveedorExistente = this.proveedoresFiltrados.find(p => {
         const proveedorIdStr = String(proveedorIdBuscado);
         const pIdStr = String(p.id || p.proveedorId);
-        const coincide = pIdStr === proveedorIdStr;
-        
-        console.log(`🔍 Comparando proveedor ${p.VENDOR}: "${pIdStr}" === "${proveedorIdStr}"? ${coincide}`);
-        return coincide;
+        return pIdStr === proveedorIdStr;
       });
+      
+      // Si no está en filtrados, buscar en disponibles (puede estar ya usado)
+      if (!proveedorExistente) {
+        proveedorExistente = this.proveedoresDisponibles.find(p => {
+          const proveedorIdStr = String(proveedorIdBuscado);
+          const pIdStr = String(p.id || p.proveedorId);
+          const coincide = pIdStr === proveedorIdStr;
+          
+          console.log(`🔍 Comparando proveedor ${p.VENDOR}: "${pIdStr}" === "${proveedorIdStr}"? ${coincide}`);
+          return coincide;
+        });
+      }
       
       if (proveedorExistente) {
         console.log('✅ Proveedor encontrado por ID:', proveedorExistente);
@@ -2716,6 +2743,9 @@ export class ModalNuevaPautaComponent implements OnInit {
 
     // Cargar plantilla para este medio
     this.cargarPlantillaPorMedio(medioExistente.nombre);
+    
+    // ✅ RECARGAR medios existentes por si se actualizaron
+    this.cargarMediosExistentes();
     
     // ✅ Forzar detección de cambios después de un pequeño delay
     setTimeout(() => {
@@ -2892,13 +2922,20 @@ export class ModalNuevaPautaComponent implements OnInit {
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
     const tarifaValida = this.pautaForm.get('tarifa')?.value > 0;
 
+    // ✅ En modo creación, validar que haya proveedores filtrados disponibles (solo si no está cargando)
+    const tieneProveedoresDisponibles = this.data.action === 'edit' || 
+                                       this.cargandoProveedores || 
+                                       this.proveedoresFiltrados.length > 0;
+
     const esValido = !!(
       medioSeleccionado && 
       medioSeleccionado.medioId && 
       proveedorId && 
       Number(proveedorId) > 0 &&
       tarifaValida &&
-      this.pautaForm.valid
+      tieneProveedoresDisponibles &&
+      this.pautaForm.valid &&
+      !this.cargandoProveedores  // ✅ No permitir guardar mientras carga proveedores
     );
 
     return esValido;
@@ -2915,9 +2952,17 @@ export class ModalNuevaPautaComponent implements OnInit {
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
     if (!proveedorId) return '';
     
-    const proveedor = this.proveedoresDisponibles.find(p => 
+    // Buscar primero en filtrados, luego en disponibles
+    let proveedor = this.proveedoresFiltrados.find(p => 
       (p.id || p.proveedorId) == proveedorId
     );
+    
+    if (!proveedor) {
+      proveedor = this.proveedoresDisponibles.find(p => 
+        (p.id || p.proveedorId) == proveedorId
+      );
+    }
+    
     return proveedor?.VENDOR || '';
   }
 
@@ -2933,11 +2978,32 @@ export class ModalNuevaPautaComponent implements OnInit {
     console.log('✅ === FIN DEBUG ===');
   }
 
+  // ✅ CARGAR MEDIOS EXISTENTES - COPIADO DESDE RESUMEN
+  private cargarMediosExistentes(): void {
+    console.log('🔄 Cargando medios existentes para filtro...');
+    
+    // Obtener items existentes del componente padre a través de data
+    const itemsExistentes = this.data.itemsExistentes || [];
+    
+    this.mediosExistentes = itemsExistentes.map((item: any) => ({
+      medio: item.medio,
+      proveedor: item.proveedor,
+      id: item.id
+    }));
+
+    console.log('✅ Medios existentes cargados:', this.mediosExistentes.length);
+    console.log('📊 Lista de medios existentes:', this.mediosExistentes);
+  }
+
   onMedioChange(medioSeleccionado: MedioBackend): void {
     if (medioSeleccionado && medioSeleccionado.nombre) {
       this.cargandoProveedores = true;
       console.log('🔄 Cargando proveedores para medio:', medioSeleccionado.nombre);
       this.seleccionForm.patchValue({ proveedor: '' });
+      
+      // ✅ RECARGAR medios existentes antes de filtrar proveedores
+      this.cargarMediosExistentes();
+      
       this.cargarProveedoresPorMedio(medioSeleccionado.nombre);
       this.cargarPlantillaPorMedio(medioSeleccionado.nombre);
     }
@@ -2946,13 +3012,38 @@ export class ModalNuevaPautaComponent implements OnInit {
   cargarProveedoresPorMedio(medio: string, callback?: () => void): void {
     this.cargandoProveedores = true;
     this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
+    
+    // ✅ FILTRAR PROVEEDORES - igual que en resumen
+    this.filtrarProveedoresDisponibles(medio);
+    
     this.cargandoProveedores = false;
     console.log('✅ Proveedores cargados para', medio, ':', this.proveedoresDisponibles.length);
+    console.log('✅ Proveedores filtrados para', medio, ':', this.proveedoresFiltrados.length);
     
     // Ejecutar callback si se proporciona
     if (callback) {
       setTimeout(() => callback(), 100); // Pequeño delay para asegurar que la vista se actualice
     }
+  }
+
+  // ✅ FILTRAR PROVEEDORES - COPIADO EXACTO DESDE RESUMEN
+  private filtrarProveedoresDisponibles(nombreMedio: string): void {
+    // ✅ OBTENER proveedores ya usados para este medio específico
+    const proveedoresUsados = this.mediosExistentes
+      .filter(me => me.medio === nombreMedio)
+      .map(me => me.proveedor);
+
+    // ✅ FILTRAR proveedores disponibles excluyendo los ya usados
+    this.proveedoresFiltrados = this.proveedoresDisponibles.filter(proveedor =>
+      !proveedoresUsados.includes(proveedor.VENDOR)
+    );
+
+    console.log('🔍 FILTRADO DE PROVEEDORES PARA:', nombreMedio);
+    console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
+    console.log('📋 Proveedores ya usados para este medio:', proveedoresUsados);
+    console.log('📋 Proveedores totales disponibles:', this.proveedoresDisponibles.length);
+    console.log('✅ Proveedores filtrados (sin usar):', this.proveedoresFiltrados.length);
+    console.log('📊 Lista de proveedores filtrados:', this.proveedoresFiltrados.map(p => p.VENDOR));
   }
 
   obtenerTipoCampo(campo: CampoPlantilla): string {
@@ -3127,8 +3218,8 @@ export class ModalNuevaPautaComponent implements OnInit {
       },
       error: (error) => {
         console.error('❌ Error guardando en backend:', error);
-        throw error;
-      }
+      throw error;
+    }
     });
   }
 
@@ -3206,8 +3297,8 @@ export class ModalNuevaPautaComponent implements OnInit {
       },
       error: (error) => {
         console.error('❌ Error actualizando en backend:', error);
-        throw error;
-      }
+      throw error;
+    }
     });
   }
 
@@ -3851,13 +3942,13 @@ export class ModalCalendarioPautaComponent implements OnInit {
       });
     }
 
-        onMedioChange(medio: MedioBackend): void {
-    if (medio && medio.medioId) {
-      this.cargandoProveedores = true;
-      console.log('🔄 Cargando proveedores para medio:', medio.nombre, 'ID:', medio.medioId);
+    onMedioChange(medio: MedioBackend): void {
+      if (medio && medio.medioId) {
+        this.cargandoProveedores = true;
+        console.log('🔄 Cargando proveedores para medio:', medio.nombre, 'ID:', medio.medioId);
       this.medioForm.patchValue({ proveedor: '' });
+      }
     }
-  }
 
     // Método para cargar medios desde el backend
     private cargarMediosDesdeBackend(): void {

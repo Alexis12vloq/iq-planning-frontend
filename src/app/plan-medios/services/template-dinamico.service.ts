@@ -354,17 +354,54 @@ export class TemplateDinamicoService {
   ];
 
   // Mapeo de nombres de medios a medioId (actualizado con todas las 9 plantillas)
+  // ✅ INCLUYE VARIACIONES EN MAYÚSCULAS Y MINÚSCULAS
   private medioNombreToId: { [key: string]: number } = {
-    'TV NAL': 6,        // TV Abierta
+    // TV Abierta / NAL
+    'TV NAL': 6,
     'TV Abierta': 6,
+    'TV ABIERTA': 6,
+    'TV_NAL': 6,
+    'tv nal': 6,
+    'tv abierta': 6,
+    
+    // TV Paga
     'TV Paga': 7,
+    'TV PAGA': 7,
+    'tv paga': 7,
+    
+    // TV Local
     'TV Local': 8,
+    'TV LOCAL': 8,
+    'tv local': 8,
+    
+    // Radio
     'Radio': 2,
+    'RADIO': 2,
+    'radio': 2,
+    
+    // Revista
     'Revista': 9,
+    'REVISTA': 9,
+    'revista': 9,
+    
+    // Prensa
     'Prensa': 4,
+    'PRENSA': 4,
+    'prensa': 4,
+    
+    // Cine
     'Cine': 10,
+    'CINE': 10,
+    'cine': 10,
+    
+    // OOH
     'OOH': 5,
-    'Digital': 3
+    'ooh': 5,
+    
+    // Digital
+    'Digital': 3,
+    'DIGITAL': 3,
+    'digital': 3
   };
 
   constructor(private backendMediosService: BackendMediosService) {
@@ -386,13 +423,18 @@ export class TemplateDinamicoService {
   obtenerPlantillaPorMedio(medioNombre: string): Observable<PlantillaPauta | null> {
     console.log('🔄 [TEMPORAL] Obteniendo plantilla hardcodeada para medio:', medioNombre);
 
-    // Buscar medioId usando el mapeo
+    // ✅ BÚSQUEDA DIRECTA EN MAPEO (incluye todas las variaciones de case)
+    console.log('🔍 Buscando medio exacto:', medioNombre);
+    
     const medioId = this.medioNombreToId[medioNombre];
+    
     if (!medioId) {
       console.warn('⚠️ [TEMPORAL] No se encontró medioId para:', medioNombre);
       console.warn('⚠️ Medios disponibles:', Object.keys(this.medioNombreToId));
       return of(null);
     }
+    
+    console.log('✅ Medio encontrado:', medioNombre, '→', medioId);
 
     // Verificar cache primero
     if (this.plantillasCache.has(medioId)) {
