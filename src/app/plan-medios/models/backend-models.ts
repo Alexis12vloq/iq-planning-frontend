@@ -160,4 +160,21 @@ export interface SpotsPorFechaData {
   valorTotal: number;
 }
 
+// ✅ NUEVO: Modelo para Template Pantalla JSON del backend
+export interface TemplatePantallaJsonBackend {
+  templateId: number;
+  pantalla: string;
+  paisId: number;
+  paisNombre: string;
+  tablaCompleta: string;
+  medioId: number;
+  medioNombre: string;
+  jsonSchema: string; // JSON schema de la plantilla
+  fechaCreacion: string;
+  usuarioCreacion: string;
+  fechaModificacion?: string;
+  usuarioModificacion?: string;
+  estado: boolean;
+}
+
  

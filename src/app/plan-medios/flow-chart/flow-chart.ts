@@ -18,6 +18,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Router } from '@angular/router';
 import { PlantillaPautaService } from '../services/plantilla-pauta.service';
+import { TemplateDinamicoService } from '../services/template-dinamico.service';
 import { PlantillaPauta, CampoPlantilla, RespuestaPauta, DiaCalendario } from '../models/plantilla-pauta.model';
 import { Inject } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
@@ -140,6 +141,7 @@ export class FlowChart implements OnInit {
     private router: Router,
     private snackBar: MatSnackBar,
     private plantillaService: PlantillaPautaService,
+    private templateDinamicoService: TemplateDinamicoService,
     private cdr: ChangeDetectorRef,
     private dialog: MatDialog,
     private backendMediosService: BackendMediosService
@@ -461,40 +463,47 @@ export class FlowChart implements OnInit {
     console.log('🔄 Migración omitida - sin localStorage');
   }
 
-  // Cargar plantilla según el país del plan y el medio seleccionado
-    cargarPlantillaPorMedio(medio: string): void {
+  // Cargar plantilla dinámica desde el backend
+  cargarPlantillaPorMedio(medio: string): void {
     this.cargandoPlantilla = true;
     this.errorPlantilla = null;
     this.plantillaActual = null;
     
-    setTimeout(() => {
-      try {
-        // Usar el nuevo método que busca solo por medio
-        this.plantillaActual = this.plantillaService.obtenerPlantillaPorMedio(medio);
-        
-        if (this.plantillaActual) {
+    console.log('🔄 Cargando plantilla dinámica para medio:', medio);
+    
+    // Usar el servicio dinámico
+    this.templateDinamicoService.obtenerPlantillaPorMedio(medio).subscribe({
+      next: (plantilla) => {
+        if (plantilla) {
+          this.plantillaActual = plantilla;
           this.generarFormularioSimplificado();
           this.configurarCalculosAutomaticos();
-          this.snackBar.open(`Plantilla cargada: ${this.plantillaActual.nombre}`, '', { 
-            duration: 1500,
+          
+          this.snackBar.open(`Plantilla dinámica cargada: ${plantilla.nombre}`, '', { 
+            duration: 2000,
             panelClass: ['success-snackbar']
           });
           this.errorPlantilla = null;
+          console.log('✅ Plantilla dinámica cargada:', plantilla);
         } else {
-          this.errorPlantilla = `No existe plantilla configurada para "${medio}". ` +
-                               `Contacta al administrador para configurar esta plantilla.`;
+          this.errorPlantilla = `No se encontró plantilla en el backend para "${medio}". ` +
+                               `Verifica que el medio tenga una plantilla configurada en el servidor.`;
           this.pautaForm = this.fb.group({});
+          console.warn('⚠️ No se encontró plantilla para medio:', medio);
         }
-      } catch (error) {
-        console.error('Error al cargar plantilla:', error);
-        this.errorPlantilla = 'Error al cargar la plantilla. Intenta nuevamente.';
+      },
+      error: (error) => {
+        console.error('❌ Error cargando plantilla dinámica:', error);
+        this.errorPlantilla = `Error conectando con el backend para cargar la plantilla de "${medio}". ` +
+                             `Intenta nuevamente o contacta al administrador.`;
         this.plantillaActual = null;
         this.pautaForm = this.fb.group({});
-      } finally {
+      },
+      complete: () => {
         this.cargandoPlantilla = false;
         this.cdr.detectChanges();
       }
-    }, 10);
+    });
   }
 
   generarFormularioSimplificado(): void {
@@ -1338,6 +1347,42 @@ export class FlowChart implements OnInit {
     }
   }
 
+  limpiarCachePlantillas(): void {
+    this.templateDinamicoService.limpiarCache();
+    this.snackBar.open('Cache de plantillas dinámicas limpiado', '', {
+      duration: 2000,
+      panelClass: ['info-snackbar']
+    });
+    console.log('🧹 Cache de plantillas dinámicas limpiado');
+  }
+
+  // 🚧 TEMPORAL: Probar carga de plantilla hardcodeada
+  probarPlantillaHardcodeada(): void {
+    const mediosParaProbar = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
+    
+    console.log('🧪 === PROBANDO PLANTILLAS HARDCODEADAS ===');
+    
+    mediosParaProbar.forEach(medio => {
+      this.templateDinamicoService.obtenerPlantillaPorMedio(medio).subscribe({
+        next: (plantilla) => {
+          if (plantilla) {
+            console.log(`✅ ${medio}: ${plantilla.fields.length} campos`, plantilla.fields.map(c => c.name));
+          } else {
+            console.warn(`❌ ${medio}: No encontrado`);
+          }
+        },
+        error: (error) => {
+          console.error(`💥 ${medio}: Error`, error);
+        }
+      });
+    });
+    
+    this.snackBar.open('Revisa la consola para ver las pruebas de plantillas', '', {
+      duration: 4000,
+      panelClass: ['info-snackbar']
+    });
+  }
+
   limpiarPlantillas(): void {
     if (confirm('¿Estás seguro de que deseas reinicializar todas las plantillas? Esta acción no se puede deshacer.')) {
       this.plantillaService.limpiarYReinicializarPlantillas();
@@ -1530,6 +1575,9 @@ export class FlowChart implements OnInit {
     
     console.log('🎯 Items por medio:', this.itemsPorMedio);
     console.log('🎯 Programación items:', Object.keys(this.programacionItems).length);
+    
+    // Diagnóstico de plantillas dinámicas
+    console.log('🎯 Cache plantillas dinámicas:', this.templateDinamicoService.obtenerEstadisticasCache());
   }
 
   // Métodos para el manejo de la grilla de calendario
@@ -2053,12 +2101,12 @@ export class FlowChart implements OnInit {
               <mat-label>Medio</mat-label>
               <mat-select 
                 formControlName="medio" 
-                (selectionChange)="cargarPlantillaPorMedio($event.value)"
-                [disabled]="data.action === 'edit'">
+                [disabled]="data.action === 'edit' || cargandoMedios">
                 <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
-                  {{ medio }}
+                  {{ medio.nombre }}
                 </mat-option>
               </mat-select>
+              <mat-hint *ngIf="cargandoMedios">Cargando medios...</mat-hint>
               <mat-hint *ngIf="data.action === 'edit'" class="edit-hint">
                 <mat-icon class="hint-icon">info</mat-icon>
                 El medio no se puede cambiar durante la edición
@@ -2069,11 +2117,12 @@ export class FlowChart implements OnInit {
               <mat-label>Proveedor</mat-label>
               <mat-select 
                 formControlName="proveedor"
-                [disabled]="data.action === 'edit'">
+                [disabled]="data.action === 'edit' || cargandoProveedores">
                 <mat-option *ngFor="let proveedor of proveedoresDisponibles" [value]="proveedor.id">
                   {{ proveedor.VENDOR }}
                 </mat-option>
               </mat-select>
+              <mat-hint *ngIf="cargandoProveedores">Cargando proveedores...</mat-hint>
               <mat-hint *ngIf="data.action === 'edit'">
                 El proveedor no se puede cambiar durante la edición
               </mat-hint>
@@ -2328,18 +2377,20 @@ export class ModalNuevaPautaComponent implements OnInit {
   errorPlantilla: string | null = null;
   private lookupCache = new Map<string, any[]>();
   
-  // Medios disponibles (todos los medios)
-  todosLosMedios: string[] = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
-  
-  // Medios disponibles filtrados (excluyendo los ya usados)
-  mediosDisponibles: string[] = [];
-  
-  // Proveedores disponibles para el medio seleccionado
+  // Medios y proveedores cargados dinámicamente desde backend
+  todosLosMedios: MedioBackend[] = [];
+  mediosDisponibles: MedioBackend[] = [];
   proveedoresDisponibles: any[] = [];
+  
+  // Estados de carga
+  cargandoMedios: boolean = true;
+  cargandoProveedores: boolean = false;
 
   constructor(
     private fb: FormBuilder,
     private plantillaService: PlantillaPautaService,
+    private templateDinamicoService: TemplateDinamicoService,
+    private backendMediosService: BackendMediosService,
     private dialogRef: MatDialogRef<ModalNuevaPautaComponent>,
     private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: any
@@ -2349,11 +2400,10 @@ export class ModalNuevaPautaComponent implements OnInit {
       proveedor: ['']
     });
 
-    this.seleccionForm.get('medio')?.valueChanges.subscribe(medio => {
-      if (medio && medio.trim()) {
-        this.cargarProveedoresPorMedio(medio);
-        this.seleccionForm.patchValue({ proveedor: '' });
-        this.cargarPlantillaPorMedio(medio);
+    this.seleccionForm.get('medio')?.valueChanges.subscribe(medioSeleccionado => {
+      if (medioSeleccionado) {
+        console.log('🔄 Medio seleccionado:', medioSeleccionado);
+        this.onMedioChange(medioSeleccionado);
       } else {
         this.proveedoresDisponibles = [];
         this.plantillaActual = null;
@@ -2369,8 +2419,8 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.errorPlantilla = null;
     this.plantillaActual = null;
     
-    // Filtrar medios disponibles
-    this.filtrarMediosDisponibles();
+    // Cargar medios desde backend
+    this.cargarMediosDisponibles();
     
     // Si es modo edición, cargar los datos existentes
     if (this.data.action === 'edit' && this.data.pautaData) {
@@ -2385,45 +2435,72 @@ export class ModalNuevaPautaComponent implements OnInit {
     }
   }
 
+  private cargarMediosDisponibles(): void {
+    this.cargandoMedios = true;
+    console.log('🔄 Cargando medios desde backend...');
+    
+    this.backendMediosService.getMedios().subscribe({
+      next: (medios) => {
+        this.todosLosMedios = medios.filter(m => m.estado); // Solo medios activos
+        this.filtrarMediosDisponibles();
+        console.log('✅ Medios cargados:', this.todosLosMedios.length);
+      },
+      error: (error) => {
+        console.error('❌ Error cargando medios:', error);
+        this.todosLosMedios = [];
+        this.mediosDisponibles = [];
+      },
+      complete: () => {
+        this.cargandoMedios = false;
+      }
+    });
+  }
+
   private filtrarMediosDisponibles(): void {
     if (this.data.action === 'edit') {
-      // En modo edición, solo mostrar el medio actual (el selector estará deshabilitado)
-      this.mediosDisponibles = [this.data.pautaData.medio];
+      // En modo edición, encontrar el medio actual
+      const medioActual = this.todosLosMedios.find(m => m.nombre === this.data.pautaData.medio);
+      this.mediosDisponibles = medioActual ? [medioActual] : [];
       return;
     }
     
-    // En modo creación, mostrar todos los medios (permitir repetición)
+    // En modo creación, mostrar todos los medios activos
     this.mediosDisponibles = this.todosLosMedios;
   }
 
-  cargarPlantillaPorMedio(medio: string): void {
+  cargarPlantillaPorMedio(medioNombre: string): void {
     this.cargandoPlantilla = true;
     this.errorPlantilla = null;
     this.plantillaActual = null;
     
-    setTimeout(() => {
-      try {
-        // Usar el nuevo método que busca solo por medio
-        this.plantillaActual = this.plantillaService.obtenerPlantillaPorMedio(medio);
-        
-        if (this.plantillaActual) {
+    console.log('🔄 Modal: Cargando plantilla dinámica para medio:', medioNombre);
+    
+    // Usar el servicio dinámico
+    this.templateDinamicoService.obtenerPlantillaPorMedio(medioNombre).subscribe({
+      next: (plantilla) => {
+        if (plantilla) {
+          this.plantillaActual = plantilla;
           this.generarFormulario();
           this.configurarCalculosAutomaticos();
           this.errorPlantilla = null;
+          console.log('✅ Modal: Plantilla dinámica cargada:', plantilla);
         } else {
-          this.errorPlantilla = `No existe plantilla configurada para "${medio}". ` +
-                               `Contacta al administrador para configurar esta plantilla.`;
+          this.errorPlantilla = `No se encontró plantilla en el backend para "${medioNombre}". ` +
+                               `Verifica que el medio tenga una plantilla configurada.`;
           this.pautaForm = this.fb.group({});
+          console.warn('⚠️ Modal: No se encontró plantilla para medio:', medioNombre);
         }
-      } catch (error) {
-        console.error('Error al cargar plantilla:', error);
-        this.errorPlantilla = 'Error al cargar la plantilla. Intenta nuevamente.';
+      },
+      error: (error) => {
+        console.error('❌ Modal: Error cargando plantilla dinámica:', error);
+        this.errorPlantilla = `Error conectando con el backend. Intenta nuevamente.`;
         this.plantillaActual = null;
         this.pautaForm = this.fb.group({});
-      } finally {
+      },
+      complete: () => {
         this.cargandoPlantilla = false;
       }
-    }, 10);
+    });
   }
 
   generarFormulario(): void {
@@ -2433,13 +2510,24 @@ export class ModalNuevaPautaComponent implements OnInit {
     }
 
     const formConfig: { [key: string]: any } = {};
+    const isEdit = this.data.action === 'edit';
+    const datosExistentes = this.data.pautaData?.datos || {};
+
+    console.log('📝 Generando formulario:', { 
+      isEdit, 
+      campos: this.plantillaActual.fields.length,
+      datosExistentes: Object.keys(datosExistentes).length
+    });
 
     for (const campo of this.plantillaActual.fields) {
       let valorInicial = campo.defaultValue || '';
       
-      // Si es modo edición, usar los datos existentes
-      if (this.data.action === 'edit' && this.data.pautaData?.datos) {
-        valorInicial = this.data.pautaData.datos[campo.name] || campo.defaultValue || '';
+      // Si es modo edición y hay datos existentes del DataPlantillaJson
+      if (isEdit && datosExistentes && datosExistentes.hasOwnProperty(campo.name)) {
+        valorInicial = datosExistentes[campo.name];
+        console.log(`📝 Campo ${campo.name}: cargando valor existente:`, valorInicial);
+      } else if (isEdit) {
+        console.log(`📝 Campo ${campo.name}: usando valor por defecto (no existe en datos)`);
       }
       
       formConfig[campo.name] = [valorInicial];
@@ -2447,7 +2535,11 @@ export class ModalNuevaPautaComponent implements OnInit {
 
     this.pautaForm = this.fb.group(formConfig);
     
-    console.log('📝 Formulario generado:', this.pautaForm.value);
+    console.log('📝 Formulario generado con plantilla dinámica:', {
+      totalCampos: Object.keys(formConfig).length,
+      valoresFormulario: this.pautaForm.value,
+      isEdit: isEdit
+    });
   }
 
   configurarCalculosAutomaticos(): void {
@@ -2512,8 +2604,21 @@ export class ModalNuevaPautaComponent implements OnInit {
     return !!campo.lookupTable;
   }
 
+  onMedioChange(medioSeleccionado: MedioBackend): void {
+    if (medioSeleccionado && medioSeleccionado.nombre) {
+      this.cargandoProveedores = true;
+      console.log('🔄 Cargando proveedores para medio:', medioSeleccionado.nombre);
+      this.seleccionForm.patchValue({ proveedor: '' });
+      this.cargarProveedoresPorMedio(medioSeleccionado.nombre);
+      this.cargarPlantillaPorMedio(medioSeleccionado.nombre);
+    }
+  }
+
   cargarProveedoresPorMedio(medio: string): void {
+    this.cargandoProveedores = true;
     this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
+    this.cargandoProveedores = false;
+    console.log('✅ Proveedores cargados para', medio, ':', this.proveedoresDisponibles.length);
   }
 
   obtenerTipoCampo(campo: CampoPlantilla): string {
@@ -2552,7 +2657,8 @@ export class ModalNuevaPautaComponent implements OnInit {
     
     // Ya no validamos medios únicos - se permite repetir medios con diferentes proveedores
     
-    // Obtener información del proveedor seleccionado
+    // Obtener información del medio y proveedor seleccionados
+    const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
     let proveedorNombre = '';
     if (proveedorId) {
@@ -2565,7 +2671,7 @@ export class ModalNuevaPautaComponent implements OnInit {
       planId: planId,
       plantillaId: this.plantillaActual.id,
       paisFacturacion: this.plantillaActual.paisFacturacion,
-      medio: this.plantillaActual.medio,
+      medio: medioSeleccionado?.nombre || this.plantillaActual.medio,
       proveedor: proveedorNombre,
       proveedorId: proveedorId,
       datos: valores,
@@ -3183,13 +3289,13 @@ export class ModalCalendarioPautaComponent implements OnInit {
       });
     }
 
-    onMedioChange(medio: MedioBackend): void {
-      if (medio && medio.medioId) {
-        this.cargandoProveedores = true;
-        console.log('🔄 Cargando proveedores para medio:', medio.nombre, 'ID:', medio.medioId);
-        this.medioForm.patchValue({ proveedor: '', tarifa: 0 });
-      }
+        onMedioChange(medio: MedioBackend): void {
+    if (medio && medio.medioId) {
+      this.cargandoProveedores = true;
+      console.log('🔄 Cargando proveedores para medio:', medio.nombre, 'ID:', medio.medioId);
+      this.medioForm.patchValue({ proveedor: '' });
     }
+  }
 
     // Método para cargar medios desde el backend
     private cargarMediosDesdeBackend(): void {

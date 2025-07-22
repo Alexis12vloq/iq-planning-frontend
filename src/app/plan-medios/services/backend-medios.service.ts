@@ -15,7 +15,8 @@ import {
   ActualizarDataJsonRequest,
   ActualizarCalendarioJsonRequest,
   EliminarPlanMedioItemResponse,
-  OperacionExitosaResponse
+  OperacionExitosaResponse,
+  TemplatePantallaJsonBackend
 } from '../models/backend-models';
 
 @Injectable({
@@ -169,6 +170,22 @@ export class BackendMediosService {
     const url = `${this.baseUrl}/api/PlanMedioItem/update-json`;
     console.log('🔄 PATCH PlanMedioItem (JSON) - MÉTODO LEGACY:', url, request);
     return this.http.patch<PlanMedioItemBackend>(url, request);
+  }
+
+  // ✅ NUEVO: Obtener Templates por Medio y País
+  getTemplatesPorMedioYPais(medioId: number, paisId: number): Observable<TemplatePantallaJsonBackend[]> {
+    const url = `${this.baseUrl}/api/TemplatePantallaJson/by-medio-and-pais`;
+    const params = { medioId: medioId.toString(), paisId: paisId.toString() };
+    console.log('🔄 GET Templates por medio y país:', url, params);
+    return this.http.get<TemplatePantallaJsonBackend[]>(url, { params });
+  }
+
+  // ✅ NUEVO: Obtener Templates por Medio solamente
+  getTemplatesPorMedio(medioId: number): Observable<TemplatePantallaJsonBackend[]> {
+    const url = `${this.baseUrl}/api/TemplatePantallaJson/by-medio`;
+    const params = { medioId: medioId.toString() };
+    console.log('🔄 GET Templates por medio:', url, params);
+    return this.http.get<TemplatePantallaJsonBackend[]>(url, { params });
   }
 
   // ✅ MÉTODO EXISTENTE - Descargar template
