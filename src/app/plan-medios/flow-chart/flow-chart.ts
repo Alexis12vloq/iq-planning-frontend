@@ -810,16 +810,33 @@ export class FlowChart implements OnInit {
 
   onRegresar(): void {
     console.log('📋 === REGRESANDO A PLAN MEDIOS RESUMEN ===');
+    console.log('🔄 Plan data actual:', this.planData);
     
-    // ✅ NAVEGACIÓN DIRECTA Y SIMPLE - COMO FUNCIONABA ANTES
-    console.log('🔄 Navegando directamente a plan-medios-resumen');
-    this.router.navigate(['/plan-medios-resumen']).then(success => {
-      console.log('✅ Navegación exitosa:', success);
-    }).catch(error => {
-      console.error('❌ Error navegación:', error);
-      // Fallback: recarga completa
-      window.location.href = '/plan-medios-resumen';
-    });
+    // ✅ NAVEGACIÓN CON DATOS DEL PLAN - COMO EN RESUMEN
+    if (this.planData && this.planData.id) {
+      console.log('🔄 Navegando con plan data a plan-medios-resumen');
+      this.router.navigate(['/plan-medios-resumen'], {
+        state: { 
+          planData: this.planData,
+          fromFlowChart: true 
+        }
+      }).then(success => {
+        console.log('✅ Navegación exitosa a resumen:', success);
+      }).catch(error => {
+        console.error('❌ Error navegación a resumen:', error);
+        // Fallback: navegación simple
+        this.router.navigate(['/plan-medios-resumen']);
+      });
+    } else {
+      console.log('🔄 Navegando directamente a plan-medios-resumen (sin plan data)');
+      this.router.navigate(['/plan-medios-resumen']).then(success => {
+        console.log('✅ Navegación directa exitosa:', success);
+      }).catch(error => {
+        console.error('❌ Error navegación directa:', error);
+        // Último fallback: recarga completa
+        window.location.href = '/plan-medios-resumen';
+      });
+    }
   }
 
 
@@ -2674,7 +2691,7 @@ export class ModalNuevaPautaComponent implements OnInit {
 
     // Cargar proveedores para este medio
     console.log('🔄 Cargando proveedores para medio:', medioExistente.nombre);
-    this.cargarProveedoresPorMedio(medioExistente.nombre, () => {
+    this.cargarProveedoresPorMedio(medioExistente.medioId, medioExistente.nombre, () => {
       console.log('🔄 Callback de proveedores ejecutado');
       console.log('📋 Proveedores cargados:', this.proveedoresDisponibles.map(p => ({ 
         id: p.id, 
@@ -3004,26 +3021,60 @@ export class ModalNuevaPautaComponent implements OnInit {
       // ✅ RECARGAR medios existentes antes de filtrar proveedores
       this.cargarMediosExistentes();
       
-      this.cargarProveedoresPorMedio(medioSeleccionado.nombre);
+      this.cargarProveedoresPorMedio(medioSeleccionado.medioId, medioSeleccionado.nombre);
       this.cargarPlantillaPorMedio(medioSeleccionado.nombre);
     }
   }
 
-  cargarProveedoresPorMedio(medio: string, callback?: () => void): void {
+  cargarProveedoresPorMedio(medioId: number, nombreMedio: string, callback?: () => void): void {
     this.cargandoProveedores = true;
-    this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
-    
-    // ✅ FILTRAR PROVEEDORES - igual que en resumen
-    this.filtrarProveedoresDisponibles(medio);
-    
-    this.cargandoProveedores = false;
-    console.log('✅ Proveedores cargados para', medio, ':', this.proveedoresDisponibles.length);
-    console.log('✅ Proveedores filtrados para', medio, ':', this.proveedoresFiltrados.length);
-    
-    // Ejecutar callback si se proporciona
-    if (callback) {
-      setTimeout(() => callback(), 100); // Pequeño delay para asegurar que la vista se actualice
-    }
+    console.log('🔄 Cargando proveedores para medio:', nombreMedio, 'ID:', medioId);
+
+    this.backendMediosService.getProveedoresPorMedio(medioId).subscribe(
+      (proveedoresBackend: ProveedorBackend[]) => {
+        console.log('✅ Proveedores del backend obtenidos:', proveedoresBackend);
+
+        // Convertir proveedores del backend a formato compatible
+        this.proveedoresDisponibles = proveedoresBackend.map(p => ({
+          id: p.proveedorId.toString(),
+          VENDOR: p.nombreProveedor,
+          proveedorId: p.proveedorId,
+          nombreProveedor: p.nombreProveedor,
+          grupoProveedor: p.grupoProveedor,
+          tipoProveedor: p.tipoProveedor,
+          orionBeneficioReal: p.orionBeneficioReal,
+          estado: p.estado
+        }));
+
+        // ✅ FILTRAR PROVEEDORES - igual que en resumen
+        this.filtrarProveedoresDisponibles(nombreMedio);
+        
+        this.cargandoProveedores = false;
+        console.log('✅ Proveedores cargados para', nombreMedio, ':', this.proveedoresDisponibles.length);
+        console.log('✅ Proveedores filtrados para', nombreMedio, ':', this.proveedoresFiltrados.length);
+        
+        // Ejecutar callback si se proporciona
+        if (callback) {
+          setTimeout(() => callback(), 100);
+        }
+      },
+      (error: any) => {
+        console.error('❌ Error cargando proveedores del backend:', error);
+        this.proveedoresDisponibles = [];
+        this.proveedoresFiltrados = [];
+        this.cargandoProveedores = false;
+        
+        this.snackBar.open('Error cargando proveedores', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+        
+        // Ejecutar callback aún en caso de error
+        if (callback) {
+          setTimeout(() => callback(), 100);
+        }
+      }
+    );
   }
 
   // ✅ FILTRAR PROVEEDORES - COPIADO EXACTO DESDE RESUMEN
