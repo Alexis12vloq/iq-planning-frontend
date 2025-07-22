@@ -1,7 +1,7 @@
 <div class="nueva-pauta-container">
   <!-- Información del Plan en una sola línea -->
   <div class="info-header-line">
-    <div class="plan-title">Flow Chart - {{ planData?.numeroPlan }}</div>
+    <div class="plan-title">Flow Chart - {{ planData?.numeroPlan || 'Sin Número' }}</div>
     <div class="plan-info">
       <span class="info-item">
         <span class="info-label">CLIENTE:</span>
@@ -22,6 +22,14 @@
     </div>
   </div>
 
+  <!-- 🚧 MENSAJE TEMPORAL -->
+  <!-- 
+  <div class="temporal-warning">
+    <mat-icon class="warning-icon">construction</mat-icon>
+    <span><strong>MODO TEMPORAL:</strong> Usando plantillas hardcodeadas. Los datos del backend están comentados temporalmente.</span>
+  </div>
+  -->
+
   <!-- Botones de Acción Principales -->
   <div class="add-item-section">
     <button 
@@ -33,33 +41,22 @@
       Nuevo Item
     </button>
     
+    <!-- ✅ BOTÓN GUARDAR CALENDARIO -->
     <button 
       mat-raised-button 
-      color="accent" 
-      class="action-btn"
-      (click)="exportarPlan()">
-      <mat-icon>download</mat-icon>
-      Exportar Plan
+      [color]="cambiosPendientes ? 'warn' : 'accent'"
+      class="save-calendar-btn"
+      [disabled]="itemsPauta.length === 0"
+      (click)="guardarCalendario()"
+      [matTooltip]="cambiosPendientes ? 'Hay cambios pendientes por guardar' : 'Guardar todos los spots programados en el calendario'">
+      <mat-icon>{{ cambiosPendientes ? 'warning' : 'save' }}</mat-icon>
+      {{ cambiosPendientes ? 'Guardar Cambios' : 'Guardar Calendario' }}
+      <span class="save-indicator" *ngIf="itemsPauta.length > 0">({{ itemsPauta.length }} items)</span>
+      <span class="changes-indicator" *ngIf="cambiosPendientes"> • Cambios pendientes</span>
     </button>
-    
-    <button 
-      mat-raised-button 
-      color="warn" 
-      class="action-btn"
-      (click)="limpiarDatosPrueba()">
-      <mat-icon>delete_sweep</mat-icon>
-      Limpiar Datos
-    </button>
-    
-    <button 
-      mat-raised-button 
-      color="warn" 
-      class="action-btn"
-      (click)="limpiarPlantillas()">
-      <mat-icon>refresh</mat-icon>
-      Reinicializar Plantillas
-    </button>
-    
+
+
+
     <button 
       mat-raised-button 
       color="warn" 
@@ -154,8 +151,18 @@
                     <!-- Proveedor -->
                     <div class="data-cell proveedor-col">
                       <div class="cell-content proveedor-info">
-                        <div class="proveedor-name">{{ item.proveedor || 'Sin proveedor' }}</div>
-                        <div class="pauta-stats">{{ item.totalSpots }} spots • {{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                        <div class="proveedor-name">
+                          {{ item.proveedor || 'Sin proveedor' }}
+                          <!-- ✅ ICONO DE ESTADO DE PLANTILLA -->
+                          <mat-icon 
+                            class="status-icon"
+                            [class.warning]="estaPlantillaIncompleta(item)"
+                            [class.success]="!estaPlantillaIncompleta(item)"
+                            [matTooltip]="obtenerTooltipEstadoPlantilla(item)">
+                            {{ obtenerIconoEstadoPlantilla(item) }}
+                          </mat-icon>
+                        </div>
+                        <div class="pauta-stats">{{ item.totalSpots || 0 }} spots • {{ (item.valorTotal || 0) | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
                       </div>
                     </div>
                   </div>
@@ -185,7 +192,7 @@
                           type="text"
                           class="spots-input"
                           [value]="obtenerSpotsPorFecha(item.id, fecha) || ''"
-                          (input)="actualizarSpotsPorFecha(item.id, fecha, $event)"
+                          (blur)="actualizarSpotsPorFecha(item.id, fecha, $event)"
                           (keypress)="validarSoloNumeros($event)"
                           (paste)="validarPegado($event)"
                           (focus)="seleccionarTextoInput($event)"

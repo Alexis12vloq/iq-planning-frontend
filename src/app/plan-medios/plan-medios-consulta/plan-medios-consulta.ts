@@ -1428,7 +1428,12 @@ formatearFecha(fecha: string | Date): string {
     } 
 
   redirigir(row: Resultado) {
-    debugger;
+    console.log('📋 === NAVEGANDO A PLAN MEDIOS RESUMEN ===');
+    console.log('📋 Row completo recibido:', row);
+    console.log('📋 row.id:', row.id, 'tipo:', typeof row.id);
+    console.log('📋 row.numeroPlan:', row.numeroPlan, 'tipo:', typeof row.numeroPlan);
+    console.log('📋 row.version:', row.version, 'tipo:', typeof row.version);
+    
     const planData = {
       id: row.id,
       numeroPlan: row.numeroPlan,
@@ -1445,6 +1450,8 @@ formatearFecha(fecha: string | Date): string {
       idProducto: row.idProducto,
       idEstadoRegistro: row.idEstadoRegistro
     };
+    
+    console.log('📋 Plan Data enviado al resumen:', planData);
     
     this.router.navigate(['/plan-medios-resumen'], { 
       state: { planData } 
