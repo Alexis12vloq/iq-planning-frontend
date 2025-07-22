@@ -144,14 +144,27 @@ export class FlowChart implements OnInit {
     private dialog: MatDialog
   ) {
     const navigation = this.router.getCurrentNavigation();
-    this.planData = navigation?.extras?.state?.['planData'] as PlanData;
+    const rawPlanData = navigation?.extras?.state?.['planData'] as any;
     const fromPlanMedios = navigation?.extras?.state?.['fromPlanMedios'];
     const mediosYProveedores = navigation?.extras?.state?.['mediosYProveedores'];
 
-    if (!this.planData) {
+    if (!rawPlanData) {
       this.router.navigate(['/plan-medios-resumen']);
       return;
     }
+
+    // Asegurar que planData tenga el formato correcto
+    this.planData = {
+      id: String(rawPlanData.id || ''), // ASEGURAR QUE ID SEA STRING
+      numeroPlan: String(rawPlanData.numeroPlan || ''), // Asegurar string
+      version: Number(rawPlanData.version || 1), // Asegurar number
+      cliente: String(rawPlanData.cliente || ''),
+      producto: String(rawPlanData.producto || ''),
+      campana: String(rawPlanData.campana || ''),
+      fechaInicio: String(rawPlanData.fechaInicio || ''),
+      fechaFin: String(rawPlanData.fechaFin || ''),
+      medioSeleccionado: rawPlanData.medioSeleccionado
+    };
 
     // Asegurar que el plan tenga un ID único
     if (!this.planData.id) {
@@ -164,7 +177,11 @@ export class FlowChart implements OnInit {
     this.inicializarFechasDelPlan();
     console.log('✅ FECHAS INICIALIZADAS - Cantidad de fechas generadas:', this.fechasDelPlan.length);
     
-    console.log('🆔 Plan Data final con ID:', this.planData);
+    console.log('🆔 === CONSTRUCTOR FLOWCHART ===');
+    console.log('🆔 Plan Data recibido:', this.planData);
+    console.log('🆔 planData.id:', this.planData?.id, 'tipo:', typeof this.planData?.id);
+    console.log('🆔 planData.numeroPlan:', this.planData?.numeroPlan, 'tipo:', typeof this.planData?.numeroPlan);
+    console.log('🆔 planData.version:', this.planData?.version, 'tipo:', typeof this.planData?.version);
     console.log('📊 Viene desde Plan de Medios:', fromPlanMedios);
     console.log('📊 Medios y Proveedores:', mediosYProveedores);
 
@@ -748,31 +765,35 @@ export class FlowChart implements OnInit {
   }
 
   onRegresar(): void {
-    // Sincronizar datos con el resumen antes de regresar
-    this.sincronizarConResumen();
+    console.log('📋 === REGRESANDO A PLAN MEDIOS RESUMEN ===');
+    console.log('📋 Datos originales en FlowChart:');
+    console.log('📋 this.planData.id:', this.planData?.id, 'tipo:', typeof this.planData?.id);
+    console.log('📋 this.planData.numeroPlan:', this.planData?.numeroPlan, 'tipo:', typeof this.planData?.numeroPlan);
+    console.log('📋 this.planData.version:', this.planData?.version, 'tipo:', typeof this.planData?.version);
     
-    // Preparar los datos del plan para el resumen
-    const planDataCompleto = {
+    // Preparar solo los datos básicos del plan para recargar
+    const planDataBasico = {
       id: this.planData?.id,
-      numeroPlan: this.planData?.numeroPlan,
+      numeroPlan: String(this.planData?.numeroPlan || ''), // Asegurar que sea string
       version: this.planData?.version,
-      cliente: this.planData?.cliente,
-      producto: this.planData?.producto,
-      campana: this.planData?.campana,
-      fechaInicio: this.planData?.fechaInicio,
-      fechaFin: this.planData?.fechaFin,
-      fromFlowChart: true,
-      totalPautas: this.itemsPauta.length,
-      presupuestoTotal: this.calcularPresupuestoTotal(),
-      totalSpots: this.calcularTotalSpots(),
-      mediosUtilizados: [...new Set(this.itemsPauta.map(item => item.medio))]
+      cliente: this.planData?.cliente || '',
+      producto: this.planData?.producto || '',
+      campana: this.planData?.campana || '',
+      fechaInicio: this.planData?.fechaInicio || '',
+      fechaFin: this.planData?.fechaFin || ''
     };
     
-    console.log('📋 Regresando a resumen con datos sincronizados:', planDataCompleto);
+    console.log('📋 Plan Data básico para recarga:', planDataBasico);
+    console.log('📋 planDataBasico.id:', planDataBasico.id, 'tipo:', typeof planDataBasico.id);
+    console.log('📋 planDataBasico.numeroPlan:', planDataBasico.numeroPlan, 'tipo:', typeof planDataBasico.numeroPlan);
     
-    // Regresar al resumen del plan de medios
+    // Regresar al resumen para que recargue desde el backend
     this.router.navigate(['/plan-medios-resumen'], {
-      state: { planData: planDataCompleto }
+      state: { 
+        planData: planDataBasico,
+        fromFlowChart: true,
+        shouldReload: true
+      }
     });
   }
 

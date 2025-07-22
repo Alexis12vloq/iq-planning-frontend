@@ -92,33 +92,55 @@ export class PlanMediosResumen implements OnInit {
   ) {
     const navigation = this.router.getCurrentNavigation();
     const planData = navigation?.extras?.state?.['planData'] as any;
+    const fromFlowChart = navigation?.extras?.state?.['fromFlowChart'] as boolean;
+    const shouldReload = navigation?.extras?.state?.['shouldReload'] as boolean;
+
+    console.log('📋 === CONSTRUCTOR PLAN MEDIOS RESUMEN ===');
+    console.log('📋 Plan Data recibido:', planData);
+    console.log('📋 planData.id:', planData?.id, 'tipo:', typeof planData?.id);
+    console.log('📋 planData.numeroPlan:', planData?.numeroPlan, 'tipo:', typeof planData?.numeroPlan);
+    console.log('📋 planData.version:', planData?.version, 'tipo:', typeof planData?.version);
+    console.log('📋 Viene del FlowChart:', fromFlowChart);
+    console.log('📋 Debe recargar desde backend:', shouldReload);
 
     /*
-     * FLUJO ÚNICO Y SIMPLE:
-     * 1. Modal de consulta → navega con planId y version
-     * 2. Consultar servicio getPlanMedioItemsPorPlan(planId, version)
-     * 3. Si hay datos → mostrar en resumen
-     * 4. Si no hay datos → resumen vacío para llenar
+     * FLUJO DUAL:
+     * 1. Desde consulta: Modal de consulta → navega con planId y version
+     * 2. Desde FlowChart: FlowChart → regresa para recargar desde backend
      */
     if (planData && planData.id) {
       // Guardar el ID del plan
       this.planId = planData.id;
+      console.log('📋 ID del plan guardado en this.planId:', this.planId, 'tipo:', typeof this.planId);
 
       // Inicializar resumen con datos básicos del plan
       this.resumenPlan = {
-        numeroPlan: planData.numeroPlan,
-        version: Number(planData.version),
-        cliente: planData.cliente,
-        producto: planData.producto,
-        campana: planData.campana,
-        fechaInicio: planData.fechaInicio,
-        fechaFin: planData.fechaFin,
+        id: String(planData.id || ''), // AGREGAR ID AQUÍ
+        numeroPlan: String(planData.numeroPlan || ''), // Asegurar que sea string
+        version: Number(planData.version || 1), // Asegurar que sea number válido
+        cliente: String(planData.cliente || ''),
+        producto: String(planData.producto || ''),
+        campana: String(planData.campana || ''),
+        fechaInicio: String(planData.fechaInicio || ''),
+        fechaFin: String(planData.fechaFin || ''),
         periodos: []
       };
       this.periodos = [];
 
+      // ✅ SIEMPRE CARGAR DESDE BACKEND
+      if (fromFlowChart && shouldReload) {
+        console.log('🔄 Regresando del FlowChart - Recargando datos desde backend...');
+        this.snackBar.open('🔄 Actualizando datos desde FlowChart...', '', {
+          duration: 2000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top'
+        });
+      } else {
+        console.log('🔄 Iniciando carga de datos desde backend...');
+      }
+      
       // Consultar servicio con planId y version
-      console.log('🔄 Iniciando carga de datos desde backend...');
+      console.log('📋 Llamando cargarPeriodosConPautas con ID:', planData.id, 'version:', planData.version);
       this.cargarPeriodosConPautas(planData.id, planData.version);
     } else {
       // No hay datos, redirigir a consulta
@@ -1720,6 +1742,36 @@ export class PlanMediosResumen implements OnInit {
     
     return porcentaje;
   }
+
+  // ✅ Método para validar si hay medios disponibles para ir a FlowChart
+  tieneMediosParaFlowChart(): boolean {
+    // Verificar que hay un período seleccionado y que tiene medios
+    if (!this.periodoSeleccionado || !this.periodoSeleccionado.medios) {
+      return false;
+    }
+
+    // Verificar que hay al menos un medio con datos válidos
+    const mediosValidos = this.periodoSeleccionado.medios.filter(medio => 
+      medio.nombre && 
+      medio.proveedor && 
+      medio.tarifa !== undefined && 
+      medio.tarifa > 0
+    );
+
+    const tieneMedios = mediosValidos.length > 0;
+    
+    // Log para debugging
+    console.log('🔍 VALIDANDO ACCESO A FLOWCHART:', {
+      periodoSeleccionado: !!this.periodoSeleccionado,
+      totalMedios: this.periodoSeleccionado?.medios?.length || 0,
+      mediosValidos: mediosValidos.length,
+      puedeIrAFlowChart: tieneMedios
+    });
+
+    return tieneMedios;
+  }
+
+
 }
 
 // Componente Modal para Agregar Medio

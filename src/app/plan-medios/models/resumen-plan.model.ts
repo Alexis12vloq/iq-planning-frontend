@@ -1,4 +1,5 @@
 export interface ResumenPlan {
+    id?: string; // AGREGAR ID A LA INTERFAZ
     numeroPlan: string;
     version: number;
     cliente: string;

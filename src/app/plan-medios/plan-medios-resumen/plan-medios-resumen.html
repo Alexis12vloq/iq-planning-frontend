@@ -47,7 +47,9 @@
             {{ guardandoResumen ? 'Guardando...' : 'Guardar Resumen' }}
           </button>
           
-          <button mat-raised-button class="action-button orange-button" (click)="onIrAFlowChart()" [disabled]="true">
+          <button mat-raised-button class="action-button orange-button" 
+                  (click)="onIrAFlowChart()" 
+                  [disabled]="!tieneMediosParaFlowChart()">
             <mat-icon>analytics</mat-icon> 
             Ir a FlowChart
           </button>

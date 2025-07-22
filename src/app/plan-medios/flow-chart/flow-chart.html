@@ -1,7 +1,7 @@
 <div class="nueva-pauta-container">
   <!-- Información del Plan en una sola línea -->
   <div class="info-header-line">
-    <div class="plan-title">Flow Chart - {{ planData?.numeroPlan }}</div>
+    <div class="plan-title">Flow Chart - {{ planData?.numeroPlan || 'Sin Número' }}</div>
     <div class="plan-info">
       <span class="info-item">
         <span class="info-label">CLIENTE:</span>
@@ -33,32 +33,7 @@
       Nuevo Item
     </button>
     
-    <button 
-      mat-raised-button 
-      color="accent" 
-      class="action-btn"
-      (click)="exportarPlan()">
-      <mat-icon>download</mat-icon>
-      Exportar Plan
-    </button>
-    
-    <button 
-      mat-raised-button 
-      color="warn" 
-      class="action-btn"
-      (click)="limpiarDatosPrueba()">
-      <mat-icon>delete_sweep</mat-icon>
-      Limpiar Datos
-    </button>
-    
-    <button 
-      mat-raised-button 
-      color="warn" 
-      class="action-btn"
-      (click)="limpiarPlantillas()">
-      <mat-icon>refresh</mat-icon>
-      Reinicializar Plantillas
-    </button>
+
     
     <button 
       mat-raised-button 
