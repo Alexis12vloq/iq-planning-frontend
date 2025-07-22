@@ -676,6 +676,11 @@ export class FlowChart implements OnInit {
         // Cargar items como lista simple
         this.cargarItemsPauta();
         
+        // Diagnóstico de datos cargados
+        setTimeout(() => {
+          this.diagnosticarEstadoDatos();
+        }, 100);
+        
         // Forzar detección de cambios
         this.cdr.detectChanges();
         setTimeout(() => {
@@ -1214,10 +1219,24 @@ export class FlowChart implements OnInit {
 
   // Obtener columnas dinámicas para un medio específico
   obtenerColumnasDinamicas(medio: string): CampoPlantilla[] {
+    // Verificar si al menos un item de este medio tiene datos de plantilla
+    const itemsDelMedio = this.itemsPorMedio[medio] || [];
+    const tieneAlgunItemConDatos = itemsDelMedio.some(item => 
+      item.datos && Object.keys(item.datos).length > 0
+    );
+    
+    if (!tieneAlgunItemConDatos) {
+      console.log(`ℹ️ No se mostrarán columnas dinámicas para ${medio} - ningún item tiene dataPlantillaJson`);
+      return [];
+    }
+    
     const campos = this.obtenerCamposPlantillaPorMedio(medio);
     // Filtrar campos que no queremos mostrar como columnas
     const camposExcluidos = ['semanas', 'iva', 'fee', '%_iva'];
-    return campos.filter(campo => !camposExcluidos.includes(campo.name));
+    const columnas = campos.filter(campo => !camposExcluidos.includes(campo.name));
+    
+    console.log(`✅ Mostrando ${columnas.length} columnas dinámicas para ${medio}`);
+    return columnas;
   }
 
   // Obtener valor de campo de una pauta
@@ -1300,17 +1319,22 @@ export class FlowChart implements OnInit {
   }
 
   limpiarDatosPrueba(): void {
-    if (confirm('¿Estás seguro de que deseas limpiar todas las pautas de prueba? Esta acción no se puede deshacer.')) {
-      // Limpiar solo datos en memoria
+    if (confirm('¿Estás seguro de que deseas limpiar todas las pautas? Esta acción solo afecta la vista local.')) {
+      // Limpiar datos en memoria (los datos del backend no se afectan)
       this.pautasGuardadas = [];
       this.itemsPauta = [];
       this.programacionItems = {};
+      this.itemsPorMedio = {};
+      this.mediosActivos = [];
+      this.itemsAgrupadosPorMedio = [];
+      
       this.cdr.detectChanges();
-      this.snackBar.open('Datos de prueba limpiados correctamente', '', {
-        duration: 3000,
-        panelClass: ['success-snackbar']
+      
+      this.snackBar.open('Vista limpiada correctamente (los datos del backend no se afectan)', '', {
+        duration: 4000,
+        panelClass: ['info-snackbar']
       });
-      console.log('🧹 Datos de prueba limpiados de memoria');
+      console.log('🧹 Vista de FlowChart limpiada (datos del backend intactos)');
     }
   }
 
@@ -1366,36 +1390,58 @@ export class FlowChart implements OnInit {
   // ✅ NUEVO: Convertir item del backend al formato local de FlowChart
   private convertirItemBackendALocal(item: PlanMedioItemFlowchartBackend): RespuestaPauta {
     console.log('🔄 Convirtiendo item backend a local:', item);
+    console.log('🔄 DataPlantillaJson recibido:', item.dataPlantillaJson);
+    console.log('🔄 CalendarioJson recibido:', item.calendarioJson);
     
     // Parsear DataPlantillaJson para obtener los campos dinámicos
     let datos: any = {};
-    if (item.dataPlantillaJson) {
+    let tieneDataPlantilla = false;
+    
+    if (item.dataPlantillaJson && item.dataPlantillaJson.trim() !== '' && item.dataPlantillaJson !== 'null') {
       try {
         datos = JSON.parse(item.dataPlantillaJson);
-        console.log('✅ DataPlantillaJson parseado:', datos);
+        tieneDataPlantilla = Object.keys(datos).length > 0;
+        console.log('✅ DataPlantillaJson parseado:', datos, 'tieneData:', tieneDataPlantilla);
       } catch (error) {
         console.error('❌ Error parseando DataPlantillaJson:', error);
         datos = {};
+        tieneDataPlantilla = false;
       }
+    } else {
+      console.log('ℹ️ DataPlantillaJson vacío o null - no se crearán columnas dinámicas');
+      datos = {};
+      tieneDataPlantilla = false;
     }
 
     // Parsear CalendarioJson para obtener la programación
     let programacion: { [fecha: string]: number } = {};
-    if (item.calendarioJson) {
+    let tieneCalendario = false;
+    
+    if (item.calendarioJson && item.calendarioJson.trim() !== '' && item.calendarioJson !== 'null') {
       try {
         programacion = JSON.parse(item.calendarioJson);
-        console.log('✅ CalendarioJson parseado:', programacion);
+        tieneCalendario = Object.keys(programacion).length > 0;
+        console.log('✅ CalendarioJson parseado:', programacion, 'tieneCalendario:', tieneCalendario);
+        
         // Guardar programación en el objeto global
         this.programacionItems[item.planMedioItemId.toString()] = programacion;
       } catch (error) {
         console.error('❌ Error parseando CalendarioJson:', error);
         programacion = {};
+        tieneCalendario = false;
       }
+    } else {
+      console.log('ℹ️ CalendarioJson vacío o null - calendario se cargará con 0s');
+      programacion = {};
+      tieneCalendario = false;
+      // Inicializar programación vacía para este item
+      this.programacionItems[item.planMedioItemId.toString()] = {};
     }
 
-    // Calcular totales desde la programación
+    // Calcular totales desde la programación o usar valores por defecto
     const totalSpotsProgramados = Object.values(programacion).reduce((sum, spots) => sum + spots, 0);
     const valorTotal = datos.valor_total || datos.valorTotal || item.tarifa || 0;
+    const totalSpotsDefault = totalSpotsProgramados || datos.total_spots || 1; // Al menos 1 spot por defecto
 
     // Crear objeto RespuestaPauta
     const pautaLocal: RespuestaPauta = {
@@ -1408,8 +1454,8 @@ export class FlowChart implements OnInit {
       paisFacturacion: datos.pais || 'Default',
       fechaCreacion: item.fechaRegistro,
       fechaModificacion: item.fechaModificacion,
-      datos: datos,
-      totalSpots: totalSpotsProgramados || datos.total_spots || 0,
+      datos: tieneDataPlantilla ? datos : {}, // Solo datos si hay información en DataPlantillaJson
+      totalSpots: totalSpotsDefault,
       valorTotal: valorTotal,
       valorNeto: datos.valor_neto || valorTotal,
       semanas: datos.semanas || [],
@@ -1418,6 +1464,15 @@ export class FlowChart implements OnInit {
     };
 
     console.log('✅ Item convertido a formato local:', pautaLocal);
+    console.log('✅ Resumen conversión:', {
+      id: pautaLocal.id,
+      medio: pautaLocal.medio,
+      tieneDataPlantilla,
+      tieneCalendario,
+      totalCamposDatos: Object.keys(pautaLocal.datos).length,
+      totalSpots: totalSpotsDefault
+    });
+    
     return pautaLocal;
   }
 
@@ -1450,6 +1505,31 @@ export class FlowChart implements OnInit {
     // });
     
     console.log('💾 Programación preparada para backend (pendiente implementación)');
+  }
+
+  // ✅ FUNCIÓN DE DIAGNÓSTICO - Verificar estado de los datos
+  diagnosticarEstadoDatos(): void {
+    console.log('🔍 === DIAGNÓSTICO FlowChart ===');
+    console.log('📊 Total items cargados:', this.itemsPauta.length);
+    console.log('📊 Medios activos:', this.mediosActivos);
+    
+    this.itemsPauta.forEach(item => {
+      const tieneDataPlantilla = item.datos && Object.keys(item.datos).length > 0;
+      const programacion = this.programacionItems[item.id];
+      const tieneCalendario = programacion && Object.keys(programacion).length > 0;
+      
+      console.log(`📋 Item ${item.id} (${item.medio}):`, {
+        proveedor: item.proveedor,
+        tieneDataPlantilla,
+        camposDinamicos: Object.keys(item.datos || {}).length,
+        tieneCalendario,
+        totalSpotsProgramados: tieneCalendario ? Object.values(programacion).reduce((sum: number, spots: number) => sum + spots, 0) : 0,
+        valorTotal: item.valorTotal
+      });
+    });
+    
+    console.log('🎯 Items por medio:', this.itemsPorMedio);
+    console.log('🎯 Programación items:', Object.keys(this.programacionItems).length);
   }
 
   // Métodos para el manejo de la grilla de calendario
@@ -1523,8 +1603,22 @@ export class FlowChart implements OnInit {
 
   obtenerSpotsPorFecha(itemId: string, fecha: Date): number | null {
     const fechaStr = fecha.toISOString().split('T')[0];
-    const spots = this.programacionItems[itemId]?.[fechaStr];
-    return spots ? spots : null; // Retorna null si no hay valor, para mostrar input vacío
+    const programacion = this.programacionItems[itemId];
+    
+    // Si no existe programación para este item, significa que CalendarioJson estaba vacío
+    if (!programacion) {
+      return 0; // Mostrar 0 cuando CalendarioJson viene vacío
+    }
+    
+    // Si existe programación pero no hay datos para esta fecha específica
+    const spots = programacion[fechaStr];
+    if (spots === undefined || spots === null) {
+      // Si la programación existe pero no tiene datos para esta fecha, mostrar input vacío
+      return null;
+    }
+    
+    // Si hay un valor específico (incluso si es 0), mostrarlo
+    return spots;
   }
 
   actualizarSpotsPorFecha(itemId: string, fecha: Date, event: Event): void {
@@ -2487,14 +2581,13 @@ export class ModalNuevaPautaComponent implements OnInit {
     console.log(`💾 Pauta construida para ${isEdit ? 'actualizar' : 'guardar'}:`, pauta);
     
     if (isEdit) {
-      this.actualizarPautaEnStorage(pauta);
+      this.actualizarPautaEnMemoria(pauta);
     } else {
-      this.guardarPautaEnStorage(pauta);
+      this.guardarPautaEnMemoria(pauta);
     }
     
-    // Verificar que se guardó correctamente
-    const verificacion = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    console.log('✅ Verificación: pautas en localStorage después del guardado:', verificacion);
+    // Los datos se mantienen solo en memoria hasta implementar backend
+    console.log('✅ Item guardado en memoria (pendiente integración con backend)');
     
     this.snackBar.open(`Item ${isEdit ? 'actualizado' : 'guardado'} correctamente`, '', { 
       duration: 2000,
@@ -2504,38 +2597,37 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.dialogRef.close({ pauta: pauta, shouldRefresh: true });
   }
 
-  private guardarPautaEnStorage(pauta: RespuestaPauta): void {
+  private guardarPautaEnMemoria(pauta: RespuestaPauta): void {
     try {
-      // Agregar solo a memoria (itemsPauta del componente padre)
-      console.log('💾 Agregando pauta a memoria:', pauta);
+      // TODO: Implementar guardado en backend con los JSON correctos
+      console.log('💾 Pauta preparada para backend:', {
+        medio: pauta.medio,
+        proveedor: pauta.proveedor,
+        dataPlantillaJson: JSON.stringify(pauta.datos),
+        calendarioJson: JSON.stringify({}) // Vacío inicialmente
+      });
       
-      // Acceder al componente padre desde el modal
-      const parentComponent = this.dialogRef.componentInstance;
-      if (parentComponent) {
-        // Agregar a itemsPauta del componente padre
-        console.log('✅ Pauta agregada a memoria del componente padre');
-      }
+      console.log('✅ Pauta guardada temporalmente en memoria del componente padre');
       
     } catch (error) {
-      console.error('💥 Error al guardar pauta en memoria:', error);
+      console.error('💥 Error al preparar pauta para backend:', error);
       throw error;
     }
   }
 
-  private actualizarPautaEnStorage(pautaActualizada: RespuestaPauta): void {
+  private actualizarPautaEnMemoria(pautaActualizada: RespuestaPauta): void {
     try {
-      // Actualizar solo en memoria (itemsPauta del componente padre)
-      console.log('🔄 Actualizando pauta en memoria:', pautaActualizada);
+      // TODO: Implementar actualización en backend
+      console.log('🔄 Pauta actualizada preparada para backend:', {
+        id: pautaActualizada.id,
+        dataPlantillaJson: JSON.stringify(pautaActualizada.datos),
+        calendarioJson: 'mantener_existente' // No tocar el calendario desde aquí
+      });
       
-      // Acceder al componente padre desde el modal
-      const parentComponent = this.dialogRef.componentInstance;
-      if (parentComponent) {
-        // Actualizar en itemsPauta del componente padre
-        console.log('✅ Pauta actualizada en memoria del componente padre');
-      }
+      console.log('✅ Pauta actualizada temporalmente en memoria del componente padre');
       
     } catch (error) {
-      console.error('💥 Error al actualizar pauta en memoria:', error);
+      console.error('💥 Error al preparar actualización para backend:', error);
       throw error;
     }
   }
@@ -2854,13 +2946,20 @@ export class ModalCalendarioPautaComponent implements OnInit {
       fechaFin: this.fechaFinPlan
     };
 
-    this.actualizarPautaEnStorage(pautaActualizada);
+    this.actualizarCalendarioEnMemoria(pautaActualizada);
     this.dialogRef.close(true);
   }
 
-  private actualizarPautaEnStorage(pautaActualizada: RespuestaPauta): void {
-    // Actualizar solo en memoria (ya no se usa localStorage)
-    console.log('📅 Calendario actualizado en memoria:', pautaActualizada);
+  private actualizarCalendarioEnMemoria(pautaActualizada: RespuestaPauta): void {
+    // TODO: Implementar actualización de calendario en backend
+    console.log('📅 Calendario preparado para backend:', {
+      id: pautaActualizada.id,
+      calendarioJson: JSON.stringify({
+        diasSeleccionados: pautaActualizada.diasSeleccionados,
+        totalDias: pautaActualizada.totalDiasSeleccionados
+      })
+    });
+    console.log('✅ Calendario actualizado temporalmente en memoria');
   }
 } 
 
