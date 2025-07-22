@@ -130,7 +130,7 @@ export class PlanMediosResumen implements OnInit {
       // ✅ SIEMPRE CARGAR DESDE BACKEND
       if (fromFlowChart && shouldReload) {
         console.log('🔄 Regresando del FlowChart - Recargando datos desde backend...');
-        this.snackBar.open('🔄 Actualizando datos desde FlowChart...', '', {
+        this.snackBar.open('🔄 Actualizando datos...', '', {
           duration: 2000,
           horizontalPosition: 'center',
           verticalPosition: 'top'

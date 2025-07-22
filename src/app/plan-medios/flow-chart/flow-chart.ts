@@ -2198,7 +2198,7 @@ export class FlowChart implements OnInit {
               </mat-select>
               <mat-hint *ngIf="cargandoMedios">Cargando medios...</mat-hint>
               <mat-hint *ngIf="data.action === 'edit'" class="edit-hint">
-                <mat-icon class="hint-icon">info</mat-icon>
+                <mat-icon class="hint-icon">lock</mat-icon>
                 El medio no se puede cambiar durante la edición
               </mat-hint>
             </mat-form-field>
@@ -2213,7 +2213,8 @@ export class FlowChart implements OnInit {
                 </mat-option>
               </mat-select>
               <mat-hint *ngIf="cargandoProveedores">Cargando proveedores...</mat-hint>
-              <mat-hint *ngIf="data.action === 'edit'">
+              <mat-hint *ngIf="data.action === 'edit'" class="edit-hint">
+                <mat-icon class="hint-icon">lock</mat-icon>
                 El proveedor no se puede cambiar durante la edición
               </mat-hint>
             </mat-form-field>
@@ -2243,9 +2244,38 @@ export class FlowChart implements OnInit {
         
         <mat-card-content class="compact-content">
           <form [formGroup]="pautaForm">
+            
+            <!-- ✅ CAMPO TARIFA OBLIGATORIO - Siempre visible -->
+            <div class="tarifa-field-section">
+              <mat-form-field class="full-width tarifa-field">
+                <mat-label>💰 Tarifa (Requerida)</mat-label>
+                <input 
+                  matInput 
+                  type="number"
+                  formControlName="tarifa"
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  required>
+                <mat-hint>
+                  <mat-icon class="hint-icon">monetization_on</mat-icon>
+                  Campo obligatorio para todos los medios
+                </mat-hint>
+                <mat-error *ngIf="pautaForm.get('tarifa')?.hasError('required')">
+                  La tarifa es requerida
+                </mat-error>
+                <mat-error *ngIf="pautaForm.get('tarifa')?.hasError('min')">
+                  La tarifa debe ser mayor a 0
+                </mat-error>
+              </mat-form-field>
+            </div>
+
             <!-- Campos Dinámicos -->
             <div class="form-grid">
               <ng-container *ngFor="let campo of plantillaActual.fields">
+                
+                <!-- ✅ Skip el campo tarifa si ya existe en la plantilla -->
+                <ng-container *ngIf="campo.name !== 'tarifa'">
                 
                 <!-- Campo de Input -->
                 <mat-form-field *ngIf="esInputField(campo)" class="compact-field">
@@ -2276,7 +2306,8 @@ export class FlowChart implements OnInit {
                     </mat-option>
                   </mat-select>
                 </mat-form-field>
-
+                
+                </ng-container>
               </ng-container>
             </div>
           </form>
@@ -2289,7 +2320,7 @@ export class FlowChart implements OnInit {
       <button 
         mat-raised-button 
         color="primary" 
-        [disabled]="!plantillaActual || cargandoPlantilla"
+        [disabled]="!plantillaActual || cargandoPlantilla || !puedeGuardar()"
         (click)="guardarPauta()">
         <mat-icon>save</mat-icon>
         {{ data.action === 'edit' ? 'Actualizar' : 'Guardar' }} Pauta
@@ -2457,6 +2488,51 @@ export class FlowChart implements OnInit {
       padding: 6px 16px !important;
       min-height: 32px !important;
     }
+
+    /* ✅ ESTILOS CAMPO TARIFA */
+    .tarifa-field-section {
+      margin-bottom: 12px;
+      padding: 8px;
+      background: linear-gradient(45deg, #fff8e1, #ffecb3);
+      border-left: 4px solid #ff9800;
+      border-radius: 4px;
+    }
+
+    .tarifa-field {
+      width: 100%;
+    }
+
+    .tarifa-field .mat-mdc-form-field-label {
+      font-weight: 600 !important;
+      color: #e65100 !important;
+    }
+
+    .tarifa-field .mat-mdc-form-field-infix input {
+      font-weight: 600 !important;
+      color: #bf360c !important;
+    }
+
+    .tarifa-field .mat-mdc-form-field-hint {
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      font-size: 11px !important;
+      color: #e65100 !important;
+      font-weight: 500 !important;
+    }
+
+    .tarifa-field .hint-icon {
+      font-size: 14px !important;
+      width: 14px !important;
+      height: 14px !important;
+      color: #ff9800 !important;
+    }
+
+    .tarifa-field .mat-mdc-form-field-error {
+      font-size: 11px !important;
+      color: #d32f2f !important;
+      font-weight: 500 !important;
+    }
   `]
 })
 export class ModalNuevaPautaComponent implements OnInit {
@@ -2512,17 +2588,7 @@ export class ModalNuevaPautaComponent implements OnInit {
     // Cargar medios desde backend
     this.cargarMediosDisponibles();
     
-    // Si es modo edición, cargar los datos existentes
-    if (this.data.action === 'edit' && this.data.pautaData) {
-      console.log('🔄 Modo edición detectado, cargando datos:', this.data.pautaData);
-      this.seleccionForm.patchValue({
-        medio: this.data.pautaData.medio,
-        proveedor: this.data.pautaData.proveedorId || ''
-      });
-      // Cargar proveedores y plantilla automáticamente en modo edición
-      this.cargarProveedoresPorMedio(this.data.pautaData.medio);
-      this.cargarPlantillaPorMedio(this.data.pautaData.medio);
-    }
+    // En modo edición, los datos se cargarán después de que se carguen los medios
   }
 
   private cargarMediosDisponibles(): void {
@@ -2534,6 +2600,11 @@ export class ModalNuevaPautaComponent implements OnInit {
         this.todosLosMedios = medios.filter(m => m.estado); // Solo medios activos
         this.filtrarMediosDisponibles();
         console.log('✅ Medios cargados:', this.todosLosMedios.length);
+        
+        // ✅ CARGAR DATOS EN MODO EDICIÓN
+        if (this.data.action === 'edit' && this.data.pautaData) {
+          this.cargarDatosEdicion();
+        }
       },
       error: (error) => {
         console.error('❌ Error cargando medios:', error);
@@ -2556,6 +2627,104 @@ export class ModalNuevaPautaComponent implements OnInit {
     
     // En modo creación, mostrar todos los medios activos
     this.mediosDisponibles = this.todosLosMedios;
+  }
+
+  // ✅ CARGAR DATOS EXISTENTES EN MODO EDICIÓN
+  private cargarDatosEdicion(): void {
+    console.log('🔄 MODO EDICIÓN: Iniciando carga de datos existentes');
+    console.log('📋 Datos completos de pauta:', this.data.pautaData);
+    console.log('🎯 Medio a buscar:', this.data.pautaData.medio);
+    console.log('🎯 Proveedor ID a buscar:', this.data.pautaData.proveedorId);
+    console.log('🎯 Proveedor nombre a buscar:', this.data.pautaData.proveedor);
+    
+    // Buscar el medio en la lista cargada
+    const medioExistente = this.todosLosMedios.find(m => m.nombre === this.data.pautaData.medio);
+    
+    if (!medioExistente) {
+      console.error('❌ No se encontró el medio existente:', this.data.pautaData.medio);
+      console.error('❌ Medios disponibles:', this.todosLosMedios.map(m => ({ id: m.medioId, nombre: m.nombre })));
+      return;
+    }
+
+    console.log('✅ Medio encontrado:', { id: medioExistente.medioId, nombre: medioExistente.nombre });
+    
+    // Setear el medio en el formulario
+    this.seleccionForm.patchValue({
+      medio: medioExistente
+    });
+    
+    console.log('✅ Medio seteado en formulario');
+
+    // Cargar proveedores para este medio
+    console.log('🔄 Cargando proveedores para medio:', medioExistente.nombre);
+    this.cargarProveedoresPorMedio(medioExistente.nombre, () => {
+      console.log('🔄 Callback de proveedores ejecutado');
+      console.log('📋 Proveedores cargados:', this.proveedoresDisponibles.map(p => ({ 
+        id: p.id, 
+        proveedorId: p.proveedorId, 
+        vendor: p.VENDOR 
+      })));
+      
+      // Callback después de cargar proveedores
+      const proveedorIdBuscado = this.data.pautaData.proveedorId;
+      const proveedorExistente = this.proveedoresDisponibles.find(p => {
+        // Convertir ambos a string para comparación robusta
+        const proveedorIdStr = String(proveedorIdBuscado);
+        const pIdStr = String(p.id || p.proveedorId);
+        const coincide = pIdStr === proveedorIdStr;
+        
+        console.log(`🔍 Comparando proveedor ${p.VENDOR}: "${pIdStr}" === "${proveedorIdStr}"? ${coincide}`);
+        return coincide;
+      });
+      
+      if (proveedorExistente) {
+        console.log('✅ Proveedor encontrado por ID:', proveedorExistente);
+        const proveedorValue = proveedorExistente.id || proveedorExistente.proveedorId;
+        this.seleccionForm.patchValue({
+          proveedor: proveedorValue
+        });
+        console.log('✅ Proveedor seteado en formulario con valor:', proveedorValue);
+      } else {
+        // ✅ FALLBACK: Buscar por nombre si no se encontró por ID
+        console.log('⚠️ No se encontró por ID, intentando buscar por nombre...');
+        const proveedorPorNombre = this.proveedoresDisponibles.find(p => 
+          p.VENDOR === this.data.pautaData.proveedor
+        );
+        
+        if (proveedorPorNombre) {
+          console.log('✅ Proveedor encontrado por nombre:', proveedorPorNombre);
+          const proveedorValue = proveedorPorNombre.id || proveedorPorNombre.proveedorId;
+          this.seleccionForm.patchValue({
+            proveedor: proveedorValue
+          });
+          console.log('✅ Proveedor seteado en formulario con valor:', proveedorValue);
+        } else {
+          console.error('❌ No se encontró el proveedor ni por ID ni por nombre');
+          console.error('❌ Buscando ID:', this.data.pautaData.proveedorId, '(tipo:', typeof this.data.pautaData.proveedorId, ')');
+          console.error('❌ Buscando Nombre:', this.data.pautaData.proveedor);
+          console.error('❌ Proveedores disponibles:', this.proveedoresDisponibles.map(p => ({
+            id: p.id,
+            proveedorId: p.proveedorId,
+            vendor: p.VENDOR
+                     })));
+         }
+       }
+       
+       // ✅ DEBUG después de intentar setear el proveedor
+       setTimeout(() => this.debugFormulario(), 300);
+     });
+
+    // Cargar plantilla para este medio
+    this.cargarPlantillaPorMedio(medioExistente.nombre);
+    
+    // ✅ Forzar detección de cambios después de un pequeño delay
+    setTimeout(() => {
+      console.log('🔄 Forzando detección de cambios en formularios');
+      this.seleccionForm.updateValueAndValidity();
+      if (this.pautaForm) {
+        this.pautaForm.updateValueAndValidity();
+      }
+    }, 200);
   }
 
   cargarPlantillaPorMedio(medioNombre: string): void {
@@ -2609,7 +2778,21 @@ export class ModalNuevaPautaComponent implements OnInit {
       datosExistentes: Object.keys(datosExistentes).length
     });
 
+    // ✅ CAMPO TARIFA OBLIGATORIO - Siempre presente
+    let tarifaInicial = 0;
+    if (isEdit && datosExistentes && datosExistentes.hasOwnProperty('tarifa')) {
+      tarifaInicial = parseFloat(datosExistentes['tarifa']) || 0;
+    }
+    formConfig['tarifa'] = [tarifaInicial, [Validators.required, Validators.min(0)]];
+    console.log('💰 Campo TARIFA agregado (obligatorio):', tarifaInicial);
+
     for (const campo of this.plantillaActual.fields) {
+      // ✅ Evitar duplicar el campo tarifa si ya existe en el schema
+      if (campo.name === 'tarifa') {
+        console.log('📝 Campo tarifa ya existe en schema, usando el campo obligatorio');
+        continue;
+      }
+
       let valorInicial = campo.defaultValue || '';
       
       // Si es modo edición y hay datos existentes del DataPlantillaJson
@@ -2620,7 +2803,16 @@ export class ModalNuevaPautaComponent implements OnInit {
         console.log(`📝 Campo ${campo.name}: usando valor por defecto (no existe en datos)`);
       }
       
-      formConfig[campo.name] = [valorInicial];
+      // ✅ Agregar validaciones opcionales según el tipo
+      const validators = [];
+      if (campo.required) {
+        validators.push(Validators.required);
+      }
+      if (campo.type === 'money' || campo.type === 'decimal') {
+        validators.push(Validators.min(0));
+      }
+      
+      formConfig[campo.name] = validators.length > 0 ? [valorInicial, validators] : [valorInicial];
     }
 
     this.pautaForm = this.fb.group(formConfig);
@@ -2694,6 +2886,53 @@ export class ModalNuevaPautaComponent implements OnInit {
     return !!campo.lookupTable;
   }
 
+  // ✅ VALIDAR SI SE PUEDE GUARDAR
+  puedeGuardar(): boolean {
+    const medioSeleccionado = this.seleccionForm.get('medio')?.value;
+    const proveedorId = this.seleccionForm.get('proveedor')?.value;
+    const tarifaValida = this.pautaForm.get('tarifa')?.value > 0;
+
+    const esValido = !!(
+      medioSeleccionado && 
+      medioSeleccionado.medioId && 
+      proveedorId && 
+      Number(proveedorId) > 0 &&
+      tarifaValida &&
+      this.pautaForm.valid
+    );
+
+    return esValido;
+  }
+
+  // ✅ OBTENER NOMBRE DEL MEDIO SELECCIONADO para mostrar en select deshabilitado
+  obtenerNombreMedioSeleccionado(): string {
+    const medioSeleccionado = this.seleccionForm.get('medio')?.value;
+    return medioSeleccionado?.nombre || '';
+  }
+
+  // ✅ OBTENER NOMBRE DEL PROVEEDOR SELECCIONADO para mostrar en select deshabilitado
+  obtenerNombreProveedorSeleccionado(): string {
+    const proveedorId = this.seleccionForm.get('proveedor')?.value;
+    if (!proveedorId) return '';
+    
+    const proveedor = this.proveedoresDisponibles.find(p => 
+      (p.id || p.proveedorId) == proveedorId
+    );
+    return proveedor?.VENDOR || '';
+  }
+
+  // ✅ MÉTODO DE DEBUG - Mostrar estado actual del formulario
+  debugFormulario(): void {
+    console.log('🔍 === DEBUG FORMULARIO ===');
+    console.log('📋 Action:', this.data.action);
+    console.log('📋 Datos de pauta:', this.data.pautaData);
+    console.log('🔘 Valor medio en formulario:', this.seleccionForm.get('medio')?.value);
+    console.log('🔘 Valor proveedor en formulario:', this.seleccionForm.get('proveedor')?.value);
+    console.log('📋 Medios disponibles:', this.mediosDisponibles.map(m => ({ id: m.medioId, nombre: m.nombre })));
+    console.log('📋 Proveedores disponibles:', this.proveedoresDisponibles.map(p => ({ id: p.id || p.proveedorId, vendor: p.VENDOR })));
+    console.log('✅ === FIN DEBUG ===');
+  }
+
   onMedioChange(medioSeleccionado: MedioBackend): void {
     if (medioSeleccionado && medioSeleccionado.nombre) {
       this.cargandoProveedores = true;
@@ -2704,11 +2943,16 @@ export class ModalNuevaPautaComponent implements OnInit {
     }
   }
 
-  cargarProveedoresPorMedio(medio: string): void {
+  cargarProveedoresPorMedio(medio: string, callback?: () => void): void {
     this.cargandoProveedores = true;
     this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
     this.cargandoProveedores = false;
     console.log('✅ Proveedores cargados para', medio, ':', this.proveedoresDisponibles.length);
+    
+    // Ejecutar callback si se proporciona
+    if (callback) {
+      setTimeout(() => callback(), 100); // Pequeño delay para asegurar que la vista se actualice
+    }
   }
 
   obtenerTipoCampo(campo: CampoPlantilla): string {
@@ -2730,6 +2974,34 @@ export class ModalNuevaPautaComponent implements OnInit {
       return;
     }
 
+    // ✅ VALIDACIONES CRÍTICAS ANTES DE PROCEDER
+    const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
+    const proveedorId = this.seleccionForm.get('proveedor')?.value;
+
+    if (!medioSeleccionado || !medioSeleccionado.medioId) {
+      this.snackBar.open('ERROR: Debe seleccionar un medio válido', '', { 
+        duration: 5000, 
+        panelClass: ['error-snackbar'] 
+      });
+      return;
+    }
+
+    if (!proveedorId || Number(proveedorId) <= 0) {
+      this.snackBar.open('ERROR: Debe seleccionar un proveedor válido', '', { 
+        duration: 5000, 
+        panelClass: ['error-snackbar'] 
+      });
+      return;
+    }
+
+    if (!this.data.planData?.id || !this.data.planData?.version) {
+      this.snackBar.open('ERROR: Datos del plan incompletos', '', { 
+        duration: 5000, 
+        panelClass: ['error-snackbar'] 
+      });
+      return;
+    }
+
     const valores = this.pautaForm.value;
     const isEdit = this.data.action === 'edit';
     
@@ -2737,6 +3009,8 @@ export class ModalNuevaPautaComponent implements OnInit {
     console.log('💾 Valores del formulario:', valores);
     console.log('💾 Plan Data completo:', this.data.planData);
     console.log('💾 Datos existentes (si edición):', this.data.pautaData);
+    console.log('💾 Medio seleccionado:', medioSeleccionado);
+    console.log('💾 Proveedor seleccionado:', proveedorId);
     
     // Asegurar que el plan tenga un ID
     let planId = this.data.planData.id;
@@ -2744,12 +3018,6 @@ export class ModalNuevaPautaComponent implements OnInit {
       planId = `${this.data.planData.numeroPlan}-v${this.data.planData.version}`;
       console.log('💾 ID generado para el plan:', planId);
     }
-    
-    // Ya no validamos medios únicos - se permite repetir medios con diferentes proveedores
-    
-    // Obtener información del medio y proveedor seleccionados
-    const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
-    const proveedorId = this.seleccionForm.get('proveedor')?.value;
     let proveedorNombre = '';
     if (proveedorId) {
       const proveedor = this.proveedoresDisponibles.find(p => p.id === proveedorId);
@@ -2777,9 +3045,9 @@ export class ModalNuevaPautaComponent implements OnInit {
     console.log(`💾 Pauta construida para ${isEdit ? 'actualizar' : 'guardar'}:`, pauta);
     
     if (isEdit) {
-      this.actualizarPautaEnBackend(pauta);
+      this.actualizarPautaEnBackend(pauta, medioSeleccionado, Number(proveedorId));
     } else {
-      this.guardarPautaEnBackend(pauta);
+      this.guardarPautaEnBackend(pauta, medioSeleccionado, Number(proveedorId));
     }
     
     // Los datos se mantienen solo en memoria hasta implementar backend
@@ -2793,18 +3061,39 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.dialogRef.close({ pauta: pauta, shouldRefresh: true });
   }
 
-  private guardarPautaEnBackend(pauta: RespuestaPauta): void {
+  private guardarPautaEnBackend(pauta: RespuestaPauta, medioSeleccionado: MedioBackend, proveedorId: number): void {
     if (!this.data.planData) {
       throw new Error('No hay datos del plan');
     }
 
-    // Obtener información del medio y proveedor
-    const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
-    const proveedorId = Number(this.seleccionForm.get('proveedor')?.value);
-
-    if (!medioSeleccionado || !proveedorId) {
-      throw new Error('Medio y proveedor son requeridos');
+    // ✅ VALIDACIÓN ESTRICTA - OBLIGATORIA
+    if (!medioSeleccionado) {
+      throw new Error('ERROR CRÍTICO: Medio no seleccionado');
     }
+
+    if (!medioSeleccionado.medioId || medioSeleccionado.medioId <= 0) {
+      throw new Error(`ERROR CRÍTICO: Medio sin ID válido. MedioId: ${medioSeleccionado.medioId}`);
+    }
+
+    if (!proveedorId || proveedorId <= 0) {
+      throw new Error(`ERROR CRÍTICO: Proveedor sin ID válido. ProveedorId: ${proveedorId}`);
+    }
+
+    if (!this.data.planData.id || this.data.planData.id <= 0) {
+      throw new Error(`ERROR CRÍTICO: Plan sin ID válido. PlanId: ${this.data.planData.id}`);
+    }
+
+    if (!this.data.planData.version || this.data.planData.version <= 0) {
+      throw new Error(`ERROR CRÍTICO: Plan sin versión válida. Version: ${this.data.planData.version}`);
+    }
+
+    console.log('✅ VALIDACIÓN EXITOSA:', {
+      medioId: medioSeleccionado.medioId,
+      medioNombre: medioSeleccionado.nombre,
+      proveedorId: proveedorId,
+      planId: this.data.planData.id,
+      version: this.data.planData.version
+    });
 
     // ✅ VALIDAR DUPLICADOS antes de crear
     const parentComponent = this.getParentFlowChartComponent();
@@ -2843,18 +3132,44 @@ export class ModalNuevaPautaComponent implements OnInit {
     });
   }
 
-  private actualizarPautaEnBackend(pautaActualizada: RespuestaPauta): void {
+  private actualizarPautaEnBackend(pautaActualizada: RespuestaPauta, medioSeleccionado: MedioBackend, proveedorId: number): void {
     if (!this.data.planData) {
       throw new Error('No hay datos del plan');
     }
 
-    // Obtener información del medio y proveedor
-    const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
-    const proveedorId = Number(this.seleccionForm.get('proveedor')?.value);
-
-    if (!medioSeleccionado || !proveedorId) {
-      throw new Error('Medio y proveedor son requeridos');
+    // ✅ VALIDACIÓN ESTRICTA - OBLIGATORIA
+    if (!medioSeleccionado) {
+      throw new Error('ERROR CRÍTICO: Medio no seleccionado');
     }
+
+    if (!medioSeleccionado.medioId || medioSeleccionado.medioId <= 0) {
+      throw new Error(`ERROR CRÍTICO: Medio sin ID válido. MedioId: ${medioSeleccionado.medioId}`);
+    }
+
+    if (!proveedorId || proveedorId <= 0) {
+      throw new Error(`ERROR CRÍTICO: Proveedor sin ID válido. ProveedorId: ${proveedorId}`);
+    }
+
+    if (!this.data.planData.id || this.data.planData.id <= 0) {
+      throw new Error(`ERROR CRÍTICO: Plan sin ID válido. PlanId: ${this.data.planData.id}`);
+    }
+
+    if (!this.data.planData.version || this.data.planData.version <= 0) {
+      throw new Error(`ERROR CRÍTICO: Plan sin versión válida. Version: ${this.data.planData.version}`);
+    }
+
+    if (!pautaActualizada.id || Number(pautaActualizada.id) <= 0) {
+      throw new Error(`ERROR CRÍTICO: Item sin ID válido. ItemId: ${pautaActualizada.id}`);
+    }
+
+    console.log('✅ VALIDACIÓN EXITOSA (UPDATE):', {
+      itemId: pautaActualizada.id,
+      medioId: medioSeleccionado.medioId,
+      medioNombre: medioSeleccionado.nombre,
+      proveedorId: proveedorId,
+      planId: this.data.planData.id,
+      version: this.data.planData.version
+    });
 
     // ✅ VALIDAR DUPLICADOS antes de actualizar
     const parentComponent = this.getParentFlowChartComponent();
@@ -2903,9 +3218,35 @@ export class ModalNuevaPautaComponent implements OnInit {
   }
 
   // ✅ EXTRAER TARIFA del formulario según medio
-  private extractTarifaFromFormulario(datosFormulario: any, medioNombre: string): number {
-    console.log('💰 Extrayendo tarifa para medio:', medioNombre);
+  private extractTarifaFromFormulario(datosFormulario: any, medioNombre?: string): number {
+    console.log('💰 Extrayendo tarifa para medio:', medioNombre, 'datos:', datosFormulario);
     
+    // ✅ PRIMERO: Buscar el campo tarifa directo que siempre agregamos
+    if (datosFormulario && datosFormulario['tarifa']) {
+      const tarifaDirecta = parseFloat(datosFormulario['tarifa']);
+      if (!isNaN(tarifaDirecta) && tarifaDirecta > 0) {
+        console.log('💰 Tarifa encontrada en campo directo:', tarifaDirecta);
+        return tarifaDirecta;
+      }
+    }
+    
+    // ✅ SEGUNDO: Si no hay medioNombre, buscar campos comunes
+    if (!medioNombre) {
+      const tarifa = parseFloat(
+        datosFormulario?.['tarifaBruta'] || 
+        datosFormulario?.['netCost1'] || 
+        datosFormulario?.['netCost'] || 
+        datosFormulario?.['valor'] || 
+        datosFormulario?.['valorTotal'] || 
+        datosFormulario?.['budget'] || 
+        datosFormulario?.['costo'] || 
+        0
+      );
+      console.log('💰 Tarifa extraída sin medio específico:', tarifa);
+      return tarifa || 0;
+    }
+    
+    // ✅ TERCERO: Buscar por tipo de medio específico
     switch (medioNombre.toUpperCase()) {
       case 'TV ABIERTA':
       case 'TV NAL':
@@ -2913,19 +3254,19 @@ export class ModalNuevaPautaComponent implements OnInit {
       case 'TV PAGA':
         return parseFloat(datosFormulario['netCost1'] || datosFormulario['invTotal'] || 0);
       case 'TV LOCAL':
-        return parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost'] || 0);
+        return parseFloat(datosFormulario['netCost'] || 0);
       case 'RADIO':
-        return parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost1'] || 0);
+        return parseFloat(datosFormulario['netCost1'] || 0);
       case 'REVISTA':
       case 'PRENSA':
-        return parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost'] || 0);
+        return parseFloat(datosFormulario['netCost'] || 0);
       case 'CINE':
       case 'OOH':
         return parseFloat(datosFormulario['tarifaBruta'] || datosFormulario['valor'] || datosFormulario['valorTotal'] || 0);
       case 'DIGITAL':
         return parseFloat(datosFormulario['budget'] || datosFormulario['costo'] || 0);
       default:
-        return parseFloat(datosFormulario['tarifa'] || datosFormulario['valor_total'] || 0);
+        return parseFloat(datosFormulario['valorTotal'] || datosFormulario['valor'] || 0);
     }
   }
 }
