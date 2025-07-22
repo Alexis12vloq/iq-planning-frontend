@@ -27,14 +27,25 @@ export class TemplateDinamicoService {
         "fields": [
           { "name": "proveedor", "label": "PROVEEDOR", "type": "string", "required": true, "origen": "I Global" },
           { "name": "vehiculo", "label": "VEHICULO", "type": "string", "required": true, "origen": "I Global" },
-          { "name": "programa", "label": "PROGRAMA", "type": "string", "required": false, "origen": "I Global" },
-          { "name": "horario", "label": "HORARIO", "type": "string", "required": false, "origen": "Manual" },
-          { "name": "duracion", "label": "DURACIÓN", "type": "integer", "required": false, "origen": "Manual" },
-          { "name": "tarifa_bruta", "label": "TARIFA BRUTA", "type": "money", "required": true, "origen": "Manual" },
-          { "name": "descuento", "label": "DESCUENTO", "type": "decimal", "required": false, "origen": "Manual" },
-          { "name": "total_spots", "label": "TOTAL SPOTS", "type": "integer", "required": true, "origen": "Manual" },
-          { "name": "valor_neto", "label": "VALOR NETO", "type": "money", "required": false, "origen": "Calculado" },
-          { "name": "valor_total", "label": "VALOR TOTAL", "type": "money", "required": false, "origen": "Calculado" }
+          { "name": "espacio", "label": "ESPACIO", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "hora", "label": "HORA", "type": "time", "required": true, "origen": "I Global" },
+          { "name": "fechaSpot", "label": "FECHA SPOT", "type": "date", "required": false, "origen": "I Global" },
+          { "name": "dayPart", "label": "DAY PART", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "version", "label": "VERSION", "type": "string", "required": false, "origen": "" },
+          { "name": "length", "label": "LENGHT", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "countSpot", "label": "count_spot", "type": "integer", "required": false, "origen": "Manual" },
+          { "name": "rtgPercentTargetCompraTotal", "label": "Rtg% Target Compra Total", "type": "decimal", "required": false, "origen": "Desplegable" },
+          { "name": "rtgNumberTargetCompraTotal", "label": "Rtg #  Target Compra Total", "type": "decimal", "required": false, "origen": "Desplegable" },
+          { "name": "rtgPercentReporting", "label": "Rtg% Target Reporting", "type": "decimal", "required": false, "origen": "Desplegable" },
+          { "name": "rtgNumberReporting", "label": "RTG # Target Reporting", "type": "decimal", "required": false, "origen": "Manual Fase 1" },
+          { "name": "rtgPercentCastigado", "label": "Rtg% Target Castigado", "type": "decimal", "required": false, "origen": "Manual Fase 1" },
+          { "name": "rtgNumberCastigado", "label": "RTG # Target Castigado", "type": "decimal", "required": false, "origen": "Manual Fase 1" },
+          { "name": "tarifaMiles", "label": "Tarifa Miles (20\\"/15\\"/10\\")", "type": "decimal", "required": false, "origen": "Manual Fase 1" },
+          { "name": "netCost1", "label": "Net Cost 1", "type": "money", "required": false, "origen": "Desplegable" },
+          { "name": "invSemanal", "label": "INV SEMANAL", "type": "money", "required": false, "origen": "Desplegable" },
+          { "name": "trpsSemanales", "label": "Trp's Semanales", "type": "decimal", "required": false, "origen": "Campo Formulado" },
+          { "name": "cprPrograma", "label": "CPR PROGRAMA", "type": "decimal", "required": false, "origen": "I Global" },
+          { "name": "cprTarget", "label": "CPR TARGET", "type": "decimal", "required": false, "origen": "I Global" }
         ]
       }`,
       fechaCreacion: '2025-07-17T17:17:22.270',
@@ -53,13 +64,63 @@ export class TemplateDinamicoService {
         "fields": [
           { "name": "proveedor", "label": "Proveedor", "type": "string", "required": true, "origen": "Desplegable" },
           { "name": "vehiculo", "label": "Vehiculo", "type": "string", "required": true, "origen": "I Global" },
-          { "name": "programa", "label": "Programa", "type": "string", "required": false, "origen": "I Global" },
-          { "name": "tarifa_bruta", "label": "Tarifa Bruta", "type": "money", "required": true, "origen": "Manual" },
-          { "name": "total_spots", "label": "Total Spots", "type": "integer", "required": true, "origen": "Manual" },
-          { "name": "valor_total", "label": "Valor Total", "type": "money", "required": false, "origen": "Calculado" }
+          { "name": "hora", "label": "Hora", "type": "time", "required": true, "origen": "I Global" },
+          { "name": "fechaSpot", "label": "Fecha spot", "type": "date", "required": false, "origen": "I Global" },
+          { "name": "espacio", "label": "Espacio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "length", "label": "Lenght", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "daypart", "label": "Daypart", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "tipoCompra", "label": "Tipo de compra", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "netCost1", "label": "Net Cost 1", "type": "money", "required": false, "origen": "I Global" },
+          { "name": "rtg", "label": "Rtg", "type": "decimal", "required": false, "origen": "I Global" },
+          { "name": "aff", "label": "Aff", "type": "decimal", "required": false, "origen": "I Global" },
+          { "name": "cprUnitario", "label": "CPR UNITARIO", "type": "money", "required": false, "origen": "Manual Fase 1" },
+          { "name": "invTotal", "label": "INV TOTAL", "type": "money", "required": false, "origen": "Manual Fase 1" },
+          { "name": "totalTrpsSem", "label": "TOTAL TRP´S SEM", "type": "decimal", "required": false, "origen": "Campo Formulado" },
+          { "name": "totalTrps", "label": "Total Trp's", "type": "decimal", "required": false, "origen": "Campo Formulado" },
+          { "name": "cpr", "label": "CPR", "type": "decimal", "required": false, "origen": "Manual Fase 1" },
+          { "name": "iva", "label": "IVA", "type": "money", "required": false, "origen": "I Global" },
+          { "name": "porcentajeIva", "label": "% IVA", "type": "decimal", "required": false, "origen": "I Global" },
+          { "name": "valorSpot", "label": "Total Spots", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "valorTotal", "label": "Valor Total", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "fee", "label": "FEE", "type": "money", "required": false, "origen": "I Global" }
         ]
       }`,
       fechaCreacion: '2025-07-17T17:19:35.523',
+      usuarioCreacion: 'SYSTEM',
+      estado: true
+    },
+    {
+      templateId: 3,
+      pantalla: 'tv-local-formulario',
+      paisId: 5,
+      paisNombre: 'Perú',
+      tablaCompleta: 'Templates',
+      medioId: 8,
+      medioNombre: 'TV Local',
+      jsonSchema: `{
+        "fields": [
+          { "name": "proveedor", "label": "Proveedor", "type": "string", "required": true, "origen": "Desplegable" },
+          { "name": "vehiculo", "label": "Vehiculo", "type": "string", "required": true, "origen": "I Global" },
+          { "name": "espacio", "label": "Espacio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "rat", "label": "RAT 18-35 ABC+", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "fechaSpot", "label": "Fecha spot", "type": "date", "required": false, "origen": "I Global" },
+          { "name": "hora", "label": "Hora", "type": "time", "required": false, "origen": "I Global" },
+          { "name": "tipoCompra", "label": "Tipo de compra", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "tarifa", "label": "Tarifa publicada", "type": "money", "required": false, "origen": "Manual Fase 1" },
+          { "name": "netCost", "label": "Net Cost", "type": "money", "required": false, "origen": "Desplegable" },
+          { "name": "descuento", "label": "Descuento", "type": "decimal", "required": false, "origen": "Manual" },
+          { "name": "valorUnitario", "label": "Valor unitario", "type": "money", "required": false, "origen": "Manual" },
+          { "name": "valorSpot", "label": "Valor Spot", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "valorNeto", "label": "Valor Neto", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "porcentajeIva", "label": "% IVA", "type": "decimal", "required": false, "origen": "I Global" },
+          { "name": "iva", "label": "IVA", "type": "money", "required": false, "origen": "I Global" },
+          { "name": "totalSpots", "label": "Total Spots", "type": "integer", "required": false, "origen": "Campo Formulado" },
+          { "name": "valorTotal", "label": "Valor Total", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "fee", "label": "FEE", "type": "money", "required": false, "origen": "I Global" },
+          { "name": "referencia", "label": "Referencia", "type": "string", "required": false, "origen": "Manual" }
+        ]
+      }`,
+      fechaCreacion: '2025-07-17T17:20:53.017',
       usuarioCreacion: 'SYSTEM',
       estado: true
     },
@@ -75,15 +136,61 @@ export class TemplateDinamicoService {
         "fields": [
           { "name": "cobertura", "label": "Cobertura", "type": "string", "required": false, "origen": "Desplegable" },
           { "name": "plaza", "label": "Plaza", "type": "string", "required": false, "origen": "Desplegable" },
-          { "name": "proveedor", "label": "Proveedor", "type": "string", "required": true, "origen": "Desplegable" },
-          { "name": "estacion", "label": "Estación", "type": "string", "required": true, "origen": "I Global" },
-          { "name": "franja", "label": "Franja", "type": "string", "required": false, "origen": "Manual" },
-          { "name": "tarifa_bruta", "label": "Tarifa Bruta", "type": "money", "required": true, "origen": "Manual" },
-          { "name": "total_spots", "label": "Total Spots", "type": "integer", "required": true, "origen": "Manual" },
-          { "name": "valor_total", "label": "Valor Total", "type": "money", "required": false, "origen": "Calculado" }
+          { "name": "copy", "label": "Copy", "type": "string", "required": false, "origen": "Desplegable" },
+          { "name": "vehiculo", "label": "Vehículo", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "proveedor", "label": "Proveedor", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "espacio", "label": "Espacio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "formato", "label": "Formato", "type": "string", "required": false, "origen": "Desplegable" },
+          { "name": "rat2035", "label": "RAT 20-35 ABC+", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "fechaSpot", "label": "Fecha spot", "type": "date", "required": false, "origen": "Manual" },
+          { "name": "hora", "label": "Hora", "type": "time", "required": false, "origen": "Desplegable" },
+          { "name": "tipoCompra", "label": "Tipo de compra", "type": "string", "required": false, "origen": "Desplegable" },
+          { "name": "tarifa", "label": "Tarifa publicada", "type": "money", "required": false, "origen": "Manual Fase 1" },
+          { "name": "netCost1", "label": "Net Cost 1", "type": "decimal", "required": false, "origen": "Desplegable" },
+          { "name": "descuento", "label": "Descuento", "type": "decimal", "required": false, "origen": "Manual" },
+          { "name": "valorNeto", "label": "Valor Neto", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "vrNeto", "label": "VR Neto Total", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "porcentajeIva", "label": "% IVA", "type": "decimal", "required": false, "origen": "I Global" },
+          { "name": "iva", "label": "IVA", "type": "money", "required": false, "origen": "I Global" },
+          { "name": "fee", "label": "FEE", "type": "money", "required": false, "origen": "I Global" }
         ]
       }`,
       fechaCreacion: '2025-07-17T17:22:24.880',
+      usuarioCreacion: 'SYSTEM',
+      estado: true
+    },
+    {
+      templateId: 5,
+      pantalla: 'revista-formulario',
+      paisId: 5,
+      paisNombre: 'Perú',
+      tablaCompleta: 'Templates',
+      medioId: 9,
+      medioNombre: 'Revista',
+      jsonSchema: `{
+        "fields": [
+          { "name": "region", "label": "Región", "type": "string", "required": false, "origen": "Desplegable" },
+          { "name": "medio", "label": "Medio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "submedio", "label": "SubMedio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "proveedor", "label": "Proveedor", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "vehiculo", "label": "Vehiculo", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "periodicidad", "label": "Periodicidad", "type": "string", "required": false, "origen": "Desplegable" },
+          { "name": "seccion", "label": "Sección", "type": "string", "required": false, "origen": "" },
+          { "name": "tiraje", "label": "Tiraje", "type": "integer", "required": false, "origen": "Manual" },
+          { "name": "passAlong", "label": "Pass Along", "type": "integer", "required": false, "origen": "Manual" },
+          { "name": "impactos", "label": "Impactos", "type": "integer", "required": false, "origen": "Campo Formulado" },
+          { "name": "cpi", "label": "CPI", "type": "decimal", "required": false, "origen": "Campo Formulado" },
+          { "name": "copy", "label": "Copy", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "formato", "label": "Formato", "type": "string", "required": false, "origen": "Desplegable" },
+          { "name": "tipoCompra", "label": "Tipo de compra", "type": "string", "required": false, "origen": "" },
+          { "name": "compra", "label": "Compra", "type": "string", "required": false, "origen": "" },
+          { "name": "tarifa", "label": "Tarifa", "type": "money", "required": false, "origen": "Manual Fase 1" },
+          { "name": "netCost", "label": "Net Cost", "type": "money", "required": false, "origen": "" },
+          { "name": "descuento", "label": "Descuento", "type": "decimal", "required": false, "origen": "" },
+          { "name": "insEne", "label": "INS ENE", "type": "integer", "required": false, "origen": "Manual" }
+        ]
+      }`,
+      fechaCreacion: '2025-07-17T17:25:16.560',
       usuarioCreacion: 'SYSTEM',
       estado: true
     },
@@ -99,14 +206,63 @@ export class TemplateDinamicoService {
         "fields": [
           { "name": "region", "label": "Región", "type": "string", "required": false, "origen": "Desplegable" },
           { "name": "medio", "label": "Medio", "type": "string", "required": false, "origen": "I Global" },
-          { "name": "proveedor", "label": "Proveedor", "type": "string", "required": true, "origen": "Manual" },
-          { "name": "formato", "label": "Formato", "type": "string", "required": false, "origen": "Manual" },
-          { "name": "tarifa_bruta", "label": "Tarifa Bruta", "type": "money", "required": true, "origen": "Manual" },
-          { "name": "total_spots", "label": "Total Spots", "type": "integer", "required": true, "origen": "Manual" },
-          { "name": "valor_total", "label": "Valor Total", "type": "money", "required": false, "origen": "Calculado" }
+          { "name": "submedio", "label": "SubMedio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "proveedor", "label": "Proveedor", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "vehiculo", "label": "Vehiculo", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "seccion", "label": "Sección", "type": "string", "required": false, "origen": "" },
+          { "name": "tiraje", "label": "Tiraje", "type": "integer", "required": false, "origen": "Manual" },
+          { "name": "passAlong", "label": "Pass Along", "type": "integer", "required": false, "origen": "Manual" },
+          { "name": "impactos", "label": "Impactos", "type": "integer", "required": false, "origen": "" },
+          { "name": "copy", "label": "Copy", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "formato", "label": "Formato", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "tipoCompra", "label": "Tipo de compra", "type": "string", "required": false, "origen": "" },
+          { "name": "compra", "label": "Compra", "type": "string", "required": false, "origen": "" },
+          { "name": "tarifa", "label": "Tarifa publicada", "type": "money", "required": false, "origen": "" },
+          { "name": "netCost", "label": "Net Cost", "type": "money", "required": false, "origen": "" },
+          { "name": "descuento", "label": "Descuento", "type": "decimal", "required": false, "origen": "" },
+          { "name": "formato", "label": "Formato", "type": "string", "required": false, "origen": "I Global" }
         ]
       }`,
       fechaCreacion: '2025-07-17T17:26:24.197',
+      usuarioCreacion: 'SYSTEM',
+      estado: true
+    },
+    {
+      templateId: 7,
+      pantalla: 'cine-formulario',
+      paisId: 5,
+      paisNombre: 'Perú',
+      tablaCompleta: 'Templates',
+      medioId: 10,
+      medioNombre: 'Cine',
+      jsonSchema: `{
+        "fields": [
+          { "name": "tipoCompra", "label": "Tipo de compra", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "proveedor", "label": "Proveedor", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "medio", "label": "Medio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "submedio", "label": "SubMedio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "vehiculo", "label": "Vehículo", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "ciudad", "label": "Ciudad", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "formato", "label": "Formato", "type": "string", "required": false, "origen": "Desplegable" },
+          { "name": "elemento", "label": "Elemento", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "multiplex", "label": "Multiplex", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "tipoSala", "label": "Tipo de sala", "type": "string", "required": false, "origen": "Desplegable" },
+          { "name": "numSalas", "label": "# Salas", "type": "integer", "required": false, "origen": "Campo Formulado" },
+          { "name": "tarifaBruta", "label": "Tarifa Bruta", "type": "money", "required": false, "origen": "Manual Fase 1" },
+          { "name": "descAgencia", "label": "Desc Agencia", "type": "decimal", "required": false, "origen": "Manual" },
+          { "name": "descCliente", "label": "Desc Cliente", "type": "decimal", "required": false, "origen": "Manual" },
+          { "name": "tarifaNeta", "label": "Tarifa Neta", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "cantSpots", "label": "Cant Spots Prom Semanal", "type": "integer", "required": false, "origen": "Campo Formulado" },
+          { "name": "valor", "label": "Valor", "type": "money", "required": false, "origen": "Manual Fase 1" },
+          { "name": "porcentajeIva", "label": "% IVA", "type": "decimal", "required": false, "origen": "I Global" },
+          { "name": "iva", "label": "IVA", "type": "money", "required": false, "origen": "I Global" },
+          { "name": "valorTotal", "label": "Valor Total", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "periodicidad", "label": "Periodicidad", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "fee", "label": "FEE", "type": "money", "required": false, "origen": "I Global" },
+          { "name": "referencia", "label": "Referencia", "type": "string", "required": false, "origen": "Manual" }
+        ]
+      }`,
+      fechaCreacion: '2025-07-17T17:28:39.070',
       usuarioCreacion: 'SYSTEM',
       estado: true
     },
@@ -122,11 +278,29 @@ export class TemplateDinamicoService {
         "fields": [
           { "name": "tipoCompra", "label": "Tipo de compra", "type": "string", "required": false, "origen": "I Global" },
           { "name": "proveedor", "label": "Proveedor", "type": "string", "required": false, "origen": "I Global" },
-          { "name": "ubicacion", "label": "Ubicación", "type": "string", "required": false, "origen": "Manual" },
-          { "name": "formato", "label": "Formato", "type": "string", "required": false, "origen": "Manual" },
-          { "name": "tarifa_bruta", "label": "Tarifa Bruta", "type": "money", "required": true, "origen": "Manual" },
-          { "name": "total_spots", "label": "Total Spots", "type": "integer", "required": true, "origen": "Manual" },
-          { "name": "valor_total", "label": "Valor Total", "type": "money", "required": false, "origen": "Calculado" }
+          { "name": "medio", "label": "Medio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "submedio", "label": "Submedio", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "vehiculo", "label": "Vehículo", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "ciudad", "label": "Ciudad", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "elemento", "label": "Elemento", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "detalleUbicacion", "label": "Detalle ubicación", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "fotografia", "label": "Fotografía", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "tipoElemento", "label": "Tipo de elemento", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "tamanoAncho", "label": "Tamaño ancho", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "ramanoAlto", "label": "Ramano alto", "type": "string", "required": false, "origen": "I Global" },
+          { "name": "areaTotal", "label": "Área total", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "tarifaBruta", "label": "Tarifa bruta", "type": "money", "required": false, "origen": "Manual" },
+          { "name": "descAgencia", "label": "Desc agencia", "type": "decimal", "required": false, "origen": "Manual" },
+          { "name": "descCliente", "label": "Desc cliente", "type": "decimal", "required": false, "origen": "Manual" },
+          { "name": "tarifaNeta", "label": "Tarifa neta", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "cantidad", "label": "Cantidad", "type": "integer", "required": false, "origen": "Campo Formulado" },
+          { "name": "valor", "label": "Valor", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "porcentajeIva", "label": "% IVA", "type": "decimal", "required": false, "origen": "I Global" },
+          { "name": "valorIva", "label": "Valor IVA", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "valorTotal", "label": "Valor total", "type": "money", "required": false, "origen": "Campo Formulado" },
+          { "name": "fee", "label": "FEE", "type": "money", "required": false, "origen": "I Global" },
+          { "name": "periodicidad", "label": "Periodicidad", "type": "string", "required": false, "origen": "Manual" },
+          { "name": "referencia", "label": "Referencia", "type": "string", "required": false, "origen": "Manual" }
         ]
       }`,
       fechaCreacion: '2025-07-17T17:33:04.330',
@@ -145,12 +319,32 @@ export class TemplateDinamicoService {
         "fields": [
           { "name": "canal", "label": "Canal", "type": "string", "required": false, "origen": "" },
           { "name": "etapa", "label": "Etapa", "type": "string", "required": false, "origen": "" },
-          { "name": "medida", "label": "Medida", "type": "string", "required": false, "origen": "" },
-          { "name": "plataforma", "label": "Plataforma", "type": "string", "required": false, "origen": "Manual" },
-          { "name": "proveedor", "label": "Proveedor", "type": "string", "required": true, "origen": "Manual" },
-          { "name": "tarifa_bruta", "label": "Tarifa Bruta", "type": "money", "required": true, "origen": "Manual" },
-          { "name": "total_spots", "label": "Total Spots", "type": "integer", "required": true, "origen": "Manual" },
-          { "name": "valor_total", "label": "Valor Total", "type": "money", "required": false, "origen": "Calculado" }
+          { "name": "medio", "label": "Medio", "type": "string", "required": false, "origen": "" },
+          { "name": "objetivo", "label": "Objetivo", "type": "string", "required": false, "origen": "" },
+          { "name": "universoPotencial", "label": "Universo Potencial", "type": "string", "required": false, "origen": "" },
+          { "name": "reach", "label": "% Reach", "type": "decimal", "required": false, "origen": "" },
+          { "name": "alcance", "label": "Alcance", "type": "string", "required": false, "origen": "" },
+          { "name": "tipoCompra", "label": "Tipo de Compra", "type": "string", "required": false, "origen": "" },
+          { "name": "tipoAudiencia", "label": "Tipo de Audiencia", "type": "string", "required": false, "origen": "" },
+          { "name": "ctr", "label": "CTR %", "type": "decimal", "required": false, "origen": "" },
+          { "name": "imp", "label": "IMP", "type": "integer", "required": false, "origen": "" },
+          { "name": "clics", "label": "Clics", "type": "integer", "required": false, "origen": "" },
+          { "name": "views", "label": "Views", "type": "integer", "required": false, "origen": "" },
+          { "name": "usuariosUnicos", "label": "Usuarios únicos", "type": "integer", "required": false, "origen": "" },
+          { "name": "vtr", "label": "VTR", "type": "decimal", "required": false, "origen": "" },
+          { "name": "costo", "label": "Costo", "type": "money", "required": false, "origen": "" },
+          { "name": "budget", "label": "Budget", "type": "money", "required": false, "origen": "" },
+          { "name": "definicionFormato", "label": "Definición del Formato", "type": "string", "required": false, "origen": "" },
+          { "name": "trps", "label": "TRPS", "type": "decimal", "required": false, "origen": "" },
+          { "name": "clicks", "label": "CLICKS", "type": "integer", "required": false, "origen": "" },
+          { "name": "vtrGrupo", "label": "Grupo de Formato", "type": "string", "required": false, "origen": "" },
+          { "name": "viewsTipoUbicacion", "label": "Tipo de Ubicación", "type": "string", "required": false, "origen": "" },
+          { "name": "cpc", "label": "CPC", "type": "money", "required": false, "origen": "" },
+          { "name": "cpv", "label": "CPV", "type": "money", "required": false, "origen": "" },
+          { "name": "cpma", "label": "CPMA", "type": "money", "required": false, "origen": "" },
+          { "name": "cpm", "label": "CPM", "type": "money", "required": false, "origen": "" },
+          { "name": "namingCampaña", "label": "NAMING CAMPAÑA", "type": "string", "required": false, "origen": "" },
+          { "name": "namingAnuncio", "label": "NAMING ANUNCIO", "type": "string", "required": false, "origen": "" }
         ]
       }`,
       fechaCreacion: '2025-07-17T17:34:40.100',
@@ -159,7 +353,7 @@ export class TemplateDinamicoService {
     }
   ];
 
-  // Mapeo de nombres de medios a medioId
+  // Mapeo de nombres de medios a medioId (actualizado con todas las 9 plantillas)
   private medioNombreToId: { [key: string]: number } = {
     'TV NAL': 6,        // TV Abierta
     'TV Abierta': 6,
@@ -174,9 +368,9 @@ export class TemplateDinamicoService {
   };
 
   constructor(private backendMediosService: BackendMediosService) {
-    console.log('🏗️ TemplateDinamicoService inicializado con datos TEMPORALES hardcodeados');
+    console.log('🏗️ TemplateDinamicoService inicializado con TODAS las 9 plantillas hardcodeadas');
     console.log('📊 Templates disponibles:', this.templatesHardcodeados.length);
-    console.log('📊 Medios mapeados:', Object.keys(this.medioNombreToId));
+    console.log('📊 Plantillas incluidas: TV Abierta, TV Paga, TV Local, Radio, Revista, Prensa, Cine, OOH, Digital');
     
     // 🚧 TODO IMPORTANTE: Para activar backend real, hacer lo siguiente:
     console.warn('🚧 TODO: Para activar backend:');
