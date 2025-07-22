@@ -41,8 +41,53 @@
       Nuevo Item
     </button>
     
-
+    <!-- ✅ BOTÓN GUARDAR CALENDARIO -->
+    <button 
+      mat-raised-button 
+      color="accent" 
+      class="save-calendar-btn"
+      [disabled]="itemsPauta.length === 0"
+      (click)="guardarCalendario()"
+      matTooltip="Guardar todos los spots programados en el calendario">
+      <mat-icon>save</mat-icon>
+      Guardar Calendario
+      <span class="save-indicator" *ngIf="itemsPauta.length > 0">({{ itemsPauta.length }} items)</span>
+    </button>
     
+    <!-- 🔍 BOTÓN TEMPORAL DE DIAGNÓSTICO -->
+    <button 
+      mat-stroked-button 
+      color="primary" 
+      class="action-btn"
+      (click)="diagnosticarColumnasDinamicas()"
+      matTooltip="Ver diagnóstico de columnas en consola">
+      <mat-icon>bug_report</mat-icon>
+      Debug Columnas
+    </button>
+    
+    <!-- 🔄 BOTÓN TEMPORAL DE RECARGA -->
+    <button 
+      mat-stroked-button 
+      color="accent" 
+      class="action-btn"
+      (click)="refrescarListaItems()"
+      matTooltip="Recargar todos los datos desde el backend">
+      <mat-icon>refresh</mat-icon>
+      Recargar Datos
+    </button>
+
+    <!-- 🧪 BOTÓN TEMPORAL DE TESTING -->
+    <button 
+      mat-stroked-button 
+      color="warn" 
+      class="action-btn"
+      *ngIf="itemsPauta.length > 0"
+      (click)="editarItem(itemsPauta[0])"
+      matTooltip="Test: Editar primer item de la lista">
+      <mat-icon>edit</mat-icon>
+      Test Editar
+    </button>
+
     <button 
       mat-raised-button 
       color="warn" 
@@ -148,7 +193,7 @@
                             {{ obtenerIconoEstadoPlantilla(item) }}
                           </mat-icon>
                         </div>
-                        <div class="pauta-stats">{{ item.totalSpots }} spots • {{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                        <div class="pauta-stats">{{ item.totalSpots || 0 }} spots • {{ (item.valorTotal || 0) | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
                       </div>
                     </div>
                   </div>

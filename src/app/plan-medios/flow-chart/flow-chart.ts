@@ -585,44 +585,58 @@ export class FlowChart implements OnInit {
     this.snackBar.open('Use el botón "Agregar Item" para crear nuevas pautas', 'OK', { duration: 3000 });
   }
 
-  eliminarPauta(pautaId: string, index: number): void {
-    if (confirm('¿Estás seguro de que deseas eliminar esta pauta?')) {
-      const planMedioItemId = Number(pautaId);
-      
-      if (isNaN(planMedioItemId)) {
-        this.snackBar.open('Error: ID de item inválido', '', { duration: 3000, panelClass: ['error-snackbar'] });
-        return;
-  }
+  eliminarItem(itemId: string, index: number): void {
+    if (!confirm('¿Estás seguro de que quieres eliminar este item? Esta acción no se puede deshacer.')) {
+      return;
+    }
 
-      this.backendMediosService.eliminarPlanMedioItemFlowchart(planMedioItemId).subscribe({
-        next: (response) => {
-          console.log('✅ Item eliminado del backend:', response);
-          
+    const planMedioItemId = Number(itemId);
+    
+    if (isNaN(planMedioItemId) || planMedioItemId <= 0) {
+      this.snackBar.open('❌ Error: ID de item inválido', '', { 
+        duration: 3000, 
+        panelClass: ['error-snackbar'] 
+      });
+      return;
+    }
+
+    console.log('🗑️ Eliminando item ID:', planMedioItemId);
+
+    this.backendMediosService.eliminarPlanMedioItemFlowchart(planMedioItemId).subscribe({
+      next: (response) => {
+        console.log('✅ Item eliminado del backend:', response);
+        
+        if (response.success) {
           // Eliminar de memoria local después del éxito en backend
-          this.pautasGuardadas = this.pautasGuardadas.filter(item => item.id !== pautaId);
-        this.itemsPauta = this.itemsPauta.filter(item => item.id !== pautaId);
+          this.itemsPauta = this.itemsPauta.filter(item => item.id !== itemId);
+          this.pautasGuardadas = this.pautasGuardadas.filter(item => item.id !== itemId);
           
           // Limpiar programación del item eliminado
-          delete this.programacionItems[pautaId];
+          delete this.programacionItems[itemId];
+          
+          // Recargar la vista
+          this.refrescarListaItems();
           
           this.snackBar.open('✅ Item eliminado exitosamente', '', { 
-          duration: 2000,
-          panelClass: ['success-snackbar']
-        });
-          
-          // Recargar datos para asegurar consistencia
-          this.recargarDatosFlowChart();
-          
-        },
-        error: (error) => {
-          console.error('❌ Error eliminando item del backend:', error);
-          this.snackBar.open('❌ Error al eliminar el item', '', { 
+            duration: 2000,
+            panelClass: ['success-snackbar']
+          });
+        } else {
+          console.error('❌ Error del servidor:', response.message);
+          this.snackBar.open(`❌ Error: ${response.message}`, '', { 
+            duration: 3000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      },
+      error: (error) => {
+        console.error('❌ Error eliminando item del backend:', error);
+        this.snackBar.open('❌ Error al eliminar el item del servidor', '', { 
           duration: 3000,
           panelClass: ['error-snackbar']
         });
       }
-      });
-    }
+    });
   }
 
   // Método eliminado - no se usa localStorage
@@ -706,10 +720,15 @@ export class FlowChart implements OnInit {
   }
 
   // Método para refrescar la lista de forma forzada
-  private refrescarListaItems(): void {
+  refrescarListaItems(): void {
     console.log('🔄 === REFRESCANDO LISTA DE ITEMS ===');
     
-    // Cargar pautas desde storage
+    if (!this.planData?.id || !this.planData?.version) {
+      console.log('❌ No hay datos del plan para refrescar');
+      return;
+    }
+    
+    // Recargar desde backend
     this.cargarPautasExistentes();
     
     // Forzar múltiples detecciones de cambios
@@ -719,12 +738,15 @@ export class FlowChart implements OnInit {
       this.cdr.detectChanges();
       console.log('✅ Lista refrescada - Items visibles:', this.itemsPauta.length);
       console.log('✅ Medios activos:', this.mediosActivos);
-    }, 50);
+    }, 100);
     
     setTimeout(() => {
       this.cdr.detectChanges();
       console.log('✅ Segunda actualización - Items visibles:', this.itemsPauta.length);
-    }, 150);
+      
+      // ✅ EJECUTAR DIAGNÓSTICO DE COLUMNAS DINÁMICAS
+      this.diagnosticarColumnasDinamicas();
+    }, 300);
   }
 
   onCargaExcel(): void {
@@ -1016,24 +1038,30 @@ export class FlowChart implements OnInit {
     return null;
   }
 
-  abrirModalNuevaPauta(): void {
+  abrirModalNuevoItem(): void {
     const dialogRef = this.dialog.open(ModalNuevaPautaComponent, {
-      width: '90%',
-      maxWidth: '1200px',
-      height: '90%',
-      data: {
+      width: '95%',
+      maxWidth: '1400px',
+      height: '95%',
+      data: { 
         planData: this.planData,
         action: 'create',
-        mediosDisponibles: this.mediosDisponibles
-      }
+        mediosDisponibles: this.mediosDisponibles,
+        itemsExistentes: this.itemsPauta // ✅ PASAR ITEMS EXISTENTES para filtro de proveedores
+      },
+      disableClose: true
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result && result.shouldRefresh) {
-        console.log('✅ Nueva pauta guardada, recargando lista');
-        this.refrescarListaItems();
+        console.log('✅ Nuevo item guardado, recargando lista');
         
-        this.snackBar.open('Pauta agregada exitosamente', '', {
+        // Recargar datos desde backend
+        setTimeout(() => {
+          this.refrescarListaItems();
+        }, 500);
+        
+        this.snackBar.open('✅ Item agregado exitosamente', '', {
           duration: 3000,
           panelClass: ['success-snackbar']
         });
@@ -1220,43 +1248,159 @@ export class FlowChart implements OnInit {
     return plantilla ? plantilla.fields : [];
   }
 
-  // Obtener columnas dinámicas para un medio específico
+  // ✅ CORREGIDO: Obtener columnas dinámicas para un medio específico DESDE EL JSON GUARDADO
   obtenerColumnasDinamicas(medio: string): CampoPlantilla[] {
-    // Verificar si al menos un item de este medio tiene datos de plantilla
-    const itemsDelMedio = this.itemsPorMedio[medio] || [];
-    const tieneAlgunItemConDatos = itemsDelMedio.some(item => 
-      item.datos && Object.keys(item.datos).length > 0
-    );
+    console.log(`🔍 === OBTENIENDO COLUMNAS DINÁMICAS PARA: ${medio} ===`);
     
-    if (!tieneAlgunItemConDatos) {
-      console.log(`ℹ️ No se mostrarán columnas dinámicas para ${medio} - ningún item tiene dataPlantillaJson`);
+    // ✅ PRIORIDAD 1: Obtener columnas desde los datos guardados de los items
+    const itemsDelMedio = this.itemsPorMedio[medio] || [];
+    console.log(`📊 Items del medio ${medio}:`, itemsDelMedio.length);
+    
+    if (itemsDelMedio.length > 0) {
+      // Tomar el primer item que tenga datos para obtener las columnas
+      const itemConDatos = itemsDelMedio.find(item => item.datos && Object.keys(item.datos).length > 0);
+      
+      if (itemConDatos) {
+        console.log(`✅ Generando columnas desde datos guardados del item:`, itemConDatos.id);
+        console.log(`📋 Datos disponibles:`, Object.keys(itemConDatos.datos));
+        
+        // Generar columnas desde los datos reales guardados
+        const columnasFromDatos: CampoPlantilla[] = Object.keys(itemConDatos.datos).map(campo => ({
+          name: campo,
+          label: this.formatearLabelFromCampo(campo),
+          type: this.inferirTipoFromValor(itemConDatos.datos[campo]),
+          required: false
+        }));
+        
+        // Filtrar campos que no queremos mostrar como columnas
+        const camposExcluidos = ['semanas', 'tarifa'];
+        const columnasFiltered = columnasFromDatos.filter(campo => !camposExcluidos.includes(campo.name));
+        
+        console.log(`✅ ${columnasFiltered.length} columnas generadas desde datos guardados:`, columnasFiltered.map(c => `${c.name} (${c.label})`));
+        return columnasFiltered;
+      }
+    }
+    
+    // ✅ FALLBACK: Si no hay datos guardados, usar plantilla como antes
+    console.log(`⚠️ No hay datos guardados, usando plantilla como fallback`);
+    const campos = this.obtenerCamposPlantillaPorMedio(medio);
+    console.log(`📋 Campos de plantilla obtenidos:`, campos.length, campos.map(c => c.name));
+    
+    if (campos.length === 0) {
+      console.log(`⚠️ No se encontró plantilla para el medio: ${medio}`);
       return [];
     }
     
-    const campos = this.obtenerCamposPlantillaPorMedio(medio);
     // Filtrar campos que no queremos mostrar como columnas
-    const camposExcluidos = ['semanas', 'iva', 'fee', '%_iva'];
+    const camposExcluidos = ['semanas', 'tarifa'];
     const columnas = campos.filter(campo => !camposExcluidos.includes(campo.name));
     
-    console.log(`✅ Mostrando ${columnas.length} columnas dinámicas para ${medio}`);
+    console.log(`✅ Mostrando ${columnas.length} columnas dinámicas para ${medio}:`, columnas.map(c => c.name));
     return columnas;
   }
 
-  // Obtener valor de campo de una pauta
-  obtenerValorCampo(pauta: RespuestaPauta, nombreCampo: string): any {
-    return pauta.datos?.[nombreCampo] || '';
+  // ✅ NUEVA: Formatear label desde nombre de campo
+  private formatearLabelFromCampo(campo: string): string {
+    // Convertir de camelCase o snake_case a título
+    return campo
+      .replace(/([A-Z])/g, ' $1') // camelCase to spaces
+      .replace(/_/g, ' ') // snake_case to spaces
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   }
 
-  // Formatear valor de campo para mostrar
+  // ✅ NUEVA: Inferir tipo desde valor guardado
+  private inferirTipoFromValor(valor: any): "string" | "boolean" | "integer" | "decimal" | "money" | "time" | "date" {
+    if (valor === null || valor === undefined) return 'string';
+    
+    const tipo = typeof valor;
+    if (tipo === 'number') {
+      return Number.isInteger(valor) ? 'integer' : 'decimal';
+    }
+    if (tipo === 'boolean') return 'boolean';
+    if (tipo === 'string') {
+      // Intentar detectar si es money
+      if (/^\$?\d+(\.\d{2})?$/.test(valor)) return 'money';
+      // Intentar detectar si es time
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(valor)) return 'time';
+      // Intentar detectar si es date
+      if (/^\d{4}-\d{2}-\d{2}/.test(valor)) return 'date';
+    }
+    return 'string';
+  }
+
+  // ✅ CORREGIDO: Obtener valor de campo de una pauta
+  obtenerValorCampo(pauta: RespuestaPauta, nombreCampo: string): any {
+    // ✅ DIAGNÓSTICO: Verificar si la pauta tiene datos de plantilla
+    if (!pauta.datos) {
+      console.log(`⚠️ Item ${pauta.id} (${pauta.medio}/${pauta.proveedor}) no tiene datos de plantilla`);
+      return '';
+    }
+    
+    let valor = pauta.datos[nombreCampo];
+    
+    // ✅ CORREGIDO: Manejar objetos complejos que causan [object Object]
+    if (valor && typeof valor === 'object') {
+      // Si es un objeto, intentar extraer el valor correcto
+      if (valor.hasOwnProperty('codigo') && valor.hasOwnProperty('valor')) {
+        // Formato: {codigo: "X", valor: "Descripción"}
+        valor = valor.valor;
+      } else if (valor.hasOwnProperty('value')) {
+        // Formato: {value: "valor"}
+        valor = valor.value;
+      } else if (valor.hasOwnProperty('label')) {
+        // Formato: {label: "etiqueta"}
+        valor = valor.label;
+      } else if (Array.isArray(valor) && valor.length > 0) {
+        // Si es un array, tomar el primer elemento
+        valor = valor[0];
+        if (valor && typeof valor === 'object') {
+          valor = valor.valor || valor.value || valor.label || JSON.stringify(valor);
+        }
+      } else {
+        // Como último recurso, convertir a string pero evitar [object Object]
+        const keys = Object.keys(valor);
+        if (keys.length === 1) {
+          valor = valor[keys[0]];
+        } else {
+          valor = JSON.stringify(valor);
+        }
+      }
+    }
+    
+    // ✅ DEBUG: Log detallado para campos específicos
+    if (nombreCampo === 'programa' || nombreCampo === 'vehiculo' || nombreCampo === 'canal' || nombreCampo === 'tipoMedio' || nombreCampo === 'ubicacion') {
+      console.log(`🔍 Campo ${nombreCampo} para ${pauta.proveedor}:`, valor, '(tipo:', typeof valor, ')');
+    }
+    
+    // ✅ Retornar valor procesado o cadena vacía
+    return valor !== null && valor !== undefined && valor !== '' ? valor : '';
+  }
+
+  // ✅ CORREGIDO: Formatear valor de campo para mostrar
   formatearValorCampo(valor: any, campo: CampoPlantilla): string {
+    // ✅ DEPURACIÓN: Log para valores problemáticos
+    if (typeof valor === 'object' && valor !== null) {
+      console.log(`⚠️ Valor objeto recibido en formatear para ${campo.name}:`, valor);
+    }
+
+    // ✅ Manejar valores vacíos o nulos
     if (valor === null || valor === undefined || valor === '') {
+      // Para campos numéricos, mostrar 0 en lugar de guión
+      if (campo.type === 'money' || campo.type === 'decimal' || campo.type === 'integer') {
+        return '0';
+      }
       return '-';
     }
 
+    // ✅ Asegurar que es string para procesamiento
+    const valorStr = valor.toString();
+
     switch (campo.type) {
       case 'money':
-        const numValue = parseFloat(valor);
-        if (isNaN(numValue)) return '-';
+        const numValue = parseFloat(valorStr);
+        if (isNaN(numValue)) return '0';
         return new Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
@@ -1265,28 +1409,35 @@ export class FlowChart implements OnInit {
         }).format(numValue);
       
       case 'decimal':
-        const decValue = parseFloat(valor);
-        if (isNaN(decValue)) return '-';
+        const decValue = parseFloat(valorStr);
+        if (isNaN(decValue)) return '0.00';
         return new Intl.NumberFormat('en-US', {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         }).format(decValue);
       
       case 'integer':
-        const intValue = parseInt(valor);
-        if (isNaN(intValue)) return '-';
+        const intValue = parseInt(valorStr);
+        if (isNaN(intValue)) return '0';
         return new Intl.NumberFormat('en-US').format(intValue);
       
       case 'time':
-        return valor.toString();
+        return valorStr;
       
       default:
+        // ✅ MEJORADO: Manejar lookups con mejor lógica
         if (campo.lookupTable) {
           const opciones = this.obtenerOpcionesLookup(campo);
-          const opcion = opciones.find(o => o.codigo == valor);
-          return opcion ? opcion.valor : valor.toString();
+          const opcion = opciones.find(o => o.codigo == valor || o.codigo == valorStr);
+          return opcion ? opcion.valor : valorStr;
         }
-        return valor.toString();
+        
+        // ✅ ÚLTIMO RECURSO: Evitar [object Object]
+        if (typeof valor === 'object') {
+          return JSON.stringify(valor);
+        }
+        
+        return valorStr;
     }
   }
 
@@ -1432,22 +1583,68 @@ export class FlowChart implements OnInit {
     console.log('🔄 DataPlantillaJson recibido:', item.dataPlantillaJson);
     console.log('🔄 CalendarioJson recibido:', item.calendarioJson);
     
-    // Parsear DataPlantillaJson para obtener los campos dinámicos
+    // ✅ MEJORADO: Parsear DataPlantillaJson para obtener los campos dinámicos
     let datos: any = {};
     let tieneDataPlantilla = false;
     
+    console.log(`📋 Procesando DataPlantillaJson para ${item.medioNombre}/${item.proveedorNombre}:`);
+    console.log(`📋 Raw DataPlantillaJson:`, JSON.stringify(item.dataPlantillaJson));
+    
     if (item.dataPlantillaJson && item.dataPlantillaJson.trim() !== '' && item.dataPlantillaJson !== 'null') {
       try {
-        datos = JSON.parse(item.dataPlantillaJson);
+        const datosRaw = JSON.parse(item.dataPlantillaJson);
+        
+        // ✅ NORMALIZAR DATOS: Procesar objetos complejos para evitar [object Object]
+        datos = {};
+        Object.keys(datosRaw).forEach(key => {
+          const valor = datosRaw[key];
+          
+          if (valor && typeof valor === 'object' && !Array.isArray(valor)) {
+            // Objeto complejo - extraer valor útil
+            if (valor.hasOwnProperty('valor')) {
+              datos[key] = valor.valor;
+            } else if (valor.hasOwnProperty('value')) {
+              datos[key] = valor.value;
+            } else if (valor.hasOwnProperty('label')) {
+              datos[key] = valor.label;
+            } else if (valor.hasOwnProperty('codigo') && valor.hasOwnProperty('descripcion')) {
+              datos[key] = valor.descripcion;
+            } else {
+              // Si es un objeto con una sola propiedad, usar ese valor
+              const keys = Object.keys(valor);
+              datos[key] = keys.length === 1 ? valor[keys[0]] : JSON.stringify(valor);
+            }
+          } else if (Array.isArray(valor) && valor.length > 0) {
+            // Array - tomar primer elemento si es complejo, o el array completo si es simple
+            const primerElemento = valor[0];
+            if (primerElemento && typeof primerElemento === 'object') {
+              datos[key] = primerElemento.valor || primerElemento.value || primerElemento.label || JSON.stringify(primerElemento);
+            } else {
+              datos[key] = valor.join(', '); // Unir elementos simples
+            }
+          } else {
+            // Valor simple - usar tal como está
+            datos[key] = valor;
+          }
+        });
+        
         tieneDataPlantilla = Object.keys(datos).length > 0;
-        console.log('✅ DataPlantillaJson parseado:', datos, 'tieneData:', tieneDataPlantilla);
+        
+        console.log('✅ DataPlantillaJson parseado y normalizado:');
+        console.log(`   📊 Total campos: ${Object.keys(datos).length}`);
+        console.log(`   📋 Campos disponibles:`, Object.keys(datos));
+        console.log(`   🔧 Datos normalizados:`, datos);
+        console.log(`   ✔️ Tiene data plantilla: ${tieneDataPlantilla}`);
       } catch (error) {
         console.error('❌ Error parseando DataPlantillaJson:', error);
+        console.error('❌ JSON que falló:', item.dataPlantillaJson);
         datos = {};
         tieneDataPlantilla = false;
       }
     } else {
-      console.log('ℹ️ DataPlantillaJson vacío o null - no se crearán columnas dinámicas');
+      console.log('ℹ️ DataPlantillaJson vacío, null o undefined');
+      console.log(`   📄 Valor recibido: "${item.dataPlantillaJson}"`);
+      console.log(`   ⚠️ NO se mostrarán columnas dinámicas para este item`);
       datos = {};
       tieneDataPlantilla = false;
     }
@@ -1674,27 +1871,6 @@ export class FlowChart implements OnInit {
   }
 
   // Métodos para el manejo de la grilla de calendario
-  abrirModalNuevoItem(): void {
-    const dialogRef = this.dialog.open(ModalNuevaPautaComponent, {
-      width: '95%',
-      maxWidth: '1400px',
-      height: '95%',
-      data: { 
-        planData: this.planData,
-        action: 'create',
-        mediosDisponibles: this.mediosDisponibles,
-        itemsExistentes: this.itemsPauta // ✅ PASAR ITEMS EXISTENTES para filtro de proveedores
-      },
-      disableClose: true
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result && result.shouldRefresh) {
-        console.log('✅ Nuevo item guardado, recargando lista');
-        this.refrescarListaItems();
-      }
-    });
-  }
 
   // Track functions para Angular
   trackByFecha(index: number, fecha: Date): string {
@@ -1714,6 +1890,35 @@ export class FlowChart implements OnInit {
   esHoy(fecha: Date): boolean {
     const hoy = new Date();
     return fecha.toDateString() === hoy.toDateString();
+  }
+
+  // ✅ NUEVA FUNCIÓN: Diagnóstico de columnas dinámicas
+  diagnosticarColumnasDinamicas(): void {
+    console.log('🔍 === DIAGNÓSTICO DE COLUMNAS DINÁMICAS ===');
+    
+    this.mediosActivos.forEach(medio => {
+      console.log(`📊 MEDIO: ${medio}`);
+      
+      const itemsDelMedio = this.itemsPorMedio[medio] || [];
+      console.log(`   📋 Items del medio: ${itemsDelMedio.length}`);
+      
+      const columnas = this.obtenerColumnasDinamicas(medio);
+      console.log(`   📋 Columnas detectadas: ${columnas.length}`, columnas.map(c => c.name));
+      
+      itemsDelMedio.forEach(item => {
+        console.log(`   🔸 Item ${item.id} (${item.proveedor}):`);
+        console.log(`      - Datos JSON: ${JSON.stringify(item.datos) || 'VACÍO'}`);
+        console.log(`      - Datos parseados:`, item.datos);
+        console.log(`      - Claves disponibles:`, Object.keys(item.datos || {}));
+        
+        columnas.forEach(campo => {
+          const valor = this.obtenerValorCampo(item, campo.name);
+          console.log(`      - ${campo.name}: "${valor}" (tipo: ${typeof valor})`);
+        });
+      });
+    });
+    
+    console.log('🔍 === FIN DIAGNÓSTICO ===');
   }
 
   // Método para formatear fechas sin desfase de zona horaria
@@ -2078,9 +2283,13 @@ export class FlowChart implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result && result.shouldRefresh) {
         console.log('✅ Item editado, recargando lista');
-        this.refrescarListaItems();
         
-        this.snackBar.open('Item actualizado exitosamente', '', {
+        // Recargar datos desde backend
+        setTimeout(() => {
+          this.refrescarListaItems();
+        }, 500);
+        
+        this.snackBar.open('✅ Item actualizado exitosamente', '', {
           duration: 3000,
           panelClass: ['success-snackbar']
         });
@@ -2105,20 +2314,112 @@ export class FlowChart implements OnInit {
     });
   }
 
-  eliminarItem(itemId: string, index: number): void {
-    if (confirm('¿Estás seguro de que quieres eliminar este item?')) {
-      // Eliminar de memoria
-      this.itemsPauta = this.itemsPauta.filter(item => item.id !== itemId);
-      
-      // Limpiar programación del item eliminado
-      delete this.programacionItems[itemId];
-      
-      this.refrescarListaItems();
-      
-      this.snackBar.open('Item eliminado exitosamente', '', { 
-        duration: 2000,
-        panelClass: ['success-snackbar']
+
+
+  // ✅ NUEVA FUNCIÓN: Guardar calendario de spots
+  guardarCalendario(): void {
+    if (!this.planData?.id || !this.planData?.version) {
+      this.snackBar.open('❌ Error: No hay datos del plan', '', { 
+        duration: 3000, 
+        panelClass: ['error-snackbar'] 
       });
+      return;
+    }
+
+    if (this.itemsPauta.length === 0) {
+      this.snackBar.open('ℹ️ No hay items para guardar', '', { 
+        duration: 2000, 
+        panelClass: ['info-snackbar'] 
+      });
+      return;
+    }
+
+    console.log('💾 === GUARDANDO CALENDARIO DE SPOTS ===');
+    console.log('📊 Total items a procesar:', this.itemsPauta.length);
+    console.log('📅 Programación actual:', this.programacionItems);
+
+    let itemsProcesados = 0;
+    let itemsExitosos = 0;
+    let itemsConErrores = 0;
+    const totalItems = this.itemsPauta.length;
+
+    // Procesar cada item
+    this.itemsPauta.forEach(item => {
+      const planMedioItemId = Number(item.id);
+      
+      if (isNaN(planMedioItemId) || planMedioItemId <= 0) {
+        console.warn('⚠️ Omitiendo item con ID inválido:', item.id);
+        itemsProcesados++;
+        itemsConErrores++;
+        this.finalizarGuardadoCalendario(itemsProcesados, totalItems, itemsExitosos, itemsConErrores);
+        return;
+      }
+
+      // Obtener programación del item
+      const programacion = this.programacionItems[item.id] || {};
+      
+      // Crear JSON de calendario
+      const calendarioJson = {
+        spotsPorFecha: programacion,
+        totalSpots: Object.values(programacion).reduce((sum, spots) => sum + spots, 0),
+        fechaActualizacion: new Date().toISOString()
+      };
+
+      const request = {
+        planMedioItemId: planMedioItemId,
+        calendarioJson: JSON.stringify(calendarioJson),
+        usuarioModifico: 'SYSTEM' // TODO: Usuario real
+      };
+
+      console.log(`💾 Guardando calendario para item ${planMedioItemId}:`, calendarioJson);
+
+      // Guardar en backend
+      this.backendMediosService.actualizarCalendarioJson(request).subscribe({
+        next: (response) => {
+          console.log(`✅ Calendario guardado para item ${planMedioItemId}:`, response);
+          itemsExitosos++;
+          itemsProcesados++;
+          this.finalizarGuardadoCalendario(itemsProcesados, totalItems, itemsExitosos, itemsConErrores);
+        },
+        error: (error) => {
+          console.error(`❌ Error guardando calendario para item ${planMedioItemId}:`, error);
+          itemsConErrores++;
+          itemsProcesados++;
+          this.finalizarGuardadoCalendario(itemsProcesados, totalItems, itemsExitosos, itemsConErrores);
+        }
+      });
+    });
+  }
+
+  private finalizarGuardadoCalendario(procesados: number, total: number, exitosos: number, errores: number): void {
+    if (procesados >= total) {
+      console.log('💾 === GUARDADO CALENDARIO FINALIZADO ===');
+      console.log(`📊 Resumen: ${exitosos} exitosos, ${errores} con errores de ${total} total`);
+      
+      if (exitosos > 0 && errores === 0) {
+        this.snackBar.open(`✅ Calendario guardado exitosamente (${exitosos} items)`, '', { 
+          duration: 3000, 
+          panelClass: ['success-snackbar'] 
+        });
+      } else if (exitosos > 0 && errores > 0) {
+        this.snackBar.open(`⚠️ Calendario guardado parcialmente (${exitosos}/${total} items)`, '', { 
+          duration: 4000, 
+          panelClass: ['warning-snackbar'] 
+        });
+      } else {
+        this.snackBar.open('❌ Error guardando el calendario', '', { 
+          duration: 3000, 
+          panelClass: ['error-snackbar'] 
+        });
+      }
+
+      // ✅ RECARGAR LA PÁGINA después de guardar
+      if (exitosos > 0) {
+        setTimeout(() => {
+          console.log('🔄 Recargando la página después de guardar...');
+          window.location.reload();
+        }, 2000);
+      }
     }
   }
 
@@ -2214,7 +2515,9 @@ export class FlowChart implements OnInit {
                 formControlName="proveedor"
                 [disabled]="data.action === 'edit'"
                 [placeholder]="cargandoProveedores ? 'Cargando proveedores...' : 'Seleccionar proveedor'">
-                <mat-option *ngFor="let proveedor of proveedoresFiltrados" [value]="proveedor.id">
+                <!-- ✅ EN MODO EDICIÓN: Mostrar todos los proveedores disponibles -->
+                <!-- ✅ EN MODO CREACIÓN: Mostrar solo proveedores filtrados (no usados) -->
+                <mat-option *ngFor="let proveedor of data.action === 'edit' ? proveedoresDisponibles : proveedoresFiltrados" [value]="proveedor.id">
                   {{ proveedor.VENDOR }}
                 </mat-option>
               </mat-select>
@@ -2225,9 +2528,14 @@ export class FlowChart implements OnInit {
                 <mat-icon class="hint-icon">lock</mat-icon>
                 El proveedor no se puede cambiar durante la edición
               </mat-hint>
+              <!-- ✅ HINTS MEJORADOS -->
               <mat-hint *ngIf="data.action === 'create' && !cargandoProveedores && proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0" class="warning-hint">
                 <mat-icon class="hint-icon">warning</mat-icon>
                 Todos los proveedores para este medio ya están en uso
+              </mat-hint>
+              <mat-hint *ngIf="data.action === 'edit' && !cargandoProveedores && proveedoresDisponibles.length > 0" class="edit-hint">
+                <mat-icon class="hint-icon">info</mat-icon>
+                Proveedor cargado: {{ obtenerNombreProveedorSeleccionado() || 'Cargando...' }}
               </mat-hint>
             </mat-form-field>
           </form>
@@ -2754,8 +3062,16 @@ export class ModalNuevaPautaComponent implements OnInit {
          }
        }
        
-       // ✅ DEBUG después de intentar setear el proveedor
-       setTimeout(() => this.debugFormulario(), 300);
+               // ✅ DEBUG después de intentar setear el proveedor
+        setTimeout(() => {
+          this.debugFormulario();
+          console.log('🔍 Estado final del formulario:', {
+            medioValue: this.seleccionForm.get('medio')?.value,
+            proveedorValue: this.seleccionForm.get('proveedor')?.value,
+            proveedoresDisponibles: this.proveedoresDisponibles.length,
+            proveedoresFiltrados: this.proveedoresFiltrados.length
+          });
+        }, 300);
      });
 
     // Cargar plantilla para este medio
@@ -2939,10 +3255,11 @@ export class ModalNuevaPautaComponent implements OnInit {
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
     const tarifaValida = this.pautaForm.get('tarifa')?.value > 0;
 
-    // ✅ En modo creación, validar que haya proveedores filtrados disponibles (solo si no está cargando)
-    const tieneProveedoresDisponibles = this.data.action === 'edit' || 
-                                       this.cargandoProveedores || 
-                                       this.proveedoresFiltrados.length > 0;
+    // ✅ En modo EDICIÓN: Solo verificar que haya proveedores disponibles
+    // ✅ En modo CREACIÓN: Validar que haya proveedores filtrados disponibles (solo si no está cargando)
+    const tieneProveedoresDisponibles = this.data.action === 'edit' ? 
+      (this.cargandoProveedores || this.proveedoresDisponibles.length > 0) :
+      (this.cargandoProveedores || this.proveedoresFiltrados.length > 0);
 
     const esValido = !!(
       medioSeleccionado && 
@@ -2954,6 +3271,19 @@ export class ModalNuevaPautaComponent implements OnInit {
       this.pautaForm.valid &&
       !this.cargandoProveedores  // ✅ No permitir guardar mientras carga proveedores
     );
+
+    console.log('🔍 puedeGuardar() debug:', {
+      modo: this.data.action,
+      medioSeleccionado: !!medioSeleccionado,
+      medioId: medioSeleccionado?.medioId,
+      proveedorId,
+      proveedorIdValido: Number(proveedorId) > 0,
+      tarifaValida,
+      tieneProveedoresDisponibles,
+      formularioValido: this.pautaForm.valid,
+      cargandoProveedores: this.cargandoProveedores,
+      resultado: esValido
+    });
 
     return esValido;
   }
@@ -2967,20 +3297,35 @@ export class ModalNuevaPautaComponent implements OnInit {
   // ✅ OBTENER NOMBRE DEL PROVEEDOR SELECCIONADO para mostrar en select deshabilitado
   obtenerNombreProveedorSeleccionado(): string {
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
-    if (!proveedorId) return '';
+    if (!proveedorId) {
+      // En modo edición, mostrar el nombre desde los datos originales si está disponible
+      return this.data.action === 'edit' && this.data.pautaData?.proveedor || '';
+    }
     
-    // Buscar primero en filtrados, luego en disponibles
-    let proveedor = this.proveedoresFiltrados.find(p => 
+    // Buscar primero en disponibles (importante para modo edición), luego en filtrados
+    let proveedor = this.proveedoresDisponibles.find(p => 
       (p.id || p.proveedorId) == proveedorId
     );
     
     if (!proveedor) {
-      proveedor = this.proveedoresDisponibles.find(p => 
+      proveedor = this.proveedoresFiltrados.find(p => 
         (p.id || p.proveedorId) == proveedorId
       );
     }
     
-    return proveedor?.VENDOR || '';
+    const nombre = proveedor?.VENDOR || '';
+    
+    // ✅ LOGGING para debugging
+    if (this.data.action === 'edit') {
+      console.log('🔍 obtenerNombreProveedorSeleccionado():', {
+        proveedorId,
+        proveedorEncontrado: !!proveedor,
+        nombre,
+        datosOriginales: this.data.pautaData?.proveedor
+      });
+    }
+    
+    return nombre;
   }
 
   // ✅ MÉTODO DE DEBUG - Mostrar estado actual del formulario
