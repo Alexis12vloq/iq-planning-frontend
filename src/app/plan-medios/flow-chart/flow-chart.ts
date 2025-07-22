@@ -21,7 +21,7 @@ import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { PlantillaPauta, CampoPlantilla, RespuestaPauta, DiaCalendario } from '../models/plantilla-pauta.model';
 import { Inject } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
-import { CrearPlanMedioItemRequest, MedioBackend, PlanMedioItemBackend, ProveedorBackend } from '../models/backend-models';
+import { CrearPlanMedioItemRequest, MedioBackend, PlanMedioItemBackend, ProveedorBackend, PlanMedioItemFlowchartBackend } from '../models/backend-models';
 import { BackendMediosService } from '../services/backend-medios.service';
 
 interface GrupoMedio {
@@ -141,7 +141,8 @@ export class FlowChart implements OnInit {
     private snackBar: MatSnackBar,
     private plantillaService: PlantillaPautaService,
     private cdr: ChangeDetectorRef,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private backendMediosService: BackendMediosService
   ) {
     const navigation = this.router.getCurrentNavigation();
     const rawPlanData = navigation?.extras?.state?.['planData'] as any;
@@ -586,23 +587,29 @@ export class FlowChart implements OnInit {
       semanas: formData['semanas'] || []
     };
 
-    // Agregar directamente a memoria
+    // Agregar directamente a memoria (temporal)
     this.itemsPauta.push(nuevaPauta);
     this.pautasGuardadas.push(nuevaPauta);
-    this.snackBar.open('Pauta guardada correctamente', '', { duration: 2000 });
+    
+    // TODO: Implementar guardado en backend
+    // this.backendMediosService.crearPlanMedioItemFlowchart(...)
+    
+    this.snackBar.open('Pauta guardada correctamente (solo local)', '', { duration: 2000 });
     this.pautaForm.reset();
     this.cdr.detectChanges();
   }
 
-  // Método eliminado - no se usa localStorage
-
   eliminarPauta(pautaId: string, index: number): void {
     if (confirm('¿Estás seguro de que deseas eliminar esta pauta?')) {
       try {
-        // Eliminar de memoria
+        // Eliminar de memoria local
         this.pautasGuardadas.splice(index, 1);
         this.itemsPauta = this.itemsPauta.filter(item => item.id !== pautaId);
-        this.snackBar.open('Pauta eliminada correctamente', '', { 
+        
+        // TODO: Implementar eliminación en backend
+        // this.backendMediosService.eliminarPlanMedioItemFlowchart(Number(pautaId))
+        
+        this.snackBar.open('Pauta eliminada correctamente (solo local)', '', { 
           duration: 2000,
           panelClass: ['success-snackbar']
         });
@@ -620,45 +627,76 @@ export class FlowChart implements OnInit {
   // Método eliminado - no se usa localStorage
 
   private cargarPautasExistentes(): void {
-    console.log('=== CARGANDO PAUTAS EXISTENTES ===');
+    console.log('=== CARGANDO PAUTAS DESDE BACKEND ===');
     console.log('Plan Data:', this.planData);
     console.log('Plan Data ID:', this.planData?.id);
     
-    if (!this.planData?.id) {
-      console.log('❌ No hay ID de plan, no se pueden cargar pautas');
+    if (!this.planData?.id || !this.planData?.version) {
+      console.log('❌ No hay ID o version del plan, no se pueden cargar pautas');
       this.pautasGuardadas = [];
       this.itemsPauta = [];
       return;
     }
     
-    try {
-      // Usar solo datos en memoria - no localStorage
-      this.pautasGuardadas = this.itemsPauta.filter((pauta: RespuestaPauta) => {
-        const match = pauta.planId === this.planData?.id;
-        console.log(`🔍 Comparando: "${pauta.planId}" === "${this.planData?.id}" => ${match}`);
-        return match;
-      });
-      
-      console.log('✅ Pautas filtradas para este plan:', this.pautasGuardadas);
-      console.log('📊 Cantidad de pautas encontradas:', this.pautasGuardadas.length);
-      
-      // Cargar items como lista simple
-      this.cargarItemsPauta();
-      
-      console.log('🎯 Items de pauta cargados FINAL:', this.itemsPauta.length);
-      console.log('🎯 Array itemsPauta actualizado:', this.itemsPauta);
-      
-      // Forzar detección de cambios múltiple
-      this.cdr.detectChanges();
-      setTimeout(() => {
+    // Cargar desde el backend
+    const planId = Number(this.planData.id);
+    const version = Number(this.planData.version);
+    
+    console.log('🔄 Cargando items FlowChart desde backend:', { planId, version });
+    
+    this.backendMediosService.getPlanMedioItemsFlowchartPorPlan(planId, version).subscribe({
+      next: (itemsFlowchart: PlanMedioItemFlowchartBackend[]) => {
+        console.log('✅ Items FlowChart recibidos del backend:', itemsFlowchart);
+        
+        if (itemsFlowchart.length > 0) {
+          // Convertir items del backend al formato local
+          this.itemsPauta = itemsFlowchart.map(item => this.convertirItemBackendALocal(item));
+          this.pautasGuardadas = [...this.itemsPauta];
+          
+          console.log('📊 Items convertidos para FlowChart:', this.itemsPauta.length);
+          
+          this.snackBar.open(`✅ ${this.itemsPauta.length} items cargados desde el backend`, '', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['success-snackbar']
+          });
+        } else {
+          console.log('ℹ️ No hay items en el backend para este plan');
+          this.itemsPauta = [];
+          this.pautasGuardadas = [];
+          
+          this.snackBar.open('ℹ️ Este plan no tiene items en FlowChart aún', '', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top'
+          });
+        }
+        
+        // Cargar items como lista simple
+        this.cargarItemsPauta();
+        
+        // Forzar detección de cambios
         this.cdr.detectChanges();
-        console.log('🔄 Detección de cambios forzada - Items en vista:', this.itemsPauta.length);
-      }, 0);
-    } catch (error) {
-      console.error('💥 Error al cargar pautas existentes:', error);
-      this.pautasGuardadas = [];
-      this.itemsPauta = [];
-    }
+        setTimeout(() => {
+          this.cdr.detectChanges();
+          console.log('🔄 Items cargados en vista:', this.itemsPauta.length);
+        }, 0);
+      },
+      error: (error: any) => {
+        console.error('❌ Error cargando items FlowChart desde backend:', error);
+        // Fallback a datos vacíos
+        this.pautasGuardadas = [];
+        this.itemsPauta = [];
+        this.cdr.detectChanges();
+        
+        this.snackBar.open('⚠️ No se pudieron cargar los items del FlowChart', 'Cerrar', {
+          duration: 4000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top'
+        });
+      }
+    });
   }
 
   // Método para refrescar la lista de forma forzada
@@ -1325,6 +1363,95 @@ export class FlowChart implements OnInit {
     }
   }
 
+  // ✅ NUEVO: Convertir item del backend al formato local de FlowChart
+  private convertirItemBackendALocal(item: PlanMedioItemFlowchartBackend): RespuestaPauta {
+    console.log('🔄 Convirtiendo item backend a local:', item);
+    
+    // Parsear DataPlantillaJson para obtener los campos dinámicos
+    let datos: any = {};
+    if (item.dataPlantillaJson) {
+      try {
+        datos = JSON.parse(item.dataPlantillaJson);
+        console.log('✅ DataPlantillaJson parseado:', datos);
+      } catch (error) {
+        console.error('❌ Error parseando DataPlantillaJson:', error);
+        datos = {};
+      }
+    }
+
+    // Parsear CalendarioJson para obtener la programación
+    let programacion: { [fecha: string]: number } = {};
+    if (item.calendarioJson) {
+      try {
+        programacion = JSON.parse(item.calendarioJson);
+        console.log('✅ CalendarioJson parseado:', programacion);
+        // Guardar programación en el objeto global
+        this.programacionItems[item.planMedioItemId.toString()] = programacion;
+      } catch (error) {
+        console.error('❌ Error parseando CalendarioJson:', error);
+        programacion = {};
+      }
+    }
+
+    // Calcular totales desde la programación
+    const totalSpotsProgramados = Object.values(programacion).reduce((sum, spots) => sum + spots, 0);
+    const valorTotal = datos.valor_total || datos.valorTotal || item.tarifa || 0;
+
+    // Crear objeto RespuestaPauta
+    const pautaLocal: RespuestaPauta = {
+      id: item.planMedioItemId.toString(),
+      planId: item.planMedioId.toString(),
+      medio: item.medioNombre,
+      proveedor: item.proveedorNombre,
+      proveedorId: item.proveedorId.toString(),
+      plantillaId: item.medioId.toString(), // Usar medioId como plantillaId
+      paisFacturacion: datos.pais || 'Default',
+      fechaCreacion: item.fechaRegistro,
+      fechaModificacion: item.fechaModificacion,
+      datos: datos,
+      totalSpots: totalSpotsProgramados || datos.total_spots || 0,
+      valorTotal: valorTotal,
+      valorNeto: datos.valor_neto || valorTotal,
+      semanas: datos.semanas || [],
+      diasSeleccionados: Object.keys(programacion).filter(fecha => programacion[fecha] > 0),
+      totalDiasSeleccionados: Object.keys(programacion).filter(fecha => programacion[fecha] > 0).length
+    };
+
+    console.log('✅ Item convertido a formato local:', pautaLocal);
+    return pautaLocal;
+  }
+
+  // ✅ NUEVO: Guardar programación en backend
+  private guardarProgramacionEnBackend(planMedioItemId: number): void {
+    const programacion = this.programacionItems[planMedioItemId.toString()];
+    
+    if (!programacion) {
+      console.log('⚠️ No hay programación para guardar para item:', planMedioItemId);
+      return;
+    }
+
+    const calendarioJson = JSON.stringify(programacion);
+    
+    const request = {
+      planMedioItemId: planMedioItemId,
+      calendarioJson: calendarioJson
+    };
+
+    console.log('💾 Guardando programación en backend:', request);
+
+    // TODO: Usar el servicio cuando esté implementado
+    // this.backendMediosService.actualizarCalendarioJson(request).subscribe({
+    //   next: (response) => {
+    //     console.log('✅ Programación guardada en backend:', response);
+    //   },
+    //   error: (error) => {
+    //     console.error('❌ Error guardando programación en backend:', error);
+    //   }
+    // });
+    
+    console.log('💾 Programación preparada para backend (pendiente implementación)');
+  }
+
   // Métodos para el manejo de la grilla de calendario
   abrirModalNuevoItem(): void {
     const dialogRef = this.dialog.open(ModalNuevaPautaComponent, {
@@ -1438,6 +1565,11 @@ export class FlowChart implements OnInit {
     
     // Actualizar automáticamente los datos de la pauta
     this.actualizarDatosPautaAutomaticamente(itemId);
+    
+    // Guardar programación en backend (si el itemId es numérico)
+    if (!isNaN(Number(itemId))) {
+      this.guardarProgramacionEnBackend(Number(itemId));
+    }
     
     // Mostrar feedback visual de guardado
     this.mostrarFeedbackGuardado();

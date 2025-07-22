@@ -158,4 +158,6 @@ export interface SpotsPorFechaData {
   spotsPorFecha: { [fecha: string]: number };
   totalSpots: number;
   valorTotal: number;
-} 
+}
+
+ 
