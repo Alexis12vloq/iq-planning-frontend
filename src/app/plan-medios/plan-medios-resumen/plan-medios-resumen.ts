@@ -1207,17 +1207,57 @@ export class PlanMediosResumen implements OnInit {
       // Generar semanas boolean basado en spots por fecha
       const semanasBoolean = this.generarSemanasBoolean();
 
+      // ✅ NUEVO: Procesar campos de flowchart
+      let spotsCalculadosFlowchart: { [fecha: string]: number } = {};
+      let pasoPorFlowchart = item.pasoPorFlowchart || false;
+      
+      // Si pasó por flowchart y tiene calendarioJson, calcular spots por semana
+      if (pasoPorFlowchart && item.calendarioJson) {
+        try {
+          const calendarioData = JSON.parse(item.calendarioJson);
+          spotsCalculadosFlowchart = this.calcularSpotsPorSemanaDesdeCalendario(calendarioData);
+          
+          // Recalcular totales basados en calendario
+          totalSpots = Object.values(spotsCalculadosFlowchart).reduce((sum: number, spots: number) => sum + (spots || 0), 0);
+          valorTotal = totalSpots * (item.tarifa || 0);
+          
+          console.log('✅ PROCESANDO DATOS DE FLOWCHART:', {
+            medio: medio,
+            proveedor: proveedor,
+            pasoPorFlowchart: pasoPorFlowchart,
+            spotsCalculados: spotsCalculadosFlowchart,
+            totalSpotsCalculado: totalSpots,
+            valorTotalCalculado: valorTotal
+          });
+        } catch (error) {
+          console.error('❌ Error procesando calendarioJson para', medio, proveedor, ':', error);
+          spotsCalculadosFlowchart = {};
+        }
+      }
+
       // Crear o actualizar el medio
       if (mediosMap.has(claveAgrupacion)) {
         const medioExistente = mediosMap.get(claveAgrupacion)!;
         medioExistente.salidas += totalSpots;
         medioExistente.valorNeto += valorTotal;
         medioExistente.soi = medioExistente.salidas > 0 ? Math.round(medioExistente.valorNeto / medioExistente.salidas) : 0;
-        // Combinar spots por fecha
-        medioExistente.spotsPorFecha = { ...medioExistente.spotsPorFecha, ...spotsPorFecha };
+        
+        // Usar spots de flowchart si está disponible, sino usar spots normales
+        if (pasoPorFlowchart && Object.keys(spotsCalculadosFlowchart).length > 0) {
+          medioExistente.spotsPorFecha = { ...medioExistente.spotsPorFecha, ...spotsCalculadosFlowchart };
+        } else {
+          medioExistente.spotsPorFecha = { ...medioExistente.spotsPorFecha, ...spotsPorFecha };
+        }
+        
         // Mantener el planMedioItemId del primer item (importante para eliminación)
         if (!medioExistente.planMedioItemId) {
           medioExistente.planMedioItemId = item.planMedioItemId;
+        }
+        
+        // Actualizar campos de flowchart
+        if (pasoPorFlowchart) {
+          medioExistente.pasoPorFlowchart = true;
+          medioExistente.calendarioJson = item.calendarioJson;
         }
       } else {
         const nuevoMedio = {
@@ -1229,12 +1269,23 @@ export class PlanMediosResumen implements OnInit {
           soi: totalSpots > 0 ? Math.round(valorTotal / totalSpots) : 0,
           semanas: semanasBoolean,
           tarifa: item.tarifa,
-          spotsPorFecha: spotsPorFecha,
-          planMedioItemId: item.planMedioItemId // Guardar referencia al backend
+          // Usar spots de flowchart si está disponible, sino usar spots normales
+          spotsPorFecha: pasoPorFlowchart && Object.keys(spotsCalculadosFlowchart).length > 0 ? spotsCalculadosFlowchart : spotsPorFecha,
+          planMedioItemId: item.planMedioItemId, // Guardar referencia al backend
+          // ✅ NUEVO: Campos de flowchart
+          pasoPorFlowchart: pasoPorFlowchart,
+          calendarioJson: item.calendarioJson
         };
 
         console.log('📊 CREANDO NUEVO MEDIO:', nuevoMedio);
         console.log('📊 Tarifa del medio:', item.tarifa);
+        if (pasoPorFlowchart) {
+          console.log('🔄 MEDIO CON DATOS DE FLOWCHART:', {
+            pasoPorFlowchart: nuevoMedio.pasoPorFlowchart,
+            spotsCalculados: Object.keys(spotsCalculadosFlowchart).length,
+            calendarioJson: !!nuevoMedio.calendarioJson
+          });
+        }
 
         mediosMap.set(claveAgrupacion, nuevoMedio);
       }
@@ -1335,6 +1386,123 @@ export class PlanMediosResumen implements OnInit {
     }
   }
 
+  /**
+   * ✅ CORREGIDO: Calcular spots por semana desde calendarioJson de flowchart
+   * Toma el JSON de spots por días y los agrupa por semanas usando la lógica existente
+   */
+  private calcularSpotsPorSemanaDesdeCalendario(calendarioData: any): { [fecha: string]: number } {
+    const spotsPorSemana: { [fecha: string]: number } = {};
+
+    try {
+      // ✅ CORRECCIÓN: Buscar el formato correcto del calendarioJson
+      let spotsPorFecha: { [fecha: string]: number } = {};
+      
+      if (calendarioData.spotsPorFecha && typeof calendarioData.spotsPorFecha === 'object') {
+        // Formato desde FlowChart: { "spotsPorFecha": {...}, "totalSpots": X }
+        spotsPorFecha = calendarioData.spotsPorFecha;
+      } else if (typeof calendarioData === 'object' && !Array.isArray(calendarioData)) {
+        // Formato directo: { "2024-01-01": 10, "2024-01-02": 15, ... }
+        spotsPorFecha = calendarioData;
+      } else {
+        console.warn('⚠️ CalendarioJson no tiene formato esperado:', calendarioData);
+        return {};
+      }
+
+      console.log('🔄 PROCESANDO CALENDARIO DE FLOWCHART:', {
+        calendarioCompleto: calendarioData,
+        spotsPorFecha: spotsPorFecha,
+        totalDias: Object.keys(spotsPorFecha).length,
+        fechasEncontradas: Object.keys(spotsPorFecha)
+      });
+
+      // Validar que hay datos para procesar
+      if (Object.keys(spotsPorFecha).length === 0) {
+        console.log('⚠️ No hay spots por fecha para procesar');
+        return {};
+      }
+
+      // ✅ CORRECCIÓN: Usar las semanas ya calculadas para agrupar los spots por día
+      this.semanasConFechas.forEach((semana, index) => {
+        let totalSpotsSemana = 0;
+        
+        // ✅ CORRECCIÓN: Convertir fechas de semana (DD/MM/YYYY) a objetos Date
+        const fechaInicioParts = semana.fechaInicio.split('/');
+        const fechaFinParts = semana.fechaFin.split('/');
+        
+        const fechaInicioSemana = new Date(
+          parseInt(fechaInicioParts[2]), // año
+          parseInt(fechaInicioParts[1]) - 1, // mes (0-based)
+          parseInt(fechaInicioParts[0]) // día
+        );
+        
+        const fechaFinSemana = new Date(
+          parseInt(fechaFinParts[2]), // año
+          parseInt(fechaFinParts[1]) - 1, // mes (0-based)
+          parseInt(fechaFinParts[0]) // día
+        );
+
+        // ✅ CORRECCIÓN: Normalizar fechas para evitar problemas de zona horaria
+        fechaInicioSemana.setHours(0, 0, 0, 0);
+        fechaFinSemana.setHours(23, 59, 59, 999);
+
+        console.log(`📅 PROCESANDO SEMANA ${semana.nombre}:`, {
+          fechaInicio: semana.fechaInicio,
+          fechaFin: semana.fechaFin,
+          fechaInicioDate: fechaInicioSemana.toISOString().split('T')[0],
+          fechaFinDate: fechaFinSemana.toISOString().split('T')[0]
+        });
+
+        // ✅ CORRECCIÓN: Sumar spots de todos los días de esta semana
+        Object.keys(spotsPorFecha).forEach(fechaStr => {
+          let fechaDia: Date;
+          
+          // ✅ CORRECCIÓN: El flowchart guarda fechas en formato YYYY-MM-DD
+          if (fechaStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            // Formato YYYY-MM-DD (desde FlowChart)
+            fechaDia = new Date(fechaStr + 'T00:00:00.000Z');
+            fechaDia.setHours(12, 0, 0, 0); // Mediodía para evitar problemas de zona horaria
+          } else if (fechaStr.includes('/')) {
+            // Formato DD/MM/YYYY (alternativo)
+            const parts = fechaStr.split('/');
+            fechaDia = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0, 0);
+          } else {
+            // Intentar parseo directo
+            fechaDia = new Date(fechaStr);
+            fechaDia.setHours(12, 0, 0, 0);
+          }
+
+          // ✅ CORRECCIÓN: Verificar si la fecha está dentro del rango de esta semana
+          if (fechaDia >= fechaInicioSemana && fechaDia <= fechaFinSemana) {
+            const spots = spotsPorFecha[fechaStr] || 0;
+            totalSpotsSemana += spots;
+            
+            console.log(`   📅 Día ${fechaStr} (${fechaDia.toDateString()}) incluido en semana ${semana.nombre}: ${spots} spots`);
+          }
+        });
+
+        // ✅ CORRECCIÓN: Guardar el total de spots de la semana (incluso si es 0 para mostrar consistencia)
+        spotsPorSemana[semana.fechaInicio] = totalSpotsSemana;
+        
+        if (totalSpotsSemana > 0) {
+          console.log(`✅ Semana ${semana.nombre} (${semana.fechaInicio}): ${totalSpotsSemana} spots`);
+        } else {
+          console.log(`📝 Semana ${semana.nombre} (${semana.fechaInicio}): 0 spots`);
+        }
+      });
+
+      console.log('✅ SPOTS POR SEMANA CALCULADOS DESDE FLOWCHART:', spotsPorSemana);
+      console.log(`📊 RESUMEN: ${Object.keys(spotsPorSemana).length} semanas procesadas`);
+      console.log(`📊 TOTAL SPOTS: ${Object.values(spotsPorSemana).reduce((sum, spots) => sum + spots, 0)}`);
+      
+      return spotsPorSemana;
+
+    } catch (error) {
+      console.error('❌ Error calculando spots por semana desde calendario:', error);
+      console.error('❌ Datos que causaron el error:', calendarioData);
+      return {};
+    }
+  }
+
   // Método para recargar el resumen después de agregar un medio
   recargarResumen(): void {
     if (this.planId) {
@@ -1424,8 +1592,42 @@ export class PlanMediosResumen implements OnInit {
     });
   }
 
+  /**
+   * ✅ NUEVO: Verificar si un medio es editable (no vino de flowchart)
+   */
+  isMedioEditable(medio: MedioPlan): boolean {
+    return !medio.pasoPorFlowchart;
+  }
+
+  /**
+   * ✅ NUEVO: Obtener mensaje de bloqueo para medios de flowchart
+   */
+  getMensajeBloqueoFlowchart(medio: MedioPlan): string {
+    if (medio.pasoPorFlowchart) {
+      return 'Este medio viene del FlowChart y no puede ser editado aquí. Los spots se calculan automáticamente desde el calendario de FlowChart.';
+    }
+    return '';
+  }
+
   // Método para actualizar spots y recalcular inversiones
   onSpotsChange(medio: MedioPlan, semanaIndex: number, event: Event): void {
+    // ✅ NUEVO: Bloquear edición si el medio vino de flowchart
+    if (medio.pasoPorFlowchart) {
+      console.warn('⚠️ Intento de editar medio que vino de flowchart bloqueado:', medio.nombre);
+      this.snackBar.open('❌ Este medio viene del FlowChart y no puede ser editado aquí', '', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['warning-snackbar']
+      });
+      
+      // Revertir el valor en el input
+      const target = event.target as HTMLInputElement;
+      const spotsActuales = this.obtenerSpotsPorFecha(medio, semanaIndex);
+      target.value = spotsActuales.toString();
+      return;
+    }
+
     const target = event.target as HTMLInputElement;
     const nuevoSpots = parseInt(target.value) || 0;
 
@@ -1627,6 +1829,48 @@ export class PlanMediosResumen implements OnInit {
 
     this.snackBar.open('ℹ️ Integración backend completada - Ver consola para detalles', '', {
       duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+      panelClass: ['info-snackbar']
+    });
+  }
+
+  /**
+   * ✅ NUEVO: Método para mostrar información de debugging sobre flowchart
+   */
+  mostrarInfoFlowchart(): void {
+    console.log('🔄 === INFORMACIÓN DE INTEGRACIÓN FLOWCHART ===');
+    
+    const mediosFlowchart = this.periodoSeleccionado?.medios?.filter(m => m.pasoPorFlowchart) || [];
+    const mediosNormales = this.periodoSeleccionado?.medios?.filter(m => !m.pasoPorFlowchart) || [];
+    
+    console.log('📊 ESTADÍSTICAS:');
+    console.log(`  ✅ Medios totales: ${this.periodoSeleccionado?.medios?.length || 0}`);
+    console.log(`  🔄 Medios de FlowChart: ${mediosFlowchart.length}`);
+    console.log(`  ✏️  Medios editables: ${mediosNormales.length}`);
+    
+    if (mediosFlowchart.length > 0) {
+      console.log('📋 MEDIOS DESDE FLOWCHART:');
+      mediosFlowchart.forEach((medio, index) => {
+        console.log(`  ${index + 1}. ${medio.nombre} - ${medio.proveedor}`);
+        console.log(`     Spots totales: ${medio.salidas}`);
+        console.log(`     Valor total: ${medio.valorNeto}`);
+        console.log(`     Tiene calendario: ${!!medio.calendarioJson}`);
+        console.log(`     Spots por semana:`, Object.keys(medio.spotsPorFecha || {}).length);
+      });
+    }
+    
+    if (mediosNormales.length > 0) {
+      console.log('✏️ MEDIOS EDITABLES:');
+      mediosNormales.forEach((medio, index) => {
+        console.log(`  ${index + 1}. ${medio.nombre} - ${medio.proveedor} (Editable)`);
+      });
+    }
+    
+    console.log('🔄 === FIN INFORMACIÓN FLOWCHART ===');
+
+    this.snackBar.open(`ℹ️ FlowChart: ${mediosFlowchart.length} medios bloqueados, ${mediosNormales.length} editables - Ver consola`, '', {
+      duration: 4000,
       horizontalPosition: 'center',
       verticalPosition: 'top',
       panelClass: ['info-snackbar']

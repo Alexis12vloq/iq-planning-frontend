@@ -770,12 +770,100 @@
     }
   }
 
+  // ✅ NUEVO: Estilos para medios que vienen de flowchart
+  .fila-flowchart {
+    background-color: #e3f2fd !important; // Fondo azul claro para diferenciarlo
+    
+    .spots-label-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      
+      .flowchart-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: #1976d2;
+        cursor: help;
+      }
+    }
+    
+    .spots-flowchart-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background-color: #bbdefb;
+      border: 1px solid #90caf9;
+      border-radius: 3px;
+      padding: 2px 4px;
+      min-height: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #1565c0;
+      cursor: help;
+      transition: background-color 0.2s ease;
+      
+      &:hover {
+        background-color: #90caf9;
+      }
+      
+      .spots-value {
+        font-weight: 600;
+      }
+      
+      .lock-icon {
+        font-size: 12px;
+        width: 12px;
+        height: 12px;
+        color: #1976d2;
+        opacity: 0.8;
+      }
+    }
+  }
+
   .fila-inversiones {
     background-color: #f9f9f9;
     
     td {
       padding: 4px 8px;
       font-size: 11px;
+    }
+    
+    // ✅ NUEVO: Estilos para inversiones de flowchart
+    &.fila-flowchart-inversiones {
+      background-color: #e8f4fd !important;
+      
+      .inversiones-label-container {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        
+        .flowchart-icon-small {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+          color: #1976d2;
+          cursor: help;
+          opacity: 0.8;
+        }
+      }
+      
+      .inversion-value {
+        &.inversion-flowchart {
+          color: #1565c0;
+          font-weight: 600;
+          background-color: rgba(33, 150, 243, 0.1);
+          padding: 1px 3px;
+          border-radius: 2px;
+          cursor: help;
+          transition: background-color 0.2s ease;
+          
+          &:hover {
+            background-color: rgba(33, 150, 243, 0.2);
+          }
+        }
+      }
     }
     
     td:first-child {
@@ -790,9 +878,6 @@
       font-size: 11px;
       color: #666;
       font-weight: 500;
-    }
-    
-    .inversiones-cell {
       text-align: right;
       font-weight: 500;
       color: #2e7d32;

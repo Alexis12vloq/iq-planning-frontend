@@ -144,17 +144,42 @@
                 </tr>
                 
                 <!-- Fila de spots -->
-                <tr *ngIf="fila.tipo === 'spots' && fila.medio" class="fila-spots">
+                <tr *ngIf="fila.tipo === 'spots' && fila.medio" 
+                    class="fila-spots"
+                    [class.fila-flowchart]="fila.medio.pasoPorFlowchart">
                   <td></td>
-                  <td>{{ fila.nombre }}</td>
+                  <td>
+                    <div class="spots-label-container">
+                      <span>{{ fila.nombre }}</span>
+                      <!-- ✅ NUEVO: Indicador visual para medios de flowchart -->
+                      <mat-icon *ngIf="fila.medio.pasoPorFlowchart" 
+                                class="flowchart-icon" 
+                                [title]="getMensajeBloqueoFlowchart(fila.medio)">
+                        analytics
+                      </mat-icon>
+                    </div>
+                  </td>
                   <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="spots-cell">
-                    <input 
-                      type="number" 
-                      class="spots-input"
-                      [value]="obtenerSpotsPorFecha(fila.medio, semanaIndex)"
-                      (blur)="onSpotsChange(fila.medio, semanaIndex, $event)"
-                      min="0"
-                      step="1">
+                    <!-- ✅ NUEVO: Input condicional basado en si viene de flowchart -->
+                    <ng-container *ngIf="!fila.medio.pasoPorFlowchart; else spotsFlowchartTemplate">
+                      <!-- Input editable para medios normales -->
+                      <input 
+                        type="number" 
+                        class="spots-input"
+                        [value]="obtenerSpotsPorFecha(fila.medio, semanaIndex)"
+                        (blur)="onSpotsChange(fila.medio, semanaIndex, $event)"
+                        min="0"
+                        step="1">
+                    </ng-container>
+                    
+                    <!-- ✅ NUEVO: Template para spots de flowchart (solo lectura) -->
+                    <ng-template #spotsFlowchartTemplate>
+                      <div class="spots-flowchart-display"
+                           [title]="getMensajeBloqueoFlowchart(fila.medio)">
+                        <span class="spots-value">{{ obtenerSpotsPorFecha(fila.medio, semanaIndex) }}</span>
+                        <mat-icon class="lock-icon">lock</mat-icon>
+                      </div>
+                    </ng-template>
                   </td>
                   <td class="valor-mensual">{{ calcularSpotsMensual(fila.medio) }}</td>
                   <td class="valor-total">{{ calcularTotalSpots(fila.medio) }}</td>
@@ -162,11 +187,27 @@
                 </tr>
                 
                 <!-- Fila de inversiones -->
-                <tr *ngIf="fila.tipo === 'inversiones' && fila.medio" class="fila-inversiones">
+                <tr *ngIf="fila.tipo === 'inversiones' && fila.medio" 
+                    class="fila-inversiones"
+                    [class.fila-flowchart-inversiones]="fila.medio.pasoPorFlowchart">
                   <td></td>
-                  <td>{{ fila.nombre }} (Tarifa: {{ fila.medio.tarifa | currency:'USD':'symbol-narrow':'1.0-0' }})</td>
+                  <td>
+                    <div class="inversiones-label-container">
+                      <span>{{ fila.nombre }} (Tarifa: {{ fila.medio.tarifa | currency:'USD':'symbol-narrow':'1.0-0' }})</span>
+                      <!-- ✅ NUEVO: Indicador para inversiones de flowchart -->
+                      <mat-icon *ngIf="fila.medio.pasoPorFlowchart" 
+                                class="flowchart-icon-small" 
+                                title="Valores calculados automáticamente desde FlowChart">
+                        analytics
+                      </mat-icon>
+                    </div>
+                  </td>
                   <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="inversiones-cell">
-                    {{ calcularInversionSemana(fila.medio, semanaIndex) | currency:'USD':'symbol-narrow':'1.0-0' }}
+                    <div class="inversion-value" 
+                         [class.inversion-flowchart]="fila.medio.pasoPorFlowchart"
+                         [title]="fila.medio.pasoPorFlowchart ? 'Valor calculado automáticamente desde FlowChart' : ''">
+                      {{ calcularInversionSemana(fila.medio, semanaIndex) | currency:'USD':'symbol-narrow':'1.0-0' }}
+                    </div>
                   </td>
                   <td class="valor-mensual">{{ calcularValorMensual(fila.medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                   <td class="valor-total">{{ calcularValorTotal(fila.medio) | currency:'USD':'symbol-narrow':'1.0-0' }}</td>

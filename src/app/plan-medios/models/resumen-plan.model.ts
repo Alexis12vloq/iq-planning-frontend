@@ -35,6 +35,9 @@ export interface MedioPlan {
     spotsPorFecha?: { [fecha: string]: number }; // Nueva propiedad para almacenar spots por fecha específica
     tarifa?: number; // Propiedad para almacenar la tarifa por spot
     planMedioItemId?: number; // Referencia al ID del backend para operaciones CRUD
+    // Campos para flowchart
+    pasoPorFlowchart?: boolean; // Flag para controlar si pasó por flowchart
+    calendarioJson?: string; // JSON con spots por días desde flowchart
 }
 
 // Interface para pasar datos desde la consulta al resumen
