@@ -164,12 +164,38 @@ $background-light: #f8f9fa;
         border-radius: 10px;
         font-weight: 500;
       }
+
+      // ✅ INDICADOR DE CAMBIOS PENDIENTES  
+      .changes-indicator {
+        margin-left: 4px;
+        font-size: 11px;
+        color: #fff3cd;
+        font-weight: 600;
+        animation: pulse-changes 1.5s infinite;
+      }
+
+      // ✅ ESTADO DE CAMBIOS PENDIENTES
+      &[ng-reflect-color="warn"] {
+        background: linear-gradient(45deg, #d84315, #ff5722) !important;
+        box-shadow: 0 0 15px rgba(213, 67, 21, 0.4);
+        
+        &:hover:not(:disabled) {
+          background: linear-gradient(45deg, #bf360c, #d84315) !important;
+          box-shadow: 0 0 20px rgba(213, 67, 21, 0.6);
+        }
+      }
     }
 
     @keyframes pulse-save {
       0% { opacity: 1; }
       50% { opacity: 0.7; }
       100% { opacity: 1; }
+    }
+
+    @keyframes pulse-changes {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+      100% { opacity: 1; transform: scale(1); }
     }
   }
 

@@ -118,6 +118,9 @@ export class FlowChart implements OnInit {
   // Pautas guardadas (mantenemos para compatibilidad)
   pautasGuardadas: RespuestaPauta[] = [];
   
+  // ✅ Control de cambios pendientes (como resumen)
+  cambiosPendientes: boolean = false;
+  
   // Medios disponibles
   mediosDisponibles: string[] = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
   
@@ -1655,12 +1658,34 @@ export class FlowChart implements OnInit {
     
     if (item.calendarioJson && item.calendarioJson.trim() !== '' && item.calendarioJson !== 'null') {
       try {
-        programacion = JSON.parse(item.calendarioJson);
-        tieneCalendario = Object.keys(programacion).length > 0;
-        console.log('✅ CalendarioJson parseado:', programacion, 'tieneCalendario:', tieneCalendario);
+        const calendarioCompleto = JSON.parse(item.calendarioJson);
         
-        // Guardar programación en el objeto global
-        this.programacionItems[item.planMedioItemId.toString()] = programacion;
+        // ✅ EXTRAER SOLO spotsPorFecha del objeto completo
+        if (calendarioCompleto.spotsPorFecha && typeof calendarioCompleto.spotsPorFecha === 'object') {
+          programacion = calendarioCompleto.spotsPorFecha;
+        } else {
+          // Si el JSON es del formato viejo (solo fechas), usarlo directamente
+          programacion = calendarioCompleto;
+        }
+        
+        // ✅ LIMPIAR programación de metadatos
+        const programacionLimpia: { [fecha: string]: number } = {};
+        Object.keys(programacion).forEach(key => {
+          // Solo incluir fechas (formato YYYY-MM-DD) y valores numéricos
+          if (/^\d{4}-\d{2}-\d{2}$/.test(key) && typeof programacion[key] === 'number') {
+            programacionLimpia[key] = programacion[key];
+          }
+        });
+        
+        programacion = programacionLimpia;
+        tieneCalendario = Object.keys(programacion).length > 0;
+        
+        console.log('✅ CalendarioJson parseado:', {
+          original: calendarioCompleto,
+          extraido: programacion,
+          fechasEncontradas: Object.keys(programacion),
+          tieneCalendario
+        });
       } catch (error) {
         console.error('❌ Error parseando CalendarioJson:', error);
         programacion = {};
@@ -1670,8 +1695,6 @@ export class FlowChart implements OnInit {
       console.log('ℹ️ CalendarioJson vacío o null - calendario se cargará con 0s');
       programacion = {};
       tieneCalendario = false;
-      // Inicializar programación vacía para este item
-      this.programacionItems[item.planMedioItemId.toString()] = {};
     }
 
     // Calcular totales desde la programación o usar valores por defecto
@@ -1679,14 +1702,27 @@ export class FlowChart implements OnInit {
     const valorTotal = datos.valor_total || datos.valorTotal || item.tarifa || 0;
     const totalSpotsDefault = totalSpotsProgramados || datos.total_spots || 1; // Al menos 1 spot por defecto
 
+    // ✅ CORREGIDO: Usar el mismo formato de ID para consistencia
+    const itemLocalId = `${item.medioNombre}-${item.proveedorNombre}-${item.planMedioItemId}`;
+    
+    // ✅ GUARDAR PROGRAMACIÓN con la clave correcta
+    if (tieneCalendario) {
+      this.programacionItems[itemLocalId] = programacion;
+      console.log(`✅ Programación guardada con clave: ${itemLocalId}`, programacion);
+    } else {
+      this.programacionItems[itemLocalId] = {};
+      console.log(`✅ Programación vacía inicializada con clave: ${itemLocalId}`);
+    }
+    
     // Crear objeto RespuestaPauta
     const pautaLocal: RespuestaPauta = {
-      id: item.planMedioItemId.toString(),
+      id: itemLocalId,
       planId: item.planMedioId.toString(),
       medio: item.medioNombre,
       proveedor: item.proveedorNombre,
       proveedorId: item.proveedorId.toString(),
       plantillaId: item.medioId.toString(), // Usar medioId como plantillaId
+      planMedioItemId: item.planMedioItemId, // ✅ ID REAL DEL BACKEND para guardarCalendario
       paisFacturacion: datos.pais || 'Default',
       fechaCreacion: item.fechaRegistro,
       fechaModificacion: item.fechaModificacion,
@@ -1944,28 +1980,31 @@ export class FlowChart implements OnInit {
   // Funciones de programación con spots numéricos
   tieneProgramacion(itemId: string, fecha: Date): boolean {
     const fechaStr = fecha.toISOString().split('T')[0];
-    const spots = this.programacionItems[itemId]?.[fechaStr] || 0;
-    return spots > 0;
+    const spots = this.programacionItems[itemId]?.[fechaStr];
+    
+    // ✅ VERIFICAR que sea un número válido mayor a 0
+    return typeof spots === 'number' && !isNaN(spots) && spots > 0;
   }
 
   obtenerSpotsPorFecha(itemId: string, fecha: Date): number | null {
     const fechaStr = fecha.toISOString().split('T')[0];
-    const programacion = this.programacionItems[itemId];
+    const programacionCompleta = this.programacionItems[itemId];
     
-    // Si no existe programación para este item, significa que CalendarioJson estaba vacío
-    if (!programacion) {
-      return 0; // Mostrar 0 cuando CalendarioJson viene vacío
+    // Si no existe programación para este item, mostrar 0
+    if (!programacionCompleta) {
+      return 0;
     }
     
-    // Si existe programación pero no hay datos para esta fecha específica
-    const spots = programacion[fechaStr];
-    if (spots === undefined || spots === null) {
-      // Si la programación existe pero no tiene datos para esta fecha, mostrar input vacío
-      return null;
+    // ✅ BUSCAR SOLO en fechas válidas
+    const spots = programacionCompleta[fechaStr];
+    
+    // Validar que sea un número válido
+    if (typeof spots === 'number' && !isNaN(spots)) {
+      return spots;
     }
     
-    // Si hay un valor específico (incluso si es 0), mostrarlo
-    return spots;
+    // Si no hay datos válidos para esta fecha, mostrar input vacío
+    return null;
   }
 
   actualizarSpotsPorFecha(itemId: string, fecha: Date, event: Event): void {
@@ -2002,20 +2041,14 @@ export class FlowChart implements OnInit {
       this.programacionItems[itemId][fechaStr] = spots;
     }
     
-    // Guardar programación en memoria (ya está en this.programacionItems)
-    
-    // Actualizar automáticamente los datos de la pauta
+    // ✅ CAMBIO PRINCIPAL: Solo actualizar en memoria, NO guardar en backend automáticamente
+    // Actualizar automáticamente los datos de la pauta local
     this.actualizarDatosPautaAutomaticamente(itemId);
     
-    // Guardar programación en backend (si el itemId es numérico)
-    if (!isNaN(Number(itemId))) {
-      this.guardarProgramacionEnBackend(Number(itemId));
-    }
+    // ✅ MARCAR CAMBIOS PENDIENTES (como hace resumen)
+    this.cambiosPendientes = true;
     
-    // Mostrar feedback visual de guardado
-    this.mostrarFeedbackGuardado();
-    
-    console.log(`📅 Spots actualizados para item ${itemId} en fecha ${fechaStr}: ${spots}`);
+    console.log(`📝 Spots actualizados en memoria para ${itemId} el ${fechaStr}: ${spots} (guardado pendiente)`);
   }
 
   /**
@@ -2193,10 +2226,22 @@ export class FlowChart implements OnInit {
   }
 
   contarTotalSpotsProgramados(itemId: string): number {
-    const programacion = this.programacionItems[itemId];
-    if (!programacion) return 0;
+    const programacionCompleta = this.programacionItems[itemId];
+    if (!programacionCompleta) {
+      return 0;
+    }
     
-    return Object.values(programacion).reduce((total, spots) => total + spots, 0);
+    // ✅ SOLO CONTAR fechas válidas con números válidos
+    let total = 0;
+    Object.keys(programacionCompleta).forEach(key => {
+      const valor = programacionCompleta[key];
+      // Solo sumar fechas válidas (YYYY-MM-DD) con valores numéricos
+      if (/^\d{4}-\d{2}-\d{2}$/.test(key) && typeof valor === 'number' && !isNaN(valor)) {
+        total += valor;
+      }
+    });
+    
+    return total;
   }
 
   calcularCostoPorDia(item: RespuestaPauta): number {
@@ -2253,15 +2298,23 @@ export class FlowChart implements OnInit {
 
   calcularTotalSpots(medio?: string): number {
     const items = medio ? this.itemsPorMedio[medio] || [] : this.itemsPauta;
-    return items.reduce((total, item) => {
+    const total = items.reduce((total, item) => {
       const spotsProgramados = this.contarTotalSpotsProgramados(item.id);
-      return total + spotsProgramados;
+      const spotsNumerico = Number(spotsProgramados) || 0; // ✅ ASEGURAR QUE ES NÚMERO
+      return total + spotsNumerico;
     }, 0);
+    
+    return total;
   }
 
   calcularTotalSpotsOriginales(medio?: string): number {
     const items = medio ? this.itemsPorMedio[medio] || [] : this.itemsPauta;
-    return items.reduce((total, item) => total + (item.totalSpots || 0), 0);
+    const total = items.reduce((total, item) => {
+      const spotsOriginales = Number(item.totalSpots) || 0; // ✅ ASEGURAR QUE ES NÚMERO
+      return total + spotsOriginales;
+    }, 0);
+    
+    return total;
   }
 
   // Funciones de acciones
@@ -2345,23 +2398,50 @@ export class FlowChart implements OnInit {
 
     // Procesar cada item
     this.itemsPauta.forEach(item => {
-      const planMedioItemId = Number(item.id);
+      const planMedioItemId = item.planMedioItemId; // ✅ USAR EL ID REAL DEL BACKEND
       
-      if (isNaN(planMedioItemId) || planMedioItemId <= 0) {
-        console.warn('⚠️ Omitiendo item con ID inválido:', item.id);
+      if (!planMedioItemId || planMedioItemId <= 0) {
+        console.warn('⚠️ Omitiendo item sin planMedioItemId válido:', {
+          itemId: item.id,
+          planMedioItemId,
+          medio: item.medio,
+          proveedor: item.proveedor
+        });
         itemsProcesados++;
         itemsConErrores++;
         this.finalizarGuardadoCalendario(itemsProcesados, totalItems, itemsExitosos, itemsConErrores);
         return;
       }
 
-      // Obtener programación del item
-      const programacion = this.programacionItems[item.id] || {};
+      // ✅ OBTENER PROGRAMACIÓN DEL ITEM (usando el ID local)  
+      const programacionCompleta = this.programacionItems[item.id] || {};
+      
+      // ✅ EXTRAER SOLO fechas y números válidos
+      const programacion: { [fecha: string]: number } = {};
+      Object.keys(programacionCompleta).forEach(key => {
+        const valor = programacionCompleta[key];
+        // Solo incluir fechas válidas con valores numéricos
+        if (/^\d{4}-\d{2}-\d{2}$/.test(key) && typeof valor === 'number' && !isNaN(valor)) {
+          programacion[key] = valor;
+        }
+      });
+      
+      const totalSpotsCalculado = Object.values(programacion).reduce((sum, spots) => sum + spots, 0);
+      
+      console.log(`🔍 === PROCESANDO ITEM ${item.medio}/${item.proveedor} ===`);
+      console.log(`📋 Item ID local: ${item.id}`);
+      console.log(`🔢 PlanMedioItemId backend: ${planMedioItemId}`);
+      console.log(`📅 Programación encontrada:`, programacion);
+      console.log(`🎯 Total spots calculado: ${totalSpotsCalculado}`);
+      
+      if (totalSpotsCalculado === 0) {
+        console.log(`⚠️ Item ${planMedioItemId} no tiene spots programados, guardando calendario vacío`);
+      }
       
       // Crear JSON de calendario
       const calendarioJson = {
         spotsPorFecha: programacion,
-        totalSpots: Object.values(programacion).reduce((sum, spots) => sum + spots, 0),
+        totalSpots: totalSpotsCalculado,
         fechaActualizacion: new Date().toISOString()
       };
 
@@ -2371,7 +2451,8 @@ export class FlowChart implements OnInit {
         usuarioModifico: 'SYSTEM' // TODO: Usuario real
       };
 
-      console.log(`💾 Guardando calendario para item ${planMedioItemId}:`, calendarioJson);
+      console.log(`💾 Request completo para backend:`, request);
+      console.log(`📤 CalendarioJson a enviar:`, request.calendarioJson);
 
       // Guardar en backend
       this.backendMediosService.actualizarCalendarioJson(request).subscribe({
@@ -2413,7 +2494,13 @@ export class FlowChart implements OnInit {
         });
       }
 
-      // ✅ RECARGAR LA PÁGINA después de guardar
+      // ✅ RESETEAR CAMBIOS PENDIENTES cuando el guardado es exitoso
+      if (exitosos > 0) {
+        this.cambiosPendientes = false;
+        console.log('✅ Cambios pendientes reseteados');
+      }
+
+      // ✅ RECARGAR LA PÁGINA después de guardar (como hace resumen)
       if (exitosos > 0) {
         setTimeout(() => {
           console.log('🔄 Recargando la página después de guardar...');
