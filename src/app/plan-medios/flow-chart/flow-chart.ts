@@ -2573,6 +2573,13 @@ export class FlowChart implements OnInit {
         </div>
       </div>
 
+      <!-- 🔍 DEBUG TEMPORAL -->
+      <div style="background: #e3f2fd; padding: 8px; margin: 8px 0; border-radius: 4px; font-size: 12px;">
+        <strong>DEBUG:</strong> Modo = {{ data.action }} | 
+        Medio = {{ data.pautaData?.medio }} | 
+        Proveedor = {{ data.pautaData?.proveedor }}
+      </div>
+
       <!-- Selección de Medio -->
       <mat-card class="selection-card">
         <mat-card-header class="compact-header">
@@ -2580,49 +2587,61 @@ export class FlowChart implements OnInit {
         </mat-card-header>
         <mat-card-content class="compact-content">
           <form [formGroup]="seleccionForm">
-            <mat-form-field class="full-width">
+            <!-- ✅ MODO EDICIÓN: Mostrar valor fijo -->
+            <mat-form-field class="full-width" *ngIf="data.action === 'edit'">
               <mat-label>Medio</mat-label>
-              <mat-select 
-                formControlName="medio" 
-                [disabled]="data.action === 'edit' || cargandoMedios">
-                <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
-                  {{ medio.nombre }}
-                </mat-option>
-              </mat-select>
-              <mat-hint *ngIf="cargandoMedios">Cargando medios...</mat-hint>
-              <mat-hint *ngIf="data.action === 'edit'" class="edit-hint">
+              <input 
+                matInput 
+                [value]="data.pautaData?.medio || 'Cargando...'"
+                readonly
+                class="readonly-input">
+              <mat-icon matSuffix>lock</mat-icon>
+              <mat-hint class="edit-hint">
                 <mat-icon class="hint-icon">lock</mat-icon>
                 El medio no se puede cambiar durante la edición
               </mat-hint>
             </mat-form-field>
 
-            <mat-form-field class="full-width" *ngIf="seleccionForm.get('medio')?.value">
-              <mat-label>Proveedor</mat-label>
-              <mat-select 
-                formControlName="proveedor"
-                [disabled]="data.action === 'edit'"
-                [placeholder]="cargandoProveedores ? 'Cargando proveedores...' : 'Seleccionar proveedor'">
-                <!-- ✅ EN MODO EDICIÓN: Mostrar todos los proveedores disponibles -->
-                <!-- ✅ EN MODO CREACIÓN: Mostrar solo proveedores filtrados (no usados) -->
-                <mat-option *ngFor="let proveedor of data.action === 'edit' ? proveedoresDisponibles : proveedoresFiltrados" [value]="proveedor.id">
-                  {{ proveedor.VENDOR }}
+            <!-- ✅ MODO CREACIÓN: Selector normal -->
+            <mat-form-field class="full-width" *ngIf="data.action !== 'edit'">
+              <mat-label>Medio</mat-label>
+              <mat-select formControlName="medio">
+                <mat-option *ngFor="let medio of mediosDisponibles" [value]="medio">
+                  {{ medio.nombre }}
                 </mat-option>
               </mat-select>
-              <mat-icon matSuffix *ngIf="data.action === 'edit'">lock</mat-icon>
-              <!-- ✅ HINTS ESPECÍFICOS POR MODO -->
-              <mat-hint *ngIf="cargandoProveedores && data.action !== 'edit'">Cargando proveedores...</mat-hint>
-              <mat-hint *ngIf="data.action === 'edit'" class="edit-hint">
+              <mat-hint *ngIf="cargandoMedios">Cargando medios...</mat-hint>
+            </mat-form-field>
+
+            <!-- ✅ MODO EDICIÓN: Mostrar valor fijo del proveedor -->
+            <mat-form-field class="full-width" *ngIf="data.action === 'edit'">
+              <mat-label>Proveedor</mat-label>
+              <input 
+                matInput 
+                [value]="data.pautaData?.proveedor || 'Cargando...'"
+                readonly
+                class="readonly-input">
+              <mat-icon matSuffix>lock</mat-icon>
+              <mat-hint class="edit-hint">
                 <mat-icon class="hint-icon">lock</mat-icon>
                 El proveedor no se puede cambiar durante la edición
               </mat-hint>
-              <!-- ✅ HINTS MEJORADOS -->
-              <mat-hint *ngIf="data.action === 'create' && !cargandoProveedores && proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0" class="warning-hint">
+            </mat-form-field>
+
+            <!-- ✅ MODO CREACIÓN: Selector normal -->
+            <mat-form-field class="full-width" *ngIf="data.action !== 'edit' && seleccionForm.get('medio')?.value">
+              <mat-label>Proveedor</mat-label>
+              <mat-select 
+                formControlName="proveedor"
+                [placeholder]="cargandoProveedores ? 'Cargando proveedores...' : 'Seleccionar proveedor'">
+                <mat-option *ngFor="let proveedor of proveedoresFiltrados" [value]="proveedor.id">
+                  {{ proveedor.VENDOR }}
+                </mat-option>
+              </mat-select>
+              <mat-hint *ngIf="cargandoProveedores">Cargando proveedores...</mat-hint>
+              <mat-hint *ngIf="!cargandoProveedores && proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0" class="warning-hint">
                 <mat-icon class="hint-icon">warning</mat-icon>
                 Todos los proveedores para este medio ya están en uso
-              </mat-hint>
-              <mat-hint *ngIf="data.action === 'edit' && !cargandoProveedores && proveedoresDisponibles.length > 0" class="edit-hint">
-                <mat-icon class="hint-icon">info</mat-icon>
-                Proveedor cargado: {{ obtenerNombreProveedorSeleccionado() || 'Cargando...' }}
               </mat-hint>
             </mat-form-field>
           </form>
@@ -2957,6 +2976,19 @@ export class FlowChart implements OnInit {
       height: 14px !important;
       color: #ff9800 !important;
     }
+
+    /* ✅ ESTILOS PARA CAMPOS READONLY */
+    .readonly-input {
+      background-color: #f5f5f5 !important;
+      color: #666 !important;
+      cursor: not-allowed !important;
+      font-weight: 500 !important;
+    }
+
+    .readonly-input:focus {
+      background-color: #f5f5f5 !important;
+      color: #666 !important;
+    }
   `]
 })
 export class ModalNuevaPautaComponent implements OnInit {
@@ -3010,6 +3042,11 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.cargandoPlantilla = false;
     this.errorPlantilla = null;
     this.plantillaActual = null;
+    
+    console.log('🚀 Iniciando ModalNuevaPautaComponent');
+    console.log('📋 Data recibida:', this.data);
+    console.log('🔧 Modo de operación:', this.data?.action);
+    console.log('📄 Datos de pauta (edición):', this.data?.pautaData);
     
     // Cargar medios desde backend
     this.cargarMediosDisponibles();
