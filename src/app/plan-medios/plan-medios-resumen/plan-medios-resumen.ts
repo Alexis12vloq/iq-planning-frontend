@@ -794,13 +794,23 @@ export class PlanMediosResumen implements OnInit {
       fechaFin: this.resumenPlan.fechaFin
     };
 
+    // ✅ PREPARAR MEDIOS EXISTENTES ACTUALIZADOS desde el período seleccionado
+    const mediosExistentes = this.periodoSeleccionado.medios.map(medio => ({
+      medio: medio.nombre,
+      proveedor: medio.proveedor,
+      tarifa: medio.tarifa,
+      planMedioItemId: medio.planMedioItemId
+    }));
+
     console.log('🔄 Abriendo modal para agregar medio:', planData);
+    console.log('📋 Medios existentes enviados al modal:', mediosExistentes);
 
     const dialogRef = this.dialog.open(ModalAgregarMedioComponent, {
       width: '600px',
       data: {
         planData,
-        numSemanas: this.semanasColumnas.length
+        numSemanas: this.semanasColumnas.length,
+        mediosExistentes // ✅ AGREGAR medios existentes actualizados
       },
       disableClose: true
     });
@@ -2005,10 +2015,11 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   private cargarMediosExistentes(): void {
-    // Priorizar datos del backend (desde el componente padre)
-    if (this.data.mediosExistentes) {
+    // ✅ PRIORIZAR datos del backend (desde el componente padre)
+    if (this.data.mediosExistentes && this.data.mediosExistentes.length > 0) {
       this.mediosExistentes = this.data.mediosExistentes;
-      console.log('📋 Medios existentes cargados desde backend:', this.mediosExistentes);
+      console.log('✅ MEDIOS EXISTENTES CARGADOS DESDE BACKEND (ACTUALIZADO):', this.mediosExistentes);
+      console.log(`📊 Total medios existentes: ${this.mediosExistentes.length}`);
     } else {
       // Fallback: cargar desde localStorage para compatibilidad temporal
       const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
@@ -2020,7 +2031,8 @@ export class ModalAgregarMedioComponent implements OnInit {
           tarifa: pauta.datos?.tarifa || 0
         }));
 
-      console.log('📋 Medios existentes cargados desde localStorage (fallback):', this.mediosExistentes);
+      console.log('⚠️ MEDIOS EXISTENTES CARGADOS DESDE LOCALSTORAGE (FALLBACK):', this.mediosExistentes);
+      console.log('ℹ️ Esto indica que el componente padre no pasó medios existentes actualizados');
     }
   }
 
@@ -2095,17 +2107,22 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   private filtrarProveedoresDisponibles(nombreMedio: string): void {
-    // Obtener proveedores ya usados para este medio
+    // ✅ OBTENER proveedores ya usados para este medio específico
     const proveedoresUsados = this.mediosExistentes
       .filter(me => me.medio === nombreMedio)
       .map(me => me.proveedor);
 
-    // Filtrar proveedores disponibles excluyendo los ya usados
+    // ✅ FILTRAR proveedores disponibles excluyendo los ya usados
     this.proveedoresFiltrados = this.proveedoresDisponibles.filter(proveedor =>
       !proveedoresUsados.includes(proveedor.VENDOR)
     );
 
-    console.log('🔍 Proveedores filtrados para', nombreMedio, ':', this.proveedoresFiltrados);
+    console.log('🔍 FILTRADO DE PROVEEDORES PARA:', nombreMedio);
+    console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
+    console.log('📋 Proveedores ya usados para este medio:', proveedoresUsados);
+    console.log('📋 Proveedores totales disponibles:', this.proveedoresDisponibles.length);
+    console.log('✅ Proveedores filtrados (sin usar):', this.proveedoresFiltrados.length);
+    console.log('📊 Lista de proveedores filtrados:', this.proveedoresFiltrados.map(p => p.VENDOR));
   }
 
   private validarCombinacionDuplicada(): void {
@@ -2116,19 +2133,28 @@ export class ModalAgregarMedioComponent implements OnInit {
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
 
       if (proveedorSeleccionado && medioSeleccionado) {
-        // Verificar si existe la combinación exacta
+        // ✅ VERIFICAR si existe la combinación exacta contra medios existentes actualizados
         this.existeCombinacion = this.mediosExistentes.some(me =>
           me.medio === medioSeleccionado.nombre &&
           me.proveedor === proveedorSeleccionado.VENDOR &&
           Math.abs(me.tarifa - valores.tarifa) < 0.01 // Comparación con tolerancia para decimales
         );
 
-        console.log('🔍 Validando combinación:', {
-          medio: medioSeleccionado.nombre,
-          proveedor: proveedorSeleccionado.VENDOR,
-          tarifa: valores.tarifa,
-          existe: this.existeCombinacion
-        });
+        console.log('🔍 VALIDANDO DUPLICADO - COMBINACIÓN A VERIFICAR:');
+        console.log('📊 Medio:', medioSeleccionado.nombre);
+        console.log('📊 Proveedor:', proveedorSeleccionado.VENDOR);
+        console.log('📊 Tarifa:', valores.tarifa);
+        console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
+        console.log('❓ Combinación ya existe:', this.existeCombinacion ? '❌ SÍ' : '✅ NO');
+        
+        if (this.existeCombinacion) {
+          const medioConflicto = this.mediosExistentes.find(me =>
+            me.medio === medioSeleccionado.nombre &&
+            me.proveedor === proveedorSeleccionado.VENDOR &&
+            Math.abs(me.tarifa - valores.tarifa) < 0.01
+          );
+          console.log('⚠️ CONFLICTO ENCONTRADO CON:', medioConflicto);
+        }
       }
     } else {
       this.existeCombinacion = false;
