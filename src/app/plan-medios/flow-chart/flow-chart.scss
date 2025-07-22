@@ -746,4 +746,43 @@ $background-light: #f8f9fa;
       border-left: 4px solid #dc3545;
     }
   }
+}
+
+// ✅ ESTILOS PARA ICONOS DE ESTADO DE PLANTILLA
+.proveedor-name {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  
+  .status-icon {
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+    flex-shrink: 0 !important;
+    
+    &.warning {
+      color: #ff9800 !important; // Naranja para advertencia (plantilla incompleta)
+      animation: pulse-warning 2s infinite;
+    }
+    
+    &.success {
+      color: #4caf50 !important; // Verde para completado
+    }
+  }
+}
+
+// Animación para advertencias
+@keyframes pulse-warning {
+  0% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7; 
+    transform: scale(1.1);
+  }
+  100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
 } 

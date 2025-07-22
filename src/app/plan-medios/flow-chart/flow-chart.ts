@@ -22,7 +22,7 @@ import { TemplateDinamicoService } from '../services/template-dinamico.service';
 import { PlantillaPauta, CampoPlantilla, RespuestaPauta, DiaCalendario } from '../models/plantilla-pauta.model';
 import { Inject } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
-import { CrearPlanMedioItemRequest, MedioBackend, PlanMedioItemBackend, ProveedorBackend, PlanMedioItemFlowchartBackend } from '../models/backend-models';
+import { CrearPlanMedioItemRequest, MedioBackend, PlanMedioItemBackend, ProveedorBackend, PlanMedioItemFlowchartBackend, CrearPlanMedioItemFlowchartRequest, ActualizarPlanMedioItemFlowchartRequest } from '../models/backend-models';
 import { BackendMediosService } from '../services/backend-medios.service';
 
 interface GrupoMedio {
@@ -580,56 +580,47 @@ export class FlowChart implements OnInit {
       return;
     }
 
-    const formData = this.pautaForm.value;
-    
-    const nuevaPauta: RespuestaPauta = {
-      id: Date.now().toString(),
-      planId: this.planData.id || '',
-      plantillaId: this.plantillaActual.id,
-      paisFacturacion: this.plantillaActual.paisFacturacion,
-      medio: this.plantillaActual.medio,
-      datos: formData,
-      fechaCreacion: new Date().toISOString(),
-      valorTotal: parseFloat(formData['valor_total']) || 0,
-      valorNeto: parseFloat(formData['valor_neto']) || 0,
-      totalSpots: parseInt(formData['total_spots']) || 1,
-      semanas: formData['semanas'] || []
-    };
-
-    // Agregar directamente a memoria (temporal)
-    this.itemsPauta.push(nuevaPauta);
-    this.pautasGuardadas.push(nuevaPauta);
-    
-    // TODO: Implementar guardado en backend
-    // this.backendMediosService.crearPlanMedioItemFlowchart(...)
-    
-    this.snackBar.open('Pauta guardada correctamente (solo local)', '', { duration: 2000 });
-    this.pautaForm.reset();
-    this.cdr.detectChanges();
+    // ⚠️ Este método está deprecated - usar el modal para crear/editar items
+    this.snackBar.open('Use el botón "Agregar Item" para crear nuevas pautas', 'OK', { duration: 3000 });
   }
 
   eliminarPauta(pautaId: string, index: number): void {
     if (confirm('¿Estás seguro de que deseas eliminar esta pauta?')) {
-      try {
-        // Eliminar de memoria local
-        this.pautasGuardadas.splice(index, 1);
-        this.itemsPauta = this.itemsPauta.filter(item => item.id !== pautaId);
-        
-        // TODO: Implementar eliminación en backend
-        // this.backendMediosService.eliminarPlanMedioItemFlowchart(Number(pautaId))
-        
-        this.snackBar.open('Pauta eliminada correctamente (solo local)', '', { 
-          duration: 2000,
-          panelClass: ['success-snackbar']
-        });
-        this.cdr.detectChanges();
-      } catch (error) {
-        console.error('Error al eliminar pauta:', error);
-        this.snackBar.open('Error al eliminar la pauta', '', { 
-          duration: 3000,
-          panelClass: ['error-snackbar']
-        });
+      const planMedioItemId = Number(pautaId);
+      
+      if (isNaN(planMedioItemId)) {
+        this.snackBar.open('Error: ID de item inválido', '', { duration: 3000, panelClass: ['error-snackbar'] });
+        return;
       }
+
+      this.backendMediosService.eliminarPlanMedioItemFlowchart(planMedioItemId).subscribe({
+        next: (response) => {
+          console.log('✅ Item eliminado del backend:', response);
+          
+          // Eliminar de memoria local después del éxito en backend
+          this.pautasGuardadas = this.pautasGuardadas.filter(item => item.id !== pautaId);
+          this.itemsPauta = this.itemsPauta.filter(item => item.id !== pautaId);
+          
+          // Limpiar programación del item eliminado
+          delete this.programacionItems[pautaId];
+          
+          this.snackBar.open('✅ Item eliminado exitosamente', '', { 
+            duration: 2000,
+            panelClass: ['success-snackbar']
+          });
+          
+          // Recargar datos para asegurar consistencia
+          this.recargarDatosFlowChart();
+          
+        },
+        error: (error) => {
+          console.error('❌ Error eliminando item del backend:', error);
+          this.snackBar.open('❌ Error al eliminar el item', '', { 
+            duration: 3000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      });
     }
   }
 
@@ -1578,6 +1569,105 @@ export class FlowChart implements OnInit {
     
     // Diagnóstico de plantillas dinámicas
     console.log('🎯 Cache plantillas dinámicas:', this.templateDinamicoService.obtenerEstadisticasCache());
+  }
+
+  // ✅ RECARGAR DATOS FlowChart desde backend
+  private recargarDatosFlowChart(): void {
+    console.log('🔄 Recargando datos FlowChart desde backend...');
+    this.cargarPautasExistentes();
+  }
+
+  // ✅ VALIDAR DUPLICADOS (medio + proveedor)
+  private validarDuplicado(medioNombre: string, proveedorId: number, itemIdExcluir?: string): boolean {
+    const duplicado = this.itemsPauta.find(item => 
+      item.medio === medioNombre && 
+      item.proveedorId === proveedorId.toString() && 
+      item.id !== itemIdExcluir
+    );
+    
+    if (duplicado) {
+      console.warn('⚠️ Item duplicado encontrado:', { medioNombre, proveedorId, duplicado });
+      return true;
+    }
+    
+    return false;
+  }
+
+  // ✅ EXTRAER TARIFA de plantilla según medio
+  private extraerTarifaDeFormulario(datosFormulario: any, medioNombre: string): number {
+    console.log('💰 Extrayendo tarifa para medio:', medioNombre, 'datos:', datosFormulario);
+    
+    let tarifa = 0;
+    
+    switch (medioNombre.toUpperCase()) {
+      case 'TV ABIERTA':
+      case 'TV NAL':
+        tarifa = parseFloat(datosFormulario['tarifaMiles'] || datosFormulario['netCost1'] || 0);
+        break;
+        
+      case 'TV PAGA':
+        tarifa = parseFloat(datosFormulario['netCost1'] || datosFormulario['invTotal'] || 0);
+        break;
+        
+      case 'TV LOCAL':
+        tarifa = parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost'] || 0);
+        break;
+        
+      case 'RADIO':
+        tarifa = parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost1'] || 0);
+        break;
+        
+      case 'REVISTA':
+      case 'PRENSA':
+        tarifa = parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost'] || 0);
+        break;
+        
+      case 'CINE':
+      case 'OOH':
+        tarifa = parseFloat(datosFormulario['tarifaBruta'] || datosFormulario['valor'] || datosFormulario['valorTotal'] || 0);
+        break;
+        
+      case 'DIGITAL':
+        tarifa = parseFloat(datosFormulario['budget'] || datosFormulario['costo'] || 0);
+        break;
+        
+      default:
+        // Buscar campos comunes como fallback
+        tarifa = parseFloat(
+          datosFormulario['tarifa'] || 
+          datosFormulario['tarifa_bruta'] || 
+          datosFormulario['valor_total'] || 
+          datosFormulario['valorTotal'] || 
+          datosFormulario['budget'] || 
+          datosFormulario['costo'] || 
+          0
+        );
+        console.warn('⚠️ Medio no reconocido, usando tarifa genérica:', tarifa);
+        break;
+    }
+    
+    console.log('💰 Tarifa extraída:', tarifa, 'para medio:', medioNombre);
+    return tarifa || 0;
+  }
+
+  // ✅ VERIFICAR SI PLANTILLA ESTÁ INCOMPLETA
+  estaPlantillaIncompleta(item: RespuestaPauta): boolean {
+    // Si el item viene del backend, verificar el flag plantillaCompletada
+    // Si no tiene datos de plantilla, está incompleta
+    const tieneDataPlantilla = item.datos && Object.keys(item.datos).length > 0;
+    return !tieneDataPlantilla;
+  }
+
+  // ✅ OBTENER ICONO DE ESTADO de plantilla
+  obtenerIconoEstadoPlantilla(item: RespuestaPauta): string {
+    return this.estaPlantillaIncompleta(item) ? 'warning' : 'check_circle';
+  }
+
+  // ✅ OBTENER TOOLTIP DE ESTADO de plantilla
+  obtenerTooltipEstadoPlantilla(item: RespuestaPauta): string {
+    return this.estaPlantillaIncompleta(item) ? 
+      'Plantilla incompleta - Debe completar la información' : 
+      'Plantilla completada';
   }
 
   // Métodos para el manejo de la grilla de calendario
@@ -2687,9 +2777,9 @@ export class ModalNuevaPautaComponent implements OnInit {
     console.log(`💾 Pauta construida para ${isEdit ? 'actualizar' : 'guardar'}:`, pauta);
     
     if (isEdit) {
-      this.actualizarPautaEnMemoria(pauta);
+      this.actualizarPautaEnBackend(pauta);
     } else {
-      this.guardarPautaEnMemoria(pauta);
+      this.guardarPautaEnBackend(pauta);
     }
     
     // Los datos se mantienen solo en memoria hasta implementar backend
@@ -2703,38 +2793,139 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.dialogRef.close({ pauta: pauta, shouldRefresh: true });
   }
 
-  private guardarPautaEnMemoria(pauta: RespuestaPauta): void {
-    try {
-      // TODO: Implementar guardado en backend con los JSON correctos
-      console.log('💾 Pauta preparada para backend:', {
-        medio: pauta.medio,
-        proveedor: pauta.proveedor,
-        dataPlantillaJson: JSON.stringify(pauta.datos),
-        calendarioJson: JSON.stringify({}) // Vacío inicialmente
-      });
-      
-      console.log('✅ Pauta guardada temporalmente en memoria del componente padre');
-      
-    } catch (error) {
-      console.error('💥 Error al preparar pauta para backend:', error);
-      throw error;
+  private guardarPautaEnBackend(pauta: RespuestaPauta): void {
+    if (!this.data.planData) {
+      throw new Error('No hay datos del plan');
     }
+
+    // Obtener información del medio y proveedor
+    const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
+    const proveedorId = Number(this.seleccionForm.get('proveedor')?.value);
+
+    if (!medioSeleccionado || !proveedorId) {
+      throw new Error('Medio y proveedor son requeridos');
+    }
+
+    // ✅ VALIDAR DUPLICADOS antes de crear
+    const parentComponent = this.getParentFlowChartComponent();
+    if (parentComponent && parentComponent.validarDuplicado(medioSeleccionado.nombre, proveedorId)) {
+      throw new Error(`Ya existe un item para ${medioSeleccionado.nombre} con este proveedor`);
+    }
+
+    // Extraer tarifa del formulario
+    const tarifa = this.extractTarifaFromFormulario(pauta.datos, medioSeleccionado.nombre);
+
+    const request: CrearPlanMedioItemFlowchartRequest = {
+      planMedioId: Number(this.data.planData.id),
+      version: Number(this.data.planData.version),
+      medioId: medioSeleccionado.medioId,
+      proveedorId: proveedorId,
+      tarifa: tarifa,
+      dataJson: JSON.stringify({}), // JSON básico
+      dataPlantillaJson: JSON.stringify(pauta.datos), // Datos de la plantilla
+      usuarioRegistro: 'SYSTEM' // TODO: Usuario real
+    };
+
+    console.log('💾 Creando item en backend:', request);
+
+    this.backendMediosService.crearPlanMedioItemFlowchart(request).subscribe({
+      next: (response) => {
+        console.log('✅ Item creado en backend:', response);
+        this.snackBar.open('✅ Item guardado exitosamente', '', { 
+          duration: 2000,
+          panelClass: ['success-snackbar']
+        });
+      },
+      error: (error) => {
+        console.error('❌ Error guardando en backend:', error);
+        throw error;
+      }
+    });
   }
 
-  private actualizarPautaEnMemoria(pautaActualizada: RespuestaPauta): void {
-    try {
-      // TODO: Implementar actualización en backend
-      console.log('🔄 Pauta actualizada preparada para backend:', {
-        id: pautaActualizada.id,
-        dataPlantillaJson: JSON.stringify(pautaActualizada.datos),
-        calendarioJson: 'mantener_existente' // No tocar el calendario desde aquí
-      });
-      
-      console.log('✅ Pauta actualizada temporalmente en memoria del componente padre');
-      
-    } catch (error) {
-      console.error('💥 Error al preparar actualización para backend:', error);
-      throw error;
+  private actualizarPautaEnBackend(pautaActualizada: RespuestaPauta): void {
+    if (!this.data.planData) {
+      throw new Error('No hay datos del plan');
+    }
+
+    // Obtener información del medio y proveedor
+    const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
+    const proveedorId = Number(this.seleccionForm.get('proveedor')?.value);
+
+    if (!medioSeleccionado || !proveedorId) {
+      throw new Error('Medio y proveedor son requeridos');
+    }
+
+    // ✅ VALIDAR DUPLICADOS antes de actualizar
+    const parentComponent = this.getParentFlowChartComponent();
+    if (parentComponent && parentComponent.validarDuplicado(medioSeleccionado.nombre, proveedorId, pautaActualizada.id)) {
+      throw new Error(`Ya existe otro item para ${medioSeleccionado.nombre} con este proveedor`);
+    }
+
+    // Extraer tarifa del formulario
+    const tarifa = this.extractTarifaFromFormulario(pautaActualizada.datos, medioSeleccionado.nombre);
+
+    const request: ActualizarPlanMedioItemFlowchartRequest = {
+      planMedioItemId: Number(pautaActualizada.id),
+      planMedioId: Number(this.data.planData.id),
+      version: Number(this.data.planData.version),
+      medioId: medioSeleccionado.medioId,
+      proveedorId: proveedorId,
+      tarifa: tarifa,
+      dataJson: JSON.stringify({}), // JSON básico
+      pasoPorFlowchart: true, // ✅ Siempre true cuando se guarda desde FlowChart
+      plantillaCompletada: true, // ✅ Siempre true cuando se completa la plantilla
+      dataPlantillaJson: JSON.stringify(pautaActualizada.datos), // Datos de la plantilla
+      usuarioModifico: 'SYSTEM' // TODO: Usuario real
+    };
+
+    console.log('🔄 Actualizando item en backend:', request);
+
+    this.backendMediosService.actualizarPlanMedioItemFlowchart(request).subscribe({
+      next: (response) => {
+        console.log('✅ Item actualizado en backend:', response);
+        this.snackBar.open('✅ Item actualizado exitosamente', '', { 
+          duration: 2000,
+          panelClass: ['success-snackbar']
+        });
+      },
+      error: (error) => {
+        console.error('❌ Error actualizando en backend:', error);
+        throw error;
+      }
+    });
+  }
+
+  // ✅ OBTENER REFERENCIA al componente padre FlowChart
+  private getParentFlowChartComponent(): any {
+    // TODO: Implementar referencia al componente padre para validaciones
+    return null;
+  }
+
+  // ✅ EXTRAER TARIFA del formulario según medio
+  private extractTarifaFromFormulario(datosFormulario: any, medioNombre: string): number {
+    console.log('💰 Extrayendo tarifa para medio:', medioNombre);
+    
+    switch (medioNombre.toUpperCase()) {
+      case 'TV ABIERTA':
+      case 'TV NAL':
+        return parseFloat(datosFormulario['tarifaMiles'] || datosFormulario['netCost1'] || 0);
+      case 'TV PAGA':
+        return parseFloat(datosFormulario['netCost1'] || datosFormulario['invTotal'] || 0);
+      case 'TV LOCAL':
+        return parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost'] || 0);
+      case 'RADIO':
+        return parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost1'] || 0);
+      case 'REVISTA':
+      case 'PRENSA':
+        return parseFloat(datosFormulario['tarifa'] || datosFormulario['netCost'] || 0);
+      case 'CINE':
+      case 'OOH':
+        return parseFloat(datosFormulario['tarifaBruta'] || datosFormulario['valor'] || datosFormulario['valorTotal'] || 0);
+      case 'DIGITAL':
+        return parseFloat(datosFormulario['budget'] || datosFormulario['costo'] || 0);
+      default:
+        return parseFloat(datosFormulario['tarifa'] || datosFormulario['valor_total'] || 0);
     }
   }
 }
@@ -2973,6 +3164,8 @@ export class ModalCalendarioPautaComponent implements OnInit {
 
   constructor(
     private dialogRef: MatDialogRef<ModalCalendarioPautaComponent>,
+    private backendMediosService: BackendMediosService,
+    private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {}
 
@@ -3052,20 +3245,48 @@ export class ModalCalendarioPautaComponent implements OnInit {
       fechaFin: this.fechaFinPlan
     };
 
-    this.actualizarCalendarioEnMemoria(pautaActualizada);
+    this.actualizarCalendarioEnBackend(pautaActualizada);
     this.dialogRef.close(true);
   }
 
-  private actualizarCalendarioEnMemoria(pautaActualizada: RespuestaPauta): void {
-    // TODO: Implementar actualización de calendario en backend
-    console.log('📅 Calendario preparado para backend:', {
-      id: pautaActualizada.id,
-      calendarioJson: JSON.stringify({
-        diasSeleccionados: pautaActualizada.diasSeleccionados,
-        totalDias: pautaActualizada.totalDiasSeleccionados
-      })
+  private actualizarCalendarioEnBackend(pautaActualizada: RespuestaPauta): void {
+    const planMedioItemId = Number(pautaActualizada.id);
+    
+    if (isNaN(planMedioItemId)) {
+      console.error('❌ ID de item inválido para actualizar calendario');
+      return;
+    }
+
+    const calendarioData = {
+      diasSeleccionados: pautaActualizada.diasSeleccionados || [],
+      totalDias: pautaActualizada.totalDiasSeleccionados || 0,
+      fechaModificacion: new Date().toISOString()
+    };
+
+    const request = {
+      planMedioItemId: planMedioItemId,
+      calendarioJson: JSON.stringify(calendarioData),
+      usuarioModifico: 'SYSTEM' // TODO: Usuario real
+    };
+
+    console.log('📅 Actualizando calendario en backend:', request);
+
+    this.backendMediosService.actualizarCalendarioJson(request).subscribe({
+      next: (response: any) => {
+        console.log('✅ Calendario actualizado en backend:', response);
+        this.snackBar.open('✅ Calendario guardado exitosamente', '', { 
+          duration: 2000,
+          panelClass: ['success-snackbar']
+        });
+      },
+      error: (error: any) => {
+        console.error('❌ Error actualizando calendario en backend:', error);
+        this.snackBar.open('❌ Error guardando el calendario', '', { 
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
     });
-    console.log('✅ Calendario actualizado temporalmente en memoria');
   }
 } 
 

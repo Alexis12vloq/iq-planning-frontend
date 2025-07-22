@@ -137,7 +137,17 @@
                     <!-- Proveedor -->
                     <div class="data-cell proveedor-col">
                       <div class="cell-content proveedor-info">
-                        <div class="proveedor-name">{{ item.proveedor || 'Sin proveedor' }}</div>
+                        <div class="proveedor-name">
+                          {{ item.proveedor || 'Sin proveedor' }}
+                          <!-- ✅ ICONO DE ESTADO DE PLANTILLA -->
+                          <mat-icon 
+                            class="status-icon"
+                            [class.warning]="estaPlantillaIncompleta(item)"
+                            [class.success]="!estaPlantillaIncompleta(item)"
+                            [matTooltip]="obtenerTooltipEstadoPlantilla(item)">
+                            {{ obtenerIconoEstadoPlantilla(item) }}
+                          </mat-icon>
+                        </div>
                         <div class="pauta-stats">{{ item.totalSpots }} spots • {{ item.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
                       </div>
                     </div>
