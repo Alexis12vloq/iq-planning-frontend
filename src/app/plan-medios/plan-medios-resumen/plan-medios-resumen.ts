@@ -2106,6 +2106,22 @@ export class PlanMediosResumen implements OnInit {
               </mat-error>
             </mat-form-field>
 
+            <mat-form-field class="full-width" *ngIf="medioForm.get('proveedor')?.value">
+              <mat-label>Seleccionar Canal</mat-label>
+              <mat-select formControlName="canal" [disabled]="cargandoCanales">
+                <mat-option *ngFor="let canal of canalesDisponibles" [value]="canal.id">
+                  {{ canal.nombre }} ({{ canal.codigo }})
+                </mat-option>
+              </mat-select>
+              <mat-hint *ngIf="cargandoCanales">Cargando canales...</mat-hint>
+              <mat-hint *ngIf="!cargandoCanales && canalesDisponibles.length === 0">
+                No hay canales disponibles para este proveedor
+              </mat-hint>
+              <mat-error *ngIf="medioForm.get('canal')?.hasError('required')">
+                El canal es obligatorio
+              </mat-error>
+            </mat-form-field>
+
             <mat-form-field class="full-width">
               <mat-label>Tarifa</mat-label>
               <input matInput type="number" formControlName="tarifa" step="0.01" min="0.01">
@@ -2269,6 +2285,10 @@ export class ModalAgregarMedioComponent implements OnInit {
   numSemanas: number = 5; // Por defecto 5 semanas
   cargandoMedios: boolean = true;
   cargandoProveedores: boolean = false;
+  
+  // Canales disponibles
+  canalesDisponibles: any[] = [];
+  cargandoCanales: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -2281,7 +2301,17 @@ export class ModalAgregarMedioComponent implements OnInit {
     this.medioForm = this.fb.group({
       medio: ['', [Validators.required]],
       proveedor: ['', [Validators.required]],
+      canal: ['', [Validators.required]],
       tarifa: [0, [Validators.required, Validators.min(0.01)]]
+    });
+
+    // Suscribirse a cambios del proveedor para cargar canales
+    this.medioForm.get('proveedor')?.valueChanges.subscribe(proveedor => {
+      if (proveedor) {
+        this.cargarCanalesPorProveedor(proveedor);
+      } else {
+        this.canalesDisponibles = [];
+      }
     });
   }
 
@@ -2371,8 +2401,57 @@ export class ModalAgregarMedioComponent implements OnInit {
         }
       );
 
-      this.medioForm.patchValue({ proveedor: '', tarifa: 0 });
+      this.medioForm.patchValue({ proveedor: '', canal: '', tarifa: 0 });
     }
+  }
+
+  cargarCanalesPorProveedor(proveedorId: string): void {
+    this.cargandoCanales = true;
+    console.log('🔄 Cargando canales para proveedor ID:', proveedorId);
+
+    // Por ahora, usar datos mock hasta que el servicio esté listo
+    setTimeout(() => {
+      // Datos mock de canales basados en el proveedor
+      const canalesMock = this.generarCanalesMock(proveedorId);
+      
+      this.canalesDisponibles = canalesMock;
+      this.cargandoCanales = false;
+      
+      console.log('✅ Canales cargados para proveedor', proveedorId, ':', this.canalesDisponibles.length);
+    }, 500);
+  }
+
+  private generarCanalesMock(proveedorId: string): any[] {
+    // Generar canales mock basados en el proveedor
+    const canalesPorProveedor: { [key: string]: any[] } = {
+      '1': [
+        { id: 1, nombre: 'Canal 1', codigo: 'C1' },
+        { id: 2, nombre: 'Canal 2', codigo: 'C2' },
+        { id: 3, nombre: 'Canal 3', codigo: 'C3' }
+      ],
+      '2': [
+        { id: 4, nombre: 'Radio FM 1', codigo: 'RF1' },
+        { id: 5, nombre: 'Radio FM 2', codigo: 'RF2' }
+      ],
+      '3': [
+        { id: 6, nombre: 'Digital Platform 1', codigo: 'DP1' },
+        { id: 7, nombre: 'Digital Platform 2', codigo: 'DP2' },
+        { id: 8, nombre: 'Social Media', codigo: 'SM' }
+      ],
+      '4': [
+        { id: 9, nombre: 'Periódico Nacional', codigo: 'PN' },
+        { id: 10, nombre: 'Revista Semanal', codigo: 'RS' }
+      ],
+      '5': [
+        { id: 11, nombre: 'Billboard Principal', codigo: 'BP' },
+        { id: 12, nombre: 'Valla Digital', codigo: 'VD' },
+        { id: 13, nombre: 'Transit Media', codigo: 'TM' }
+      ]
+    };
+
+    return canalesPorProveedor[proveedorId] || [
+      { id: 999, nombre: 'Canal Genérico', codigo: 'CG' }
+    ];
   }
 
   // Método para cargar medios desde el backend

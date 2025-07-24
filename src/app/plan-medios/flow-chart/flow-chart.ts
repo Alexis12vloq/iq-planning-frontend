@@ -16,6 +16,7 @@ import { MatDialogModule, MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angu
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatListModule } from '@angular/material/list';
 import { Router } from '@angular/router';
 import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { TemplateDinamicoService } from '../services/template-dinamico.service';
@@ -24,6 +25,8 @@ import { Inject } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { CrearPlanMedioItemRequest, MedioBackend, PlanMedioItemBackend, ProveedorBackend, PlanMedioItemFlowchartBackend, CrearPlanMedioItemFlowchartRequest, ActualizarPlanMedioItemFlowchartRequest } from '../models/backend-models';
 import { BackendMediosService } from '../services/backend-medios.service';
+import { ModalEliminarMediosComponent } from './modal-eliminar-medios.component';
+import { ConfirmDialogComponent } from './confirm-dialog.component';
 
 interface GrupoMedio {
   medio: string;
@@ -66,7 +69,8 @@ interface PlanData {
     MatDialogModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatTabsModule
+    MatTabsModule,
+    MatListModule
   ],
   templateUrl: './flow-chart.html',
   styleUrls: ['./flow-chart.scss'],
@@ -427,10 +431,10 @@ export class FlowChart implements OnInit {
           if (spotsParaEsteDia > 0) {
             const fechaStr = fecha.toISOString().split('T')[0];
             programacion[fechaStr] = spotsParaEsteDia;
-          }
-        }
-      }
-    });
+                }
+    }
+  }
+});
     
     // Guardar programación
     if (Object.keys(programacion).length > 0) {
@@ -2367,6 +2371,161 @@ export class FlowChart implements OnInit {
     });
   }
 
+  /**
+   * Elimina todos los items de un medio específico
+   */
+  eliminarMedio(medio: string, event: Event): void {
+    // Prevenir que se active la pestaña al hacer clic en el botón
+    event.stopPropagation();
+    
+    const itemsDelMedio = this.itemsPorMedio[medio] || [];
+    const cantidadItems = itemsDelMedio.length;
+    
+    if (cantidadItems === 0) {
+      this.snackBar.open('No hay items para eliminar en este medio', '', {
+        duration: 2000,
+        panelClass: ['info-snackbar']
+      });
+      return;
+    }
+
+    // Mostrar confirmación con el nuevo componente
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '500px',
+      data: {
+        message: `¿Estás seguro de que quieres eliminar todo el medio "${medio}"?`,
+        details: [
+          `Esta acción eliminará ${cantidadItems} item(s)`,
+          `Medio: ${medio}`,
+          ...itemsDelMedio.map(item => `• ${item.proveedor || 'Sin proveedor'}`)
+        ],
+        confirmText: 'Eliminar Medio'
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(confirmado => {
+      if (confirmado) {
+        console.log(`🗑️ Confirmada eliminación del medio: ${medio} con ${cantidadItems} items`);
+        this.eliminarItemsPorMedio(medio);
+      }
+    });
+  }
+
+  /**
+   * Elimina todos los items de un medio específico
+   */
+  private eliminarItemsPorMedio(medio: string): void {
+    const itemsDelMedio = this.itemsPorMedio[medio] || [];
+    
+    if (itemsDelMedio.length === 0) {
+      console.log(`⚠️ No hay items para eliminar del medio: ${medio}`);
+      return;
+    }
+
+    let itemsEliminados = 0;
+    let itemsConErrores = 0;
+
+    // Procesar cada item del medio
+    itemsDelMedio.forEach(item => {
+      const planMedioItemId = item.planMedioItemId;
+      
+      if (!planMedioItemId || planMedioItemId <= 0) {
+        console.warn(`⚠️ Item ${item.id} no tiene planMedioItemId válido, eliminando solo de memoria`);
+        // Eliminar de memoria local
+        this.itemsPauta = this.itemsPauta.filter(i => i.id !== item.id);
+        delete this.programacionItems[item.id];
+        itemsEliminados++;
+        return;
+      }
+
+      // Eliminar del backend
+      this.backendMediosService.eliminarPlanMedioItemFlowchart(planMedioItemId).subscribe({
+        next: (response) => {
+          console.log(`✅ Item ${planMedioItemId} eliminado del backend:`, response);
+          
+          if (response.success) {
+            // Eliminar de memoria local
+            this.itemsPauta = this.itemsPauta.filter(i => i.id !== item.id);
+            delete this.programacionItems[item.id];
+            itemsEliminados++;
+          } else {
+            console.error(`❌ Error del servidor al eliminar item ${planMedioItemId}:`, response.message);
+            itemsConErrores++;
+          }
+          
+          this.finalizarEliminacionMedio(medio, itemsDelMedio.length, itemsEliminados, itemsConErrores);
+        },
+        error: (error) => {
+          console.error(`❌ Error eliminando item ${planMedioItemId} del backend:`, error);
+          itemsConErrores++;
+          this.finalizarEliminacionMedio(medio, itemsDelMedio.length, itemsEliminados, itemsConErrores);
+        }
+      });
+    });
+  }
+
+  /**
+   * Finaliza el proceso de eliminación de medio
+   */
+  private finalizarEliminacionMedio(medio: string, totalItems: number, eliminados: number, errores: number): void {
+    if (eliminados + errores >= totalItems) {
+      console.log(`🗑️ === ELIMINACIÓN DE MEDIO FINALIZADA ===`);
+      console.log(`📊 Medio: ${medio}`);
+      console.log(`📊 Resumen: ${eliminados} eliminados, ${errores} con errores de ${totalItems} total`);
+
+      // Recargar la vista
+      this.refrescarListaItems();
+
+      if (eliminados > 0 && errores === 0) {
+        this.snackBar.open(`✅ Medio "${medio}" eliminado exitosamente (${eliminados} items)`, '', {
+          duration: 4000,
+          panelClass: ['success-snackbar']
+        });
+      } else if (eliminados > 0 && errores > 0) {
+        this.snackBar.open(`⚠️ Medio "${medio}" eliminado parcialmente (${eliminados}/${totalItems} items)`, '', {
+          duration: 4000,
+          panelClass: ['warning-snackbar']
+        });
+      } else {
+        this.snackBar.open(`❌ Error eliminando el medio "${medio}"`, '', {
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    }
+  }
+
+  /**
+   * Abre el modal para eliminar medios
+   */
+  abrirModalEliminarMedios(): void {
+    const dialogRef = this.dialog.open(ModalEliminarMediosComponent, {
+      width: '600px',
+      data: {
+        mediosActivos: this.mediosActivos,
+        itemsPorMedio: this.itemsPorMedio
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.mediosEliminados && result.mediosEliminados.length > 0) {
+        console.log('✅ Medios eliminados desde modal:', result.mediosEliminados);
+        
+        // Recargar la vista
+        setTimeout(() => {
+          this.refrescarListaItems();
+        }, 500);
+        
+        this.snackBar.open(`✅ ${result.mediosEliminados.length} medio(s) eliminado(s) exitosamente`, '', {
+          duration: 4000,
+          panelClass: ['success-snackbar']
+        });
+      }
+    });
+  }
+
 
 
   // ✅ NUEVA FUNCIÓN: Guardar calendario de spots
@@ -2642,6 +2801,38 @@ export class FlowChart implements OnInit {
               <mat-hint *ngIf="!cargandoProveedores && proveedoresFiltrados.length === 0 && proveedoresDisponibles.length > 0" class="warning-hint">
                 <mat-icon class="hint-icon">warning</mat-icon>
                 Todos los proveedores para este medio ya están en uso
+              </mat-hint>
+            </mat-form-field>
+
+            <!-- ✅ MODO EDICIÓN: Mostrar valor fijo del canal -->
+            <mat-form-field class="full-width" *ngIf="data.action === 'edit'">
+              <mat-label>Canal</mat-label>
+              <input 
+                matInput 
+                [value]="data.pautaData?.canal || 'Cargando...'"
+                readonly
+                class="readonly-input">
+              <mat-icon matSuffix>lock</mat-icon>
+              <mat-hint class="edit-hint">
+                <mat-icon class="hint-icon">lock</mat-icon>
+                El canal no se puede cambiar durante la edición
+              </mat-hint>
+            </mat-form-field>
+
+            <!-- ✅ MODO CREACIÓN: Selector de canal -->
+            <mat-form-field class="full-width" *ngIf="data.action !== 'edit' && seleccionForm.get('proveedor')?.value">
+              <mat-label>Canal</mat-label>
+              <mat-select 
+                formControlName="canal"
+                [placeholder]="cargandoCanales ? 'Cargando canales...' : 'Seleccionar canal'">
+                <mat-option *ngFor="let canal of canalesDisponibles" [value]="canal.id">
+                  {{ canal.nombre }} ({{ canal.codigo }})
+                </mat-option>
+              </mat-select>
+              <mat-hint *ngIf="cargandoCanales">Cargando canales...</mat-hint>
+              <mat-hint *ngIf="!cargandoCanales && canalesDisponibles.length === 0" class="warning-hint">
+                <mat-icon class="hint-icon">warning</mat-icon>
+                No hay canales disponibles para este proveedor
               </mat-hint>
             </mat-form-field>
           </form>
@@ -3006,6 +3197,10 @@ export class ModalNuevaPautaComponent implements OnInit {
   proveedoresFiltrados: any[] = []; // ✅ FILTRADOS para evitar duplicados
   mediosExistentes: any[] = []; // ✅ ITEMS YA CREADOS para validar duplicados
   
+  // Canales disponibles
+  canalesDisponibles: any[] = [];
+  cargandoCanales: boolean = false;
+  
   // Estados de carga
   cargandoMedios: boolean = true;
   cargandoProveedores: boolean = false;
@@ -3021,7 +3216,8 @@ export class ModalNuevaPautaComponent implements OnInit {
   ) {
     this.seleccionForm = this.fb.group({
       medio: [''],
-      proveedor: ['']
+      proveedor: [''],
+      canal: ['']
     });
 
     this.seleccionForm.get('medio')?.valueChanges.subscribe(medioSeleccionado => {
@@ -3030,10 +3226,21 @@ export class ModalNuevaPautaComponent implements OnInit {
         this.onMedioChange(medioSeleccionado);
       } else {
         this.proveedoresDisponibles = [];
+        this.canalesDisponibles = [];
         this.plantillaActual = null;
         this.errorPlantilla = null;
         this.cargandoPlantilla = false;
         this.pautaForm = this.fb.group({});
+      }
+    });
+
+    this.seleccionForm.get('proveedor')?.valueChanges.subscribe(proveedorSeleccionado => {
+      if (proveedorSeleccionado) {
+        console.log('🔄 Proveedor seleccionado:', proveedorSeleccionado);
+        this.onProveedorChange(proveedorSeleccionado);
+      } else {
+        this.canalesDisponibles = [];
+        this.seleccionForm.patchValue({ canal: '' });
       }
     });
   }
@@ -3377,6 +3584,7 @@ export class ModalNuevaPautaComponent implements OnInit {
   puedeGuardar(): boolean {
     const medioSeleccionado = this.seleccionForm.get('medio')?.value;
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
+    const canalId = this.seleccionForm.get('canal')?.value;
     const tarifaValida = this.pautaForm.get('tarifa')?.value > 0;
 
     // ✅ En modo EDICIÓN: Solo verificar que haya proveedores disponibles
@@ -3385,15 +3593,24 @@ export class ModalNuevaPautaComponent implements OnInit {
       (this.cargandoProveedores || this.proveedoresDisponibles.length > 0) :
       (this.cargandoProveedores || this.proveedoresFiltrados.length > 0);
 
+    // ✅ Validar canales disponibles
+    const tieneCanalesDisponibles = this.data.action === 'edit' ? 
+      (this.cargandoCanales || this.canalesDisponibles.length > 0) :
+      (this.cargandoCanales || this.canalesDisponibles.length > 0);
+
     const esValido = !!(
       medioSeleccionado && 
       medioSeleccionado.medioId && 
       proveedorId && 
       Number(proveedorId) > 0 &&
+      canalId &&
+      Number(canalId) > 0 &&
       tarifaValida &&
       tieneProveedoresDisponibles &&
+      tieneCanalesDisponibles &&
       this.pautaForm.valid &&
-      !this.cargandoProveedores  // ✅ No permitir guardar mientras carga proveedores
+      !this.cargandoProveedores &&  // ✅ No permitir guardar mientras carga proveedores
+      !this.cargandoCanales  // ✅ No permitir guardar mientras carga canales
     );
 
     console.log('🔍 puedeGuardar() debug:', {
@@ -3402,10 +3619,14 @@ export class ModalNuevaPautaComponent implements OnInit {
       medioId: medioSeleccionado?.medioId,
       proveedorId,
       proveedorIdValido: Number(proveedorId) > 0,
+      canalId,
+      canalIdValido: Number(canalId) > 0,
       tarifaValida,
       tieneProveedoresDisponibles,
+      tieneCanalesDisponibles,
       formularioValido: this.pautaForm.valid,
       cargandoProveedores: this.cargandoProveedores,
+      cargandoCanales: this.cargandoCanales,
       resultado: esValido
     });
 
@@ -3452,6 +3673,32 @@ export class ModalNuevaPautaComponent implements OnInit {
     return nombre;
   }
 
+  // ✅ OBTENER NOMBRE DEL CANAL SELECCIONADO para mostrar en select deshabilitado
+  obtenerNombreCanalSeleccionado(): string {
+    const canalId = this.seleccionForm.get('canal')?.value;
+    if (!canalId) {
+      // En modo edición, mostrar el nombre desde los datos originales si está disponible
+      return this.data.action === 'edit' && this.data.pautaData?.canal || '';
+    }
+    
+    // Buscar el canal en la lista de canales disponibles
+    const canal = this.canalesDisponibles.find(c => c.id == canalId);
+    
+    const nombre = canal ? `${canal.nombre} (${canal.codigo})` : '';
+    
+    // ✅ LOGGING para debugging
+    if (this.data.action === 'edit') {
+      console.log('🔍 obtenerNombreCanalSeleccionado():', {
+        canalId,
+        canalEncontrado: !!canal,
+        nombre,
+        datosOriginales: this.data.pautaData?.canal
+      });
+    }
+    
+    return nombre;
+  }
+
   // ✅ MÉTODO DE DEBUG - Mostrar estado actual del formulario
   debugFormulario(): void {
     console.log('🔍 === DEBUG FORMULARIO ===');
@@ -3485,7 +3732,7 @@ export class ModalNuevaPautaComponent implements OnInit {
     if (medioSeleccionado && medioSeleccionado.nombre) {
       this.cargandoProveedores = true;
       console.log('🔄 Cargando proveedores para medio:', medioSeleccionado.nombre);
-      this.seleccionForm.patchValue({ proveedor: '' });
+      this.seleccionForm.patchValue({ proveedor: '', canal: '' });
       
       // ✅ RECARGAR medios existentes antes de filtrar proveedores
       this.cargarMediosExistentes();
@@ -3493,6 +3740,16 @@ export class ModalNuevaPautaComponent implements OnInit {
       this.cargarProveedoresPorMedio(medioSeleccionado.medioId, medioSeleccionado.nombre);
       this.cargarPlantillaPorMedio(medioSeleccionado.nombre);
     }
+  }
+
+  onProveedorChange(proveedorSeleccionado: number): void {
+    console.log('🔄 onProveedorChange ejecutado con:', proveedorSeleccionado);
+    
+    // Limpiar selección de canal
+    this.seleccionForm.patchValue({ canal: '' });
+    
+    // Cargar canales para el proveedor seleccionado
+    this.cargarCanalesPorProveedor(proveedorSeleccionado);
   }
 
   cargarProveedoresPorMedio(medioId: number, nombreMedio: string, callback?: () => void): void {
@@ -3564,6 +3821,55 @@ export class ModalNuevaPautaComponent implements OnInit {
     console.log('📋 Proveedores totales disponibles:', this.proveedoresDisponibles.length);
     console.log('✅ Proveedores filtrados (sin usar):', this.proveedoresFiltrados.length);
     console.log('📊 Lista de proveedores filtrados:', this.proveedoresFiltrados.map(p => p.VENDOR));
+  }
+
+  cargarCanalesPorProveedor(proveedorId: number): void {
+    this.cargandoCanales = true;
+    console.log('🔄 Cargando canales para proveedor ID:', proveedorId);
+
+    // Por ahora, usar datos mock hasta que el servicio esté listo
+    setTimeout(() => {
+      // Datos mock de canales basados en el proveedor
+      const canalesMock = this.generarCanalesMock(proveedorId);
+      
+      this.canalesDisponibles = canalesMock;
+      this.cargandoCanales = false;
+      
+      console.log('✅ Canales cargados para proveedor', proveedorId, ':', this.canalesDisponibles.length);
+    }, 500);
+  }
+
+  private generarCanalesMock(proveedorId: number): any[] {
+    // Generar canales mock basados en el proveedor
+    const canalesPorProveedor: { [key: number]: any[] } = {
+      1: [
+        { id: 1, nombre: 'Canal 1', codigo: 'C1' },
+        { id: 2, nombre: 'Canal 2', codigo: 'C2' },
+        { id: 3, nombre: 'Canal 3', codigo: 'C3' }
+      ],
+      2: [
+        { id: 4, nombre: 'Radio FM 1', codigo: 'RF1' },
+        { id: 5, nombre: 'Radio FM 2', codigo: 'RF2' }
+      ],
+      3: [
+        { id: 6, nombre: 'Digital Platform 1', codigo: 'DP1' },
+        { id: 7, nombre: 'Digital Platform 2', codigo: 'DP2' },
+        { id: 8, nombre: 'Social Media', codigo: 'SM' }
+      ],
+      4: [
+        { id: 9, nombre: 'Periódico Nacional', codigo: 'PN' },
+        { id: 10, nombre: 'Revista Semanal', codigo: 'RS' }
+      ],
+      5: [
+        { id: 11, nombre: 'Billboard Principal', codigo: 'BP' },
+        { id: 12, nombre: 'Valla Digital', codigo: 'VD' },
+        { id: 13, nombre: 'Transit Media', codigo: 'TM' }
+      ]
+    };
+
+    return canalesPorProveedor[proveedorId] || [
+      { id: 999, nombre: 'Canal Genérico', codigo: 'CG' }
+    ];
   }
 
   obtenerTipoCampo(campo: CampoPlantilla): string {

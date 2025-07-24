@@ -70,6 +70,17 @@
       mat-raised-button 
       color="warn" 
       class="action-btn"
+      [disabled]="mediosActivos.length === 0"
+      (click)="abrirModalEliminarMedios()"
+      matTooltip="Eliminar medios completos">
+      <mat-icon>delete_sweep</mat-icon>
+      Eliminar Medios
+    </button>
+
+    <button 
+      mat-raised-button 
+      color="warn" 
+      class="action-btn"
       (click)="onRegresar()">
       <mat-icon>arrow_back</mat-icon>
       Regresar
@@ -81,6 +92,19 @@
     <!-- Pestañas por Medio -->
     <mat-tab-group class="medios-tabs" *ngIf="mediosActivos.length > 0">
       <mat-tab *ngFor="let medio of mediosActivos" [label]="medio + ' (' + itemsPorMedio[medio].length + ')'">
+        <ng-template matTabLabel>
+          <div class="tab-header">
+            <span>{{ medio }} ({{ itemsPorMedio[medio].length }})</span>
+            <button 
+              mat-icon-button 
+              class="delete-medium-btn"
+              (click)="eliminarMedio(medio, $event)"
+              matTooltip="Eliminar todo el medio"
+              title="Eliminar todo el medio">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </ng-template>
         <ng-template matTabContent>
           
           <!-- Contenedor con scroll horizontal y vertical para cada medio -->

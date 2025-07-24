@@ -43,6 +43,8 @@ export interface RespuestaPauta {
   medio: string;
   proveedor?: string;
   proveedorId?: string;
+  canal?: string;
+  canalId?: string;
   planMedioItemId?: number; // ID del backend PlanMedioItem
   datos: { [key: string]: any }; // Respuestas dinámicas del formulario
   fechaCreacion: string;

@@ -1389,6 +1389,26 @@ export class PlanMediosNuevaPauta implements OnInit {
                 El proveedor no se puede cambiar durante la edición
               </mat-hint>
             </mat-form-field>
+
+            <mat-form-field class="full-width" *ngIf="seleccionForm.get('proveedor')?.value">
+              <mat-label>Canal</mat-label>
+              <mat-select 
+                formControlName="canal"
+                [disabled]="data.action === 'edit'"
+                [placeholder]="cargandoCanales ? 'Cargando canales...' : 'Seleccionar canal'">
+                <mat-option *ngFor="let canal of canalesDisponibles" [value]="canal.id">
+                  {{ canal.nombre }} ({{ canal.codigo }})
+                </mat-option>
+              </mat-select>
+              <mat-hint *ngIf="cargandoCanales">Cargando canales...</mat-hint>
+              <mat-hint *ngIf="!cargandoCanales && canalesDisponibles.length === 0" class="warning-hint">
+                <mat-icon class="hint-icon">warning</mat-icon>
+                No hay canales disponibles para este proveedor
+              </mat-hint>
+              <mat-hint *ngIf="data.action === 'edit'">
+                El canal no se puede cambiar durante la edición
+              </mat-hint>
+            </mat-form-field>
           </form>
         </mat-card-content>
       </mat-card>
@@ -1647,6 +1667,10 @@ export class ModalNuevaPautaComponent implements OnInit {
   
   // Proveedores disponibles para el medio seleccionado
   proveedoresDisponibles: any[] = [];
+  
+  // Canales disponibles para el proveedor seleccionado
+  canalesDisponibles: any[] = [];
+  cargandoCanales: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -1657,20 +1681,31 @@ export class ModalNuevaPautaComponent implements OnInit {
   ) {
     this.seleccionForm = this.fb.group({
       medio: [''],
-      proveedor: ['']
+      proveedor: [''],
+      canal: ['']
     });
 
     this.seleccionForm.get('medio')?.valueChanges.subscribe(medio => {
       if (medio && medio.trim()) {
         this.cargarProveedoresPorMedio(medio);
-        this.seleccionForm.patchValue({ proveedor: '' });
+        this.seleccionForm.patchValue({ proveedor: '', canal: '' });
         this.cargarPlantillaPorMedio(medio);
       } else {
         this.proveedoresDisponibles = [];
+        this.canalesDisponibles = [];
         this.plantillaActual = null;
         this.errorPlantilla = null;
         this.cargandoPlantilla = false;
         this.pautaForm = this.fb.group({});
+      }
+    });
+
+    this.seleccionForm.get('proveedor')?.valueChanges.subscribe(proveedor => {
+      if (proveedor && proveedor.trim()) {
+        this.cargarCanalesPorProveedor(proveedor);
+        this.seleccionForm.patchValue({ canal: '' });
+      } else {
+        this.canalesDisponibles = [];
       }
     });
   }
@@ -1688,10 +1723,12 @@ export class ModalNuevaPautaComponent implements OnInit {
       console.log('🔄 Modo edición detectado, cargando datos:', this.data.pautaData);
       this.seleccionForm.patchValue({
         medio: this.data.pautaData.medio,
-        proveedor: this.data.pautaData.proveedorId || ''
+        proveedor: this.data.pautaData.proveedorId || '',
+        canal: this.data.pautaData.canalId || ''
       });
-      // Cargar proveedores y plantilla automáticamente en modo edición
+      // Cargar proveedores, canales y plantilla automáticamente en modo edición
       this.cargarProveedoresPorMedio(this.data.pautaData.medio);
+      this.cargarCanalesPorProveedor(this.data.pautaData.proveedorId || '');
       this.cargarPlantillaPorMedio(this.data.pautaData.medio);
     }
   }
@@ -1829,6 +1866,55 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
   }
 
+  cargarCanalesPorProveedor(proveedor: string): void {
+    this.cargandoCanales = true;
+    console.log('🔄 Cargando canales para proveedor:', proveedor);
+
+    // Por ahora, usar datos mock hasta que el servicio esté listo
+    setTimeout(() => {
+      // Datos mock de canales basados en el proveedor
+      const canalesMock = this.generarCanalesMock(proveedor);
+      
+      this.canalesDisponibles = canalesMock;
+      this.cargandoCanales = false;
+      
+      console.log('✅ Canales cargados para proveedor', proveedor, ':', this.canalesDisponibles.length);
+    }, 500);
+  }
+
+  private generarCanalesMock(proveedor: string): any[] {
+    // Generar canales mock basados en el proveedor
+    const canalesPorProveedor: { [key: string]: any[] } = {
+      'TV NAL': [
+        { id: 1, nombre: 'Canal 1', codigo: 'C1' },
+        { id: 2, nombre: 'Canal 2', codigo: 'C2' },
+        { id: 3, nombre: 'Canal 3', codigo: 'C3' }
+      ],
+      'Radio': [
+        { id: 4, nombre: 'Radio FM 1', codigo: 'RF1' },
+        { id: 5, nombre: 'Radio FM 2', codigo: 'RF2' }
+      ],
+      'Digital': [
+        { id: 6, nombre: 'Digital Platform 1', codigo: 'DP1' },
+        { id: 7, nombre: 'Digital Platform 2', codigo: 'DP2' },
+        { id: 8, nombre: 'Social Media', codigo: 'SM' }
+      ],
+      'Prensa': [
+        { id: 9, nombre: 'Periódico Nacional', codigo: 'PN' },
+        { id: 10, nombre: 'Revista Semanal', codigo: 'RS' }
+      ],
+      'OOH': [
+        { id: 11, nombre: 'Billboard Principal', codigo: 'BP' },
+        { id: 12, nombre: 'Valla Digital', codigo: 'VD' },
+        { id: 13, nombre: 'Transit Media', codigo: 'TM' }
+      ]
+    };
+
+    return canalesPorProveedor[proveedor] || [
+      { id: 999, nombre: 'Canal Genérico', codigo: 'CG' }
+    ];
+  }
+
   obtenerTipoCampo(campo: CampoPlantilla): string {
     switch (campo.type) {
       case 'integer':
@@ -1873,6 +1959,14 @@ export class ModalNuevaPautaComponent implements OnInit {
       proveedorNombre = proveedor ? proveedor.VENDOR : '';
     }
 
+    // Obtener información del canal seleccionado
+    const canalId = this.seleccionForm.get('canal')?.value;
+    let canalNombre = '';
+    if (canalId) {
+      const canal = this.canalesDisponibles.find(c => c.id === canalId);
+      canalNombre = canal ? `${canal.nombre} (${canal.codigo})` : '';
+    }
+
     const pauta: RespuestaPauta = {
       id: isEdit ? this.data.pautaData.id : Date.now().toString(),
       planId: planId,
@@ -1881,6 +1975,8 @@ export class ModalNuevaPautaComponent implements OnInit {
       medio: this.plantillaActual.medio,
       proveedor: proveedorNombre,
       proveedorId: proveedorId,
+      canal: canalNombre,
+      canalId: canalId,
       datos: valores,
       fechaCreacion: isEdit ? this.data.pautaData.fechaCreacion : new Date().toISOString(),
       fechaModificacion: isEdit ? new Date().toISOString() : undefined,
