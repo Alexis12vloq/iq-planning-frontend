@@ -600,9 +600,14 @@ export class FlowChart implements OnInit {
     const planMedioItemId = Number(itemId);
     
     if (isNaN(planMedioItemId) || planMedioItemId <= 0) {
-      this.snackBar.open('❌ Error: ID de item inválido', '', { 
-        duration: 3000, 
-        panelClass: ['error-snackbar'] 
+      // Eliminar solo de memoria si el id no es válido para backend
+      this.itemsPauta = this.itemsPauta.filter(item => item.id !== itemId);
+      this.pautasGuardadas = this.pautasGuardadas.filter(item => item.id !== itemId);
+      delete this.programacionItems[itemId];
+      this.refrescarListaItems();
+      this.snackBar.open('Item eliminado solo de memoria (no existía en backend)', '', { 
+        duration: 2000,
+        panelClass: ['info-snackbar'] 
       });
       return;
     }

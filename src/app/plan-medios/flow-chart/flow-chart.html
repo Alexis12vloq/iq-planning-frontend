@@ -165,7 +165,7 @@
                         <button 
                           mat-icon-button 
                           class="action-delete-button"
-                          (click)="eliminarItem(item.id, itemIndex)"
+                          (click)="eliminarItem((item.planMedioItemId ? item.planMedioItemId : item.id).toString(), itemIndex)"
                           matTooltip="Eliminar">
                           <mat-icon>delete</mat-icon>
                         </button>
