@@ -170,18 +170,10 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private verificarYRecargarDatos(): void {
-    // Si tenemos un planId, verificar que los datos estén cargados correctamente
+    // Si tenemos un planId, recargar los datos
     if (this.planId) {
-      // Verificar si hay medios cargados
-      const tieneMedias = this.periodoSeleccionado && this.periodoSeleccionado.medios && this.periodoSeleccionado.medios.length > 0;
-
-      // Verificar la integridad de los datos en localStorage
-      this.verificarIntegridadDatos();
-
-      // Si no hay medios, intentar recargar
-      if (!tieneMedias) {
-        this.recargarResumen();
-      }
+      console.log('🔄 Forzando recarga completa de datos...');
+      this.recargarResumen();
     }
   }
 
@@ -806,6 +798,9 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private ejecutarAgregarMedio(): void {
+    // Forzar recarga de datos antes de abrir el modal
+    this.recargarResumen();
+
     const planData = {
       id: this.planId, // Usar el ID almacenado
       numeroPlan: this.resumenPlan.numeroPlan,
@@ -818,14 +813,16 @@ export class PlanMediosResumen implements OnInit {
     };
 
     // ✅ PREPARAR MEDIOS EXISTENTES ACTUALIZADOS desde el período seleccionado
-    const mediosExistentes = this.periodoSeleccionado.medios.map(medio => ({
-      medio: medio.nombre,
-      proveedor: medio.proveedor,
-      canal: medio.canal,
-      canalId: medio.canalId,
-      tarifa: medio.tarifa,
-      planMedioItemId: medio.planMedioItemId
-    }));
+    const mediosExistentes = this.periodoSeleccionado.medios
+      .filter(medio => medio.planMedioItemId) // Solo incluir medios que existan en el backend
+      .map(medio => ({
+        medio: medio.nombre,
+        proveedor: medio.proveedor,
+        canal: medio.canal,
+        canalId: medio.canalId,
+        tarifa: medio.tarifa,
+        planMedioItemId: medio.planMedioItemId
+      }));
 
     console.log('🔄 Abriendo modal para agregar medio:', planData);
     console.log('📋 Medios existentes enviados al modal:', mediosExistentes);
@@ -2027,6 +2024,7 @@ export class PlanMediosResumen implements OnInit {
       itemsPorMedio[medio.nombre] = [{
         planMedioItemId: medio.planMedioItemId,
         proveedor: medio.proveedor,
+        canal: medio.canal,
         valorTotal: this.calcularValorTotal(medio)
       }];
     });
@@ -2049,8 +2047,21 @@ export class PlanMediosResumen implements OnInit {
           { duration: 3000 }
         );
         
-        // Recargar los datos
-        this.verificarYRecargarDatos();
+              // Limpiar localStorage para compatibilidad temporal
+      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+      const pautasActualizadas = pautas.filter((pauta: any) => {
+        const medioEliminado = result.mediosEliminados.find((m: any) => 
+          m.planMedioItemId === pauta.planMedioItemId
+        );
+        return !medioEliminado;
+      });
+      localStorage.setItem('respuestasPautas', JSON.stringify(pautasActualizadas));
+
+      // Recargar los datos completos
+      this.verificarYRecargarDatos();
+      
+      // Recalcular totales
+      this.actualizarTotalesPeriodo();
       }
     });
   }
@@ -2379,26 +2390,15 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   private cargarMediosExistentes(): void {
-    // ✅ PRIORIZAR datos del backend (desde el componente padre)
-    if (this.data.mediosExistentes && this.data.mediosExistentes.length > 0) {
-      this.mediosExistentes = this.data.mediosExistentes;
-      console.log('✅ MEDIOS EXISTENTES CARGADOS DESDE BACKEND (ACTUALIZADO):', this.mediosExistentes);
+    // Siempre usar los datos más recientes del backend
+    if (this.data.mediosExistentes) {
+      // Filtrar solo los medios que realmente existen en el backend
+      this.mediosExistentes = this.data.mediosExistentes.filter((me: { planMedioItemId?: number }) => me.planMedioItemId);
+      console.log('✅ MEDIOS EXISTENTES FILTRADOS:', this.mediosExistentes);
       console.log(`📊 Total medios existentes: ${this.mediosExistentes.length}`);
     } else {
-      // Fallback: cargar desde localStorage para compatibilidad temporal
-      const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-      this.mediosExistentes = pautas
-        .filter((pauta: any) => pauta.planId === this.data.planData.id)
-        .map((pauta: any) => ({
-          medio: pauta.medio,
-          proveedor: pauta.proveedor,
-          canal: pauta.canal,
-          canalId: pauta.canalId,
-          tarifa: pauta.datos?.tarifa || 0
-        }));
-
-      console.log('⚠️ MEDIOS EXISTENTES CARGADOS DESDE LOCALSTORAGE (FALLBACK):', this.mediosExistentes);
-      console.log('ℹ️ Esto indica que el componente padre no pasó medios existentes actualizados');
+      this.mediosExistentes = [];
+      console.log('⚠️ No hay medios existentes');
     }
   }
 
