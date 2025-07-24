@@ -25,7 +25,7 @@ export interface PlanMedioItemBackend {
   version: number;
   medioId: number;
   proveedorId: number;
-  canalId?: number;
+  canalId: number;
   canalNombre?: string;
   canalDescripcion?: string;
   tarifa: number;
