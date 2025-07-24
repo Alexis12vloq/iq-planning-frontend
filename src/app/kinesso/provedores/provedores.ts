@@ -14,8 +14,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import * as XLSX from 'xlsx';
 
-// Importa el JSON de provedores mockeado
-import PROVEDORES_MOCK from './provedores-mock.json';
+// Eliminar importación y uso de PROVEDORES_MOCK y datos mock
 
 interface Proveedor {
   id: string;
@@ -124,23 +123,7 @@ export class Provedores implements OnInit {
   ngOnInit() {
     // Si no hay datos en localStorage, inicializa con el mock completo
     if (!localStorage.getItem('provedoresKinesso')) {
-      const provedoresJson = PROVEDORES_MOCK.map((p: any) => ({
-        id: Date.now().toString() + Math.random().toString(36).slice(2),
-        VENDOR_MEDIUM: p.VENDOR_MEDIUM,
-        VENDOR_GROUP: p.VENDOR_GROUP,
-        MEDIUMS: p.MEDIUMS,
-        VENDOR: p.VENDOR,
-        TIPO_VENDOR: p.TIPO_VENDOR,
-        ORION_BENEFICIO_REAL_VENDOR: p.ORION_BENEFICIO_REAL_VENDOR,
-        DIRECTO_TRADICIONAL_MVSS: p.DIRECTO_TRADICIONAL_MVSS,
-        KINESSO_POWER: p.KINESSO_POWER,
-        KINESSO_GLASS: p.KINESSO_GLASS,
-        NOTAS_KSO: p.NOTAS_KSO,
-        DUO_GLASS: p.DUO_GLASS,
-        DUO_POWER: p.DUO_POWER,
-        ESTADO: p.ESTADO
-      }));
-      localStorage.setItem('provedoresKinesso', JSON.stringify(provedoresJson));
+      // Eliminar inicialización de datos mock
     }
     this.loadProvedores();
     this.filteredProvedores = [...this.provedores];

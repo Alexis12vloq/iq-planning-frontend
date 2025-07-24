@@ -20,6 +20,7 @@ import { PlantillaPautaService } from '../services/plantilla-pauta.service';
 import { PlantillaPauta, CampoPlantilla, RespuestaPauta, DiaCalendario } from '../models/plantilla-pauta.model';
 import { Inject } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
+import { BackendMediosService } from '../services/backend-medios.service';
 
 interface GrupoMedio {
   medio: string;
@@ -131,7 +132,8 @@ export class PlanMediosNuevaPauta implements OnInit {
     private snackBar: MatSnackBar,
     private plantillaService: PlantillaPautaService,
     private cdr: ChangeDetectorRef,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private backendMediosService: BackendMediosService
   ) {
     const navigation = this.router.getCurrentNavigation();
     this.planData = navigation?.extras?.state?.['planData'] as PlanData;
@@ -155,7 +157,9 @@ export class PlanMediosNuevaPauta implements OnInit {
     console.log('🆔 Plan Data final con ID:', this.planData);
 
     this.seleccionForm = this.fb.group({
-      medio: ['', Validators.required]
+      medio: ['', [Validators.required]],
+      proveedor: ['', [Validators.required]],
+      canal: ['', [Validators.required]]
     });
 
     this.seleccionForm.get('medio')?.valueChanges.subscribe(medio => {
@@ -356,12 +360,15 @@ export class PlanMediosNuevaPauta implements OnInit {
       plantillaId: this.plantillaActual.id,
       paisFacturacion: this.plantillaActual.paisFacturacion,
       medio: this.plantillaActual.medio,
+      proveedor: formData['proveedor'] || 'Sin proveedor',
+      proveedorId: formData['proveedorId'] || '',
       datos: formData,
       fechaCreacion: new Date().toISOString(),
       valorTotal: parseFloat(formData['valor_total']) || 0,
       valorNeto: parseFloat(formData['valor_neto']) || 0,
       totalSpots: parseInt(formData['total_spots']) || 1,
-      semanas: formData['semanas'] || []
+      semanas: formData['semanas'] || new Array(5).fill(true),
+      diasSeleccionados: []
     };
 
     this.guardarPautaEnStorage(nuevaPauta);
@@ -734,6 +741,7 @@ export class PlanMediosNuevaPauta implements OnInit {
     });
   }
 
+  /*
   abrirCalendarioPauta(pauta: RespuestaPauta): void {
     const dialogRef = this.dialog.open(ModalCalendarioPautaComponent, {
       width: '80%',
@@ -755,6 +763,7 @@ export class PlanMediosNuevaPauta implements OnInit {
       }
     });
   }
+  */
 
   // Métodos para la nueva estructura de calendario
   private inicializarFechasDelPlan(): void {
@@ -1389,6 +1398,29 @@ export class PlanMediosNuevaPauta implements OnInit {
                 El proveedor no se puede cambiar durante la edición
               </mat-hint>
             </mat-form-field>
+
+            <mat-form-field class="full-width" *ngIf="seleccionForm.get('proveedor')?.value">
+              <mat-label>Canal</mat-label>
+              <mat-select 
+                formControlName="canal"
+                [disabled]="data.action === 'edit' && !!seleccionForm.get('canal')?.value"
+                [placeholder]="cargandoCanales ? 'Cargando canales...' : 'Seleccionar canal'">
+                <mat-option *ngFor="let canal of canalesDisponibles" [value]="canal.id.toString()">
+                  {{ canal.nombre }}
+                </mat-option>
+              </mat-select>
+              <mat-hint *ngIf="cargandoCanales">Cargando canales...</mat-hint>
+              <mat-hint *ngIf="!cargandoCanales && canalesDisponibles.length === 0" class="warning-hint">
+                <mat-icon class="hint-icon">warning</mat-icon>
+                No hay canales disponibles para este proveedor
+              </mat-hint>
+              <mat-hint *ngIf="data.action === 'edit'">
+                El canal no se puede cambiar durante la edición
+              </mat-hint>
+              <mat-error *ngIf="seleccionForm.get('canal')?.hasError('required')">
+                El canal es obligatorio
+              </mat-error>
+            </mat-form-field>
           </form>
         </mat-card-content>
       </mat-card>
@@ -1647,30 +1679,47 @@ export class ModalNuevaPautaComponent implements OnInit {
   
   // Proveedores disponibles para el medio seleccionado
   proveedoresDisponibles: any[] = [];
+  
+  // Canales disponibles para el proveedor seleccionado
+  canalesDisponibles: any[] = [];
+  cargandoCanales: boolean = false;
 
   constructor(
     private fb: FormBuilder,
     private plantillaService: PlantillaPautaService,
     private dialogRef: MatDialogRef<ModalNuevaPautaComponent>,
     private snackBar: MatSnackBar,
+    private backendMediosService: BackendMediosService,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.seleccionForm = this.fb.group({
-      medio: [''],
-      proveedor: ['']
+      medio: ['', [Validators.required]],
+      proveedor: ['', [Validators.required]],
+      canal: ['', [Validators.required]]
     });
 
     this.seleccionForm.get('medio')?.valueChanges.subscribe(medio => {
       if (medio && medio.trim()) {
         this.cargarProveedoresPorMedio(medio);
-        this.seleccionForm.patchValue({ proveedor: '' });
+        this.seleccionForm.patchValue({ proveedor: '', canal: '' });
         this.cargarPlantillaPorMedio(medio);
       } else {
         this.proveedoresDisponibles = [];
+        this.canalesDisponibles = [];
         this.plantillaActual = null;
         this.errorPlantilla = null;
         this.cargandoPlantilla = false;
         this.pautaForm = this.fb.group({});
+      }
+    });
+
+    this.seleccionForm.get('proveedor')?.valueChanges.subscribe(proveedor => {
+      if (proveedor && proveedor.trim()) {
+        this.cargarCanalesPorProveedor(proveedor);
+        this.seleccionForm.patchValue({ canal: '' });
+      } else {
+        this.canalesDisponibles = [];
+        this.seleccionForm.patchValue({ canal: '' });
       }
     });
   }
@@ -1688,10 +1737,12 @@ export class ModalNuevaPautaComponent implements OnInit {
       console.log('🔄 Modo edición detectado, cargando datos:', this.data.pautaData);
       this.seleccionForm.patchValue({
         medio: this.data.pautaData.medio,
-        proveedor: this.data.pautaData.proveedorId || ''
+        proveedor: this.data.pautaData.proveedorId ? this.data.pautaData.proveedorId.toString() : '',
+        canal: this.data.pautaData.canalId ? this.data.pautaData.canalId.toString() : ''
       });
-      // Cargar proveedores y plantilla automáticamente en modo edición
+      // Cargar proveedores, canales y plantilla automáticamente en modo edición
       this.cargarProveedoresPorMedio(this.data.pautaData.medio);
+      this.cargarCanalesPorProveedor(this.data.pautaData.proveedorId || '');
       this.cargarPlantillaPorMedio(this.data.pautaData.medio);
     }
   }
@@ -1829,6 +1880,28 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.proveedoresDisponibles = this.plantillaService.obtenerProveedoresPorMedio(medio);
   }
 
+  cargarCanalesPorProveedor(proveedor: string): void {
+    this.cargandoCanales = true;
+    console.log('🔄 Cargando canales para proveedor:', proveedor);
+
+    this.backendMediosService.getCanalesPorProveedor(Number(proveedor)).subscribe({
+      next: (canales) => {
+        this.canalesDisponibles = canales;
+        this.cargandoCanales = false;
+        console.log('✅ Canales cargados para proveedor', proveedor, ':', this.canalesDisponibles.length);
+      },
+      error: (error) => {
+        console.error('❌ Error cargando canales:', error);
+        this.canalesDisponibles = [];
+        this.cargandoCanales = false;
+        this.snackBar.open('❌ Error cargando canales desde el servidor', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
   obtenerTipoCampo(campo: CampoPlantilla): string {
     switch (campo.type) {
       case 'integer':
@@ -1873,6 +1946,14 @@ export class ModalNuevaPautaComponent implements OnInit {
       proveedorNombre = proveedor ? proveedor.VENDOR : '';
     }
 
+    // Obtener información del canal seleccionado
+    const canalId = this.seleccionForm.get('canal')?.value;
+    let canalNombre = '';
+    if (canalId) {
+      const canal = this.canalesDisponibles.find(c => c.id === canalId);
+      canalNombre = canal ? `${canal.nombre} (${canal.codigo})` : '';
+    }
+
     const pauta: RespuestaPauta = {
       id: isEdit ? this.data.pautaData.id : Date.now().toString(),
       planId: planId,
@@ -1881,6 +1962,8 @@ export class ModalNuevaPautaComponent implements OnInit {
       medio: this.plantillaActual.medio,
       proveedor: proveedorNombre,
       proveedorId: proveedorId,
+      canal: canalNombre,
+      canalId: canalId,
       datos: valores,
       fechaCreacion: isEdit ? this.data.pautaData.fechaCreacion : new Date().toISOString(),
       fechaModificacion: isEdit ? new Date().toISOString() : undefined,
@@ -1888,7 +1971,8 @@ export class ModalNuevaPautaComponent implements OnInit {
       valorNeto: valores.valor_neto || 0,
       totalSpots: valores.total_spots || 1,
       diasSeleccionados: isEdit ? (this.data.pautaData.diasSeleccionados || []) : [],
-      totalDiasSeleccionados: isEdit ? (this.data.pautaData.totalDiasSeleccionados || 0) : 0
+      totalDiasSeleccionados: isEdit ? (this.data.pautaData.totalDiasSeleccionados || 0) : 0,
+      semanas: isEdit ? this.data.pautaData.semanas : new Array(5).fill(true)
     };
 
     console.log(`💾 Pauta construida para ${isEdit ? 'actualizar' : 'guardar'}:`, pauta);
@@ -1965,331 +2049,3 @@ export class ModalNuevaPautaComponent implements OnInit {
     }
   }
 }
-
-// Componente Modal para Calendario
-@Component({
-  selector: 'app-modal-calendario-pauta',
-  standalone: true,
-  imports: [
-    CommonModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatDialogModule,
-    MatCheckboxModule,
-    MatDatepickerModule,
-    MatNativeDateModule
-  ],
-  template: `
-    <div class="modal-header">
-      <h2 mat-dialog-title>
-        <mat-icon>event</mat-icon>
-        Calendario de Pauta - {{ data.pauta.medio }}
-      </h2>
-      <button mat-icon-button mat-dialog-close>
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-
-    <mat-dialog-content class="modal-content">
-      <div class="pauta-info">
-        <h3>Información de la Pauta</h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="label">Medio:</span>
-            <span class="value">{{ data.pauta.medio }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Valor Total:</span>
-            <span class="value">{{ data.pauta.valorTotal | currency:'USD':'symbol-narrow':'1.0-0' }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Total Spots:</span>
-            <span class="value">{{ data.pauta.totalSpots }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Días Seleccionados:</span>
-            <span class="value">{{ diasSeleccionados.length }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="periodo-vigencia">
-        <h3>Período de Vigencia del Plan</h3>
-        <p><strong>Desde:</strong> {{ fechaInicioPlan | date:'dd/MM/yyyy' }}</p>
-        <p><strong>Hasta:</strong> {{ fechaFinPlan | date:'dd/MM/yyyy' }}</p>
-      </div>
-
-      <div class="calendario-container">
-        <h3>Seleccionar Días de Pauta</h3>
-        <div class="calendario-grid">
-          <div 
-            *ngFor="let dia of diasCalendario" 
-            class="dia-item"
-            [class.seleccionado]="dia.seleccionado"
-            [class.deshabilitado]="!dia.habilitado"
-            (click)="toggleDia(dia)">
-            <div class="dia-numero">{{ dia.fecha.getDate() }}</div>
-            <div class="dia-mes">{{ obtenerNombreMes(dia.fecha.getMonth()) }}</div>
-            <mat-checkbox 
-              [checked]="dia.seleccionado"
-              [disabled]="!dia.habilitado"
-              (click)="$event.stopPropagation()">
-            </mat-checkbox>
-          </div>
-        </div>
-      </div>
-
-      <div class="resumen-seleccion" *ngIf="diasSeleccionados.length > 0">
-        <h3>Resumen de Selección</h3>
-        <p><strong>Total de días seleccionados:</strong> {{ diasSeleccionados.length }}</p>
-        <p><strong>Costo por día:</strong> {{ (data.pauta.valorTotal / diasSeleccionados.length) | currency:'USD':'symbol-narrow':'1.0-0' }}</p>
-        <div class="dias-seleccionados">
-          <span *ngFor="let fecha of diasSeleccionados" class="dia-tag">
-            {{ fecha | date:'dd/MM' }}
-          </span>
-        </div>
-      </div>
-    </mat-dialog-content>
-
-    <mat-dialog-actions class="modal-actions">
-      <button mat-button mat-dialog-close>Cancelar</button>
-      <button 
-        mat-raised-button 
-        color="primary" 
-        [disabled]="diasSeleccionados.length === 0"
-        (click)="guardarCalendario()">
-        <mat-icon>save</mat-icon>
-        Guardar Calendario ({{ diasSeleccionados.length }} días)
-      </button>
-    </mat-dialog-actions>
-  `,
-  styles: [`
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 24px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-
-    .modal-content {
-      padding: 20px;
-      max-height: 70vh;
-      overflow-y: auto;
-    }
-
-    .pauta-info, .periodo-vigencia {
-      margin-bottom: 24px;
-      padding: 16px;
-      background: #f5f5f5;
-      border-radius: 8px;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .info-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .label {
-      font-size: 12px;
-      color: #666;
-      font-weight: 500;
-    }
-
-    .value {
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .calendario-container {
-      margin-bottom: 24px;
-    }
-
-    .calendario-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .dia-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      background: white;
-    }
-
-    .dia-item:hover:not(.deshabilitado) {
-      border-color: #1976d2;
-      background: #f3f7ff;
-    }
-
-    .dia-item.seleccionado {
-      border-color: #1976d2;
-      background: #e3f2fd;
-    }
-
-    .dia-item.deshabilitado {
-      opacity: 0.5;
-      cursor: not-allowed;
-      background: #fafafa;
-    }
-
-    .dia-numero {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .dia-mes {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 8px;
-    }
-
-    .resumen-seleccion {
-      padding: 16px;
-      background: #e8f5e8;
-      border-radius: 8px;
-      border-left: 4px solid #4caf50;
-    }
-
-    .dias-seleccionados {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .dia-tag {
-      background: #1976d2;
-      color: white;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .modal-actions {
-      padding: 16px 24px;
-      border-top: 1px solid #e0e0e0;
-      justify-content: flex-end;
-      gap: 12px;
-    }
-  `]
-})
-export class ModalCalendarioPautaComponent implements OnInit {
-  diasCalendario: DiaCalendario[] = [];
-  diasSeleccionados: string[] = [];
-  fechaInicioPlan!: Date;
-  fechaFinPlan!: Date;
-
-  constructor(
-    private dialogRef: MatDialogRef<ModalCalendarioPautaComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
-
-  ngOnInit(): void {
-    this.inicializarFechas();
-    this.generarCalendario();
-    this.cargarDiasSeleccionados();
-  }
-
-  private inicializarFechas(): void {
-    const planData = this.data.planData;
-    this.fechaInicioPlan = new Date(planData.fechaInicio);
-    this.fechaFinPlan = new Date(planData.fechaFin);
-  }
-
-  private generarCalendario(): void {
-    this.diasCalendario = [];
-    const fechaActual = new Date(this.fechaInicioPlan);
-    
-    while (fechaActual <= this.fechaFinPlan) {
-      this.diasCalendario.push({
-        fecha: new Date(fechaActual),
-        seleccionado: false,
-        habilitado: true
-      });
-      fechaActual.setDate(fechaActual.getDate() + 1);
-    }
-  }
-
-  private cargarDiasSeleccionados(): void {
-    if (this.data.pauta.diasSeleccionados) {
-      this.diasSeleccionados = [...this.data.pauta.diasSeleccionados];
-      
-      this.diasCalendario.forEach(dia => {
-        const fechaStr = this.formatearFecha(dia.fecha);
-        dia.seleccionado = this.diasSeleccionados.includes(fechaStr);
-      });
-    }
-  }
-
-  toggleDia(dia: DiaCalendario): void {
-    if (!dia.habilitado) return;
-
-    dia.seleccionado = !dia.seleccionado;
-    const fechaStr = this.formatearFecha(dia.fecha);
-
-    if (dia.seleccionado) {
-      if (!this.diasSeleccionados.includes(fechaStr)) {
-        this.diasSeleccionados.push(fechaStr);
-      }
-    } else {
-      const index = this.diasSeleccionados.indexOf(fechaStr);
-      if (index > -1) {
-        this.diasSeleccionados.splice(index, 1);
-      }
-    }
-
-    this.diasSeleccionados.sort();
-  }
-
-  private formatearFecha(fecha: Date): string {
-    return fecha.toISOString().split('T')[0];
-  }
-
-  obtenerNombreMes(mes: number): string {
-    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-                   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    return meses[mes];
-  }
-
-  guardarCalendario(): void {
-    const pautaActualizada = {
-      ...this.data.pauta,
-      diasSeleccionados: this.diasSeleccionados,
-      totalDiasSeleccionados: this.diasSeleccionados.length,
-      fechaInicio: this.fechaInicioPlan,
-      fechaFin: this.fechaFinPlan
-    };
-
-    this.actualizarPautaEnStorage(pautaActualizada);
-    this.dialogRef.close(true);
-  }
-
-  private actualizarPautaEnStorage(pautaActualizada: RespuestaPauta): void {
-    const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-    const index = pautas.findIndex((p: RespuestaPauta) => p.id === pautaActualizada.id);
-    
-    if (index > -1) {
-      pautas[index] = pautaActualizada;
-      localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-    }
-  }
-} 

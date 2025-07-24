@@ -13,8 +13,7 @@ import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
-// Importa el JSON de clientes mockeado
-import CLIENTES_MOCK from './clientes-mock.json';
+// Eliminar importación y uso de CLIENTES_MOCK y datos mock
 
 interface Cliente {
   id: string;
@@ -122,33 +121,8 @@ export class Clientes implements OnInit {
   ngOnInit() {
     // Si no hay datos en localStorage, inicializa con el mock completo
     if (!localStorage.getItem('clientesKinesso')) {
-      const clientesJson = CLIENTES_MOCK.map((c: any) => ({
-        id: Date.now().toString() + Math.random().toString(36).slice(2),
-        advertiser: c.ADVERTISER,
-        directo: c.DIRECTO,
-        orion: c.ORION,
-        kinesso: c.KINESSO,
-        kinesso_type: c.KINESSO_TYPE,
-        duo: c.DUO,
-        available_dsp_equative: c.AVAILABLE_DSP_EQUATIVE,
-        notas_1: c.NOTAS_1,
-        avaliable_deals_curados: c.AVALIABLE_DEALS_CURADOS,
-        notas_2: c.NOTAS_2,
-        estado: c.ESTADO,
-        // Para compatibilidad con la interfaz Cliente
-        ADVERTISER: c.ADVERTISER,
-        DIRECTO: c.DIRECTO,
-        ORION: c.ORION,
-        KINESSO: c.KINESSO,
-        KINESSO_TYPE: c.KINESSO_TYPE,
-        DUO: c.DUO,
-        AVAILABLE_DSP_EQUATIVE: c.AVAILABLE_DSP_EQUATIVE,
-        NOTAS_1: c.NOTAS_1,
-        AVALIABLE_DEALS_CURADOS: c.AVALIABLE_DEALS_CURADOS,
-        NOTAS_2: c.NOTAS_2,
-        ESTADO: c.ESTADO
-      }));
-      localStorage.setItem('clientesKinesso', JSON.stringify(clientesJson));
+      // Eliminar inicialización de datos mock
+      localStorage.setItem('clientesKinesso', JSON.stringify([]));
     }
     this.loadClientes();
     this.filteredClientes = [...this.clientes];

@@ -39,23 +39,21 @@ export interface RespuestaPauta {
   id: string;
   planId: string;
   plantillaId: string;
-  paisFacturacion: string;
   medio: string;
-  proveedor?: string;
-  proveedorId?: string;
-  planMedioItemId?: number; // ID del backend PlanMedioItem
-  datos: { [key: string]: any }; // Respuestas dinámicas del formulario
+  proveedor: string;
+  proveedorId: string;
+  canalId?: string; // ✅ Agregar ID del canal (opcional para compatibilidad)
+  canal?: string; // ✅ Agregar nombre del canal (opcional para compatibilidad)
+  planMedioItemId?: number;
+  paisFacturacion: string;
   fechaCreacion: string;
   fechaModificacion?: string;
-  // Campos calculados/agregados
-  valorTotal?: number;
-  valorNeto?: number;
-  totalSpots?: number;
-  semanas?: boolean[];
-  // Información de calendario
-  fechaInicio?: Date;
-  fechaFin?: Date;
-  diasSeleccionados?: string[]; // Array de fechas en formato 'YYYY-MM-DD'
+  datos: any;
+  totalSpots: number;
+  valorTotal: number;
+  valorNeto: number;
+  semanas: boolean[];
+  diasSeleccionados: string[];
   totalDiasSeleccionados?: number;
 }
 
