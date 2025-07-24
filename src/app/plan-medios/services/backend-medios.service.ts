@@ -197,4 +197,22 @@ export class BackendMediosService {
       responseType: 'blob'  // 👈 Necesario para recibir archivos
     });
   }
+
+  // ==============================================
+  // 📺 CANALES
+  // ==============================================
+
+  // Obtener todos los canales
+  getAllCanales(): Observable<any[]> {
+    const url = `${this.baseUrl}/api/Canales`;
+    console.log('🔄 GET Todos los Canales:', url);
+    return this.http.get<any[]>(url);
+  }
+
+  // Obtener canales por proveedor
+  getCanalesPorProveedor(proveedorId: number): Observable<any[]> {
+    const url = `${this.baseUrl}/api/Canales/by-proveedor/${proveedorId}`;
+    console.log('🔄 GET Canales por proveedor:', url);
+    return this.http.get<any[]>(url);
+  }
 } 
