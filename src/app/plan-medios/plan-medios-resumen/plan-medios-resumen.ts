@@ -2036,30 +2036,8 @@ export class PlanMediosResumen implements OnInit {
 
   // ✅ Método para validar si hay medios disponibles para ir a FlowChart
   tieneMediosParaFlowChart(): boolean {
-    // Verificar que hay un período seleccionado y que tiene medios
-    if (!this.periodoSeleccionado || !this.periodoSeleccionado.medios) {
-      return false;
-    }
-
-    // Verificar que hay al menos un medio con datos válidos
-    const mediosValidos = this.periodoSeleccionado.medios.filter(medio => 
-      medio.nombre && 
-      medio.proveedor && 
-      medio.tarifa !== undefined && 
-      medio.tarifa > 0
-    );
-
-    const tieneMedios = mediosValidos.length > 0;
-    
-    // Log para debugging
-    console.log('🔍 VALIDANDO ACCESO A FLOWCHART:', {
-      periodoSeleccionado: !!this.periodoSeleccionado,
-      totalMedios: this.periodoSeleccionado?.medios?.length || 0,
-      mediosValidos: mediosValidos.length,
-      puedeIrAFlowChart: tieneMedios
-    });
-
-    return tieneMedios;
+    // Siempre permitir acceso a FlowChart
+    return true;
   }
 
   onEliminarMasivo(): void {
