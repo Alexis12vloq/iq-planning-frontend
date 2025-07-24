@@ -25,6 +25,9 @@ export interface PlanMedioItemBackend {
   version: number;
   medioId: number;
   proveedorId: number;
+  canalId?: number;
+  canalNombre?: string;
+  canalDescripcion?: string;
   tarifa: number;
   dataJson: string;
   pasoPorFlowchart?: boolean;

@@ -813,6 +813,7 @@ export class PlanMediosResumen implements OnInit {
     };
 
     // ✅ PREPARAR MEDIOS EXISTENTES ACTUALIZADOS desde el período seleccionado
+    debugger;
     const mediosExistentes = this.periodoSeleccionado.medios
       .filter(medio => medio.planMedioItemId) // Solo incluir medios que existan en el backend
       .map(medio => ({
@@ -1173,7 +1174,8 @@ export class PlanMediosResumen implements OnInit {
     planMedioItems.forEach((item: PlanMedioItemBackend) => {
       const medio = item.medioNombre || 'Medio desconocido';
       const proveedor = item.proveedorNombre || 'Proveedor desconocido';
-      const claveAgrupacion = `${medio}_${proveedor}`;
+      const canal = item.canalNombre || 'Sin canal';
+      const claveAgrupacion = `${medio}_${proveedor}_${canal}`;
 
       // Parsear el dataJson si existe
       let spotsPorFecha: { [fecha: string]: number } = {};
@@ -1264,6 +1266,9 @@ export class PlanMediosResumen implements OnInit {
           nombre: medio,
           proveedor: proveedor,
           proveedorId: item.proveedorId.toString(),
+          canal: item.canalNombre || 'Sin canal',
+          canalId: item.canalId,
+          canalDescripcion: item.canalDescripcion,
           salidas: totalSpots,
           valorNeto: valorTotal,
           soi: totalSpots > 0 ? Math.round(valorTotal / totalSpots) : 0,
@@ -2115,7 +2120,7 @@ export class PlanMediosResumen implements OnInit {
         <h4>Medios ya agregados al plan:</h4>
         <div class="medio-existente" *ngFor="let medioExistente of mediosExistentes">
           <mat-icon>info</mat-icon>
-          <span>{{ medioExistente.medio }} - {{ medioExistente.proveedor }} (Tarifa: {{ medioExistente.tarifa | currency:'USD':'symbol':'1.2-2' }})</span>
+          <span>{{ medioExistente.medio }} - {{ medioExistente.proveedor }} - {{ medioExistente.canal }} (Tarifa: {{ medioExistente.tarifa | currency:'USD':'symbol':'1.2-2' }})</span>
         </div>
       </div>
 
@@ -2451,9 +2456,26 @@ export class ModalAgregarMedioComponent implements OnInit {
 
     this.backendMediosService.getCanalesPorProveedor(Number(proveedorId)).subscribe({
       next: (canales) => {
-        this.canalesDisponibles = canales;
+        // Filtrar canales que ya están en uso para este medio y proveedor
+        const medioSeleccionado = this.medioForm.get('medio')?.value as MedioBackend;
+        if (medioSeleccionado) {
+          const canalesEnUso = this.mediosExistentes
+            .filter(me => 
+              me.medio === medioSeleccionado.nombre && 
+              me.proveedor === this.proveedoresDisponibles.find(p => p.id === proveedorId)?.VENDOR
+            )
+            .map(me => me.canalId);
+
+          console.log('🔍 Canales en uso:', canalesEnUso);
+          
+          this.canalesDisponibles = canales.filter(canal => !canalesEnUso.includes(canal.canalId));
+          console.log('✅ Canales disponibles después de filtrar:', this.canalesDisponibles);
+        } else {
+          this.canalesDisponibles = canales;
+        }
+
         this.cargandoCanales = false;
-        console.log('✅ Canales cargados para proveedor', proveedorId, ':', this.canalesDisponibles.length);
+        console.log('✅ Total canales disponibles:', this.canalesDisponibles.length);
       },
       error: (error) => {
         console.error('❌ Error cargando canales:', error);
@@ -2497,46 +2519,35 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   private filtrarProveedoresDisponibles(nombreMedio: string): void {
-    // ✅ OBTENER proveedores ya usados para este medio específico
-    const proveedoresUsados = this.mediosExistentes
-      .filter(me => me.medio === nombreMedio)
-      .map(me => me.proveedor);
+    // No filtramos proveedores ya que un mismo proveedor puede tener diferentes canales
+    this.proveedoresFiltrados = this.proveedoresDisponibles;
 
-    // ✅ FILTRAR proveedores disponibles excluyendo los ya usados
-    this.proveedoresFiltrados = this.proveedoresDisponibles.filter(proveedor =>
-      !proveedoresUsados.includes(proveedor.VENDOR)
-    );
-
-    console.log('🔍 FILTRADO DE PROVEEDORES PARA:', nombreMedio);
-    console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
-    console.log('📋 Proveedores ya usados para este medio:', proveedoresUsados);
-    console.log('📋 Proveedores totales disponibles:', this.proveedoresDisponibles.length);
-    console.log('✅ Proveedores filtrados (sin usar):', this.proveedoresFiltrados.length);
-    console.log('📊 Lista de proveedores filtrados:', this.proveedoresFiltrados.map(p => p.VENDOR));
+          console.log('🔍 PROVEEDORES DISPONIBLES PARA:', nombreMedio);
+      console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
+      console.log('📋 Proveedores totales disponibles:', this.proveedoresDisponibles.length);
+      console.log('📊 Lista de proveedores:', this.proveedoresFiltrados.map(p => p.VENDOR));
   }
 
   private validarCombinacionDuplicada(): void {
     const valores = this.medioForm.value;
 
-    if (valores.medio && valores.proveedor && valores.canal && valores.tarifa > 0) {
+    if (valores.medio && valores.proveedor && valores.canal) {
       const medioSeleccionado = valores.medio as MedioBackend;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
-      const canalSeleccionado = this.canalesDisponibles.find(c => c.id.toString() === valores.canal);
+      const canalSeleccionado = this.canalesDisponibles.find(c => c.canalId === valores.canal);
 
       if (proveedorSeleccionado && medioSeleccionado && canalSeleccionado) {
-        // Verificar si existe la combinación exacta contra medios existentes actualizados
+        // Verificar si existe la combinación exacta de medio-proveedor-canal
         this.existeCombinacion = this.mediosExistentes.some(me =>
           me.medio === medioSeleccionado.nombre &&
           me.proveedor === proveedorSeleccionado.VENDOR &&
-          me.canalId === valores.canal &&
-          Math.abs(me.tarifa - valores.tarifa) < 0.01 // Comparación con tolerancia para decimales
+          me.canalId === valores.canal
         );
 
         console.log('🔍 VALIDANDO DUPLICADO - COMBINACIÓN A VERIFICAR:');
         console.log('📊 Medio:', medioSeleccionado.nombre);
         console.log('📊 Proveedor:', proveedorSeleccionado.VENDOR);
         console.log('📊 Canal:', canalSeleccionado.nombre);
-        console.log('📊 Tarifa:', valores.tarifa);
         console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
         console.log('❓ Combinación ya existe:', this.existeCombinacion ? '❌ SÍ' : '✅ NO');
         
@@ -2544,8 +2555,7 @@ export class ModalAgregarMedioComponent implements OnInit {
           const medioConflicto = this.mediosExistentes.find(me =>
             me.medio === medioSeleccionado.nombre &&
             me.proveedor === proveedorSeleccionado.VENDOR &&
-            me.canalId === valores.canal &&
-            Math.abs(me.tarifa - valores.tarifa) < 0.01
+            me.canalId === valores.canal
           );
           console.log('⚠️ CONFLICTO ENCONTRADO CON:', medioConflicto);
         }
@@ -2619,7 +2629,7 @@ export class ModalAgregarMedioComponent implements OnInit {
     );
 
     if (combinacionExiste) {
-      this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Canal-Tarifa ya existe', '', {
+      this.snackBar.open('❌ Ya existe un registro con esta combinación de Medio-Proveedor-Canal', '', {
         duration: 3000,
         panelClass: ['error-snackbar']
       });
@@ -3360,6 +3370,10 @@ export class ModalEditarMedioComponent implements OnInit {
         <div class="info-item">
           <span class="label">Proveedor:</span>
           <span class="value">{{ data.medio.proveedor }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Canal:</span>
+          <span class="value">{{ data.medio.canal }}</span>
         </div>
         <div class="info-item">
           <span class="label">Valor Total:</span>
