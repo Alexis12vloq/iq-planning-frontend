@@ -72,6 +72,7 @@ export interface CrearPlanMedioItemRequest {
   version: number;
   medioId: number;
   proveedorId: number;
+  canalId: number;
   tarifa: number;
   dataJson: string;
   usuarioRegistro: string;

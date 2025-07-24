@@ -821,6 +821,8 @@ export class PlanMediosResumen implements OnInit {
     const mediosExistentes = this.periodoSeleccionado.medios.map(medio => ({
       medio: medio.nombre,
       proveedor: medio.proveedor,
+      canal: medio.canal,
+      canalId: medio.canalId,
       tarifa: medio.tarifa,
       planMedioItemId: medio.planMedioItemId
     }));
@@ -2390,6 +2392,8 @@ export class ModalAgregarMedioComponent implements OnInit {
         .map((pauta: any) => ({
           medio: pauta.medio,
           proveedor: pauta.proveedor,
+          canal: pauta.canal,
+          canalId: pauta.canalId,
           tarifa: pauta.datos?.tarifa || 0
         }));
 
@@ -2514,21 +2518,24 @@ export class ModalAgregarMedioComponent implements OnInit {
   private validarCombinacionDuplicada(): void {
     const valores = this.medioForm.value;
 
-    if (valores.medio && valores.proveedor && valores.tarifa > 0) {
+    if (valores.medio && valores.proveedor && valores.canal && valores.tarifa > 0) {
       const medioSeleccionado = valores.medio as MedioBackend;
       const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+      const canalSeleccionado = this.canalesDisponibles.find(c => c.id.toString() === valores.canal);
 
-      if (proveedorSeleccionado && medioSeleccionado) {
-        // ✅ VERIFICAR si existe la combinación exacta contra medios existentes actualizados
+      if (proveedorSeleccionado && medioSeleccionado && canalSeleccionado) {
+        // Verificar si existe la combinación exacta contra medios existentes actualizados
         this.existeCombinacion = this.mediosExistentes.some(me =>
           me.medio === medioSeleccionado.nombre &&
           me.proveedor === proveedorSeleccionado.VENDOR &&
+          me.canalId === valores.canal &&
           Math.abs(me.tarifa - valores.tarifa) < 0.01 // Comparación con tolerancia para decimales
         );
 
         console.log('🔍 VALIDANDO DUPLICADO - COMBINACIÓN A VERIFICAR:');
         console.log('📊 Medio:', medioSeleccionado.nombre);
         console.log('📊 Proveedor:', proveedorSeleccionado.VENDOR);
+        console.log('📊 Canal:', canalSeleccionado.nombre);
         console.log('📊 Tarifa:', valores.tarifa);
         console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
         console.log('❓ Combinación ya existe:', this.existeCombinacion ? '❌ SÍ' : '✅ NO');
@@ -2537,6 +2544,7 @@ export class ModalAgregarMedioComponent implements OnInit {
           const medioConflicto = this.mediosExistentes.find(me =>
             me.medio === medioSeleccionado.nombre &&
             me.proveedor === proveedorSeleccionado.VENDOR &&
+            me.canalId === valores.canal &&
             Math.abs(me.tarifa - valores.tarifa) < 0.01
           );
           console.log('⚠️ CONFLICTO ENCONTRADO CON:', medioConflicto);
@@ -2548,6 +2556,7 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   guardarMedio(): void {
+    debugger;
     // Marcar todos los campos como tocados para mostrar errores
     this.medioForm.markAllAsTouched();
 
@@ -2560,6 +2569,9 @@ export class ModalAgregarMedioComponent implements OnInit {
       }
       if (this.medioForm.get('proveedor')?.hasError('required')) {
         mensajeError += ' Proveedor';
+      }
+      if (this.medioForm.get('canal')?.hasError('required')) {
+        mensajeError += ' Canal';
       }
       if (this.medioForm.get('tarifa')?.hasError('required')) {
         mensajeError += ' Tarifa';
@@ -2587,10 +2599,11 @@ export class ModalAgregarMedioComponent implements OnInit {
     const valores = this.medioForm.value;
     const medioSeleccionado = valores.medio as MedioBackend;
     const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+    const canalSeleccionado = this.canalesDisponibles.find(c => c.canalId === valores.canal);
 
-    // Validar que se hayan seleccionado medio y proveedor
-    if (!medioSeleccionado || !proveedorSeleccionado) {
-      this.snackBar.open('❌ Error: Medio o proveedor no encontrado', '', {
+    // Validar que se hayan seleccionado medio, proveedor y canal
+    if (!medioSeleccionado || !proveedorSeleccionado || !canalSeleccionado) {
+      this.snackBar.open('❌ Error: Medio, proveedor o canal no encontrado', '', {
         duration: 3000,
         panelClass: ['error-snackbar']
       });
@@ -2601,11 +2614,12 @@ export class ModalAgregarMedioComponent implements OnInit {
     const combinacionExiste = this.mediosExistentes.some(me =>
       me.medio === medioSeleccionado.nombre &&
       me.proveedor === proveedorSeleccionado?.VENDOR &&
+      me.canalId === valores.canal &&
       Math.abs(me.tarifa - valores.tarifa) < 0.01
     );
 
     if (combinacionExiste) {
-      this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe', '', {
+      this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Canal-Tarifa ya existe', '', {
         duration: 3000,
         panelClass: ['error-snackbar']
       });
@@ -2618,6 +2632,7 @@ export class ModalAgregarMedioComponent implements OnInit {
       version: Number(this.data.planData.version || 1), // Versión del plan
       medioId: medioSeleccionado.medioId,
       proveedorId: Number(valores.proveedor),
+      canalId: Number(valores.canal),
       tarifa: Number(valores.tarifa),
       dataJson: JSON.stringify({
         spotsPorFecha: {},
@@ -2632,35 +2647,35 @@ export class ModalAgregarMedioComponent implements OnInit {
     // Guardar en el backend
     this.backendMediosService.crearPlanMedioItem(crearRequest).subscribe(
       (response: PlanMedioItemBackend) => {
-                  console.log('✅ PlanMedioItem creado en backend:', response);
+        // LocalStorage solo para compatibilidad temporal (TODO: eliminar cuando todo esté migrado)
+        const nuevaPauta: RespuestaPauta = {
+          id: `pauta-${response.planMedioItemId}`,
+          planId: this.data.planData.id,
+          plantillaId: 'simple',
+          paisFacturacion: 'Perú',
+          medio: medioSeleccionado.nombre,
+          proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
+          proveedorId: valores.proveedor,
+          canal: canalSeleccionado.nombre,
+          canalId: valores.canal,
+          planMedioItemId: response.planMedioItemId, // Agregar ID del backend
+          datos: {
+            tarifa: Number(valores.tarifa),
+            spotsPorFecha: {}
+          },
+          fechaCreacion: response.fechaRegistro || new Date().toISOString(),
+          fechaModificacion: response.fechaModificacion,
+          valorTotal: 0,
+          valorNeto: 0,
+          totalSpots: 0,
+          diasSeleccionados: [],
+          totalDiasSeleccionados: 0
+        };
 
-          // LocalStorage solo para compatibilidad temporal (TODO: eliminar cuando todo esté migrado)
-          const nuevaPauta: RespuestaPauta = {
-            id: `pauta-${response.planMedioItemId}`,
-            planId: this.data.planData.id,
-            plantillaId: 'simple',
-            paisFacturacion: 'Perú',
-            medio: medioSeleccionado.nombre,
-            proveedor: proveedorSeleccionado ? proveedorSeleccionado.VENDOR : 'Sin proveedor',
-            proveedorId: valores.proveedor,
-            planMedioItemId: response.planMedioItemId, // Agregar ID del backend
-            datos: {
-              tarifa: Number(valores.tarifa),
-              spotsPorFecha: {}
-            },
-            fechaCreacion: response.fechaRegistro || new Date().toISOString(),
-            fechaModificacion: response.fechaModificacion,
-            valorTotal: 0,
-            valorNeto: 0,
-            totalSpots: 0,
-            diasSeleccionados: [],
-            totalDiasSeleccionados: 0
-          };
-
-          const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-          pautas.push(nuevaPauta);
-          localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-          console.log('ℹ️ Guardado en localStorage para compatibilidad temporal');
+        const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
+        pautas.push(nuevaPauta);
+        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
+        console.log('ℹ️ Guardado en localStorage para compatibilidad temporal');
 
         this.snackBar.open('✅ Medio agregado correctamente', '', {
           duration: 2000,
@@ -2672,13 +2687,13 @@ export class ModalAgregarMedioComponent implements OnInit {
       (error: any) => {
         console.error('❌ Error creando PlanMedioItem en backend:', error);
 
-                  // Error en backend - no se puede agregar el medio
-          this.snackBar.open('❌ Error al agregar medio en el servidor', '', {
-            duration: 3000,
-            panelClass: ['error-snackbar']
-          });
+        // Error en backend - no se puede agregar el medio
+        this.snackBar.open('❌ Error al agregar medio en el servidor', '', {
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
 
-          // No cerrar el diálogo en caso de error para que el usuario pueda intentar de nuevo
+        // No cerrar el diálogo en caso de error para que el usuario pueda intentar de nuevo
       }
     );
   }
