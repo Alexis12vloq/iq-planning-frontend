@@ -360,12 +360,15 @@ export class PlanMediosNuevaPauta implements OnInit {
       plantillaId: this.plantillaActual.id,
       paisFacturacion: this.plantillaActual.paisFacturacion,
       medio: this.plantillaActual.medio,
+      proveedor: formData['proveedor'] || 'Sin proveedor',
+      proveedorId: formData['proveedorId'] || '',
       datos: formData,
       fechaCreacion: new Date().toISOString(),
       valorTotal: parseFloat(formData['valor_total']) || 0,
       valorNeto: parseFloat(formData['valor_neto']) || 0,
       totalSpots: parseInt(formData['total_spots']) || 1,
-      semanas: formData['semanas'] || []
+      semanas: formData['semanas'] || new Array(5).fill(true),
+      diasSeleccionados: []
     };
 
     this.guardarPautaEnStorage(nuevaPauta);
@@ -1968,7 +1971,8 @@ export class ModalNuevaPautaComponent implements OnInit {
       valorNeto: valores.valor_neto || 0,
       totalSpots: valores.total_spots || 1,
       diasSeleccionados: isEdit ? (this.data.pautaData.diasSeleccionados || []) : [],
-      totalDiasSeleccionados: isEdit ? (this.data.pautaData.totalDiasSeleccionados || 0) : 0
+      totalDiasSeleccionados: isEdit ? (this.data.pautaData.totalDiasSeleccionados || 0) : 0,
+      semanas: isEdit ? this.data.pautaData.semanas : new Array(5).fill(true)
     };
 
     console.log(`💾 Pauta construida para ${isEdit ? 'actualizar' : 'guardar'}:`, pauta);
