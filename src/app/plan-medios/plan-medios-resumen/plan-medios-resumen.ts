@@ -2109,7 +2109,7 @@ export class PlanMediosResumen implements OnInit {
             <mat-form-field class="full-width" *ngIf="medioForm.get('proveedor')?.value">
               <mat-label>Seleccionar Canal</mat-label>
               <mat-select formControlName="canal">
-                <mat-option *ngFor="let canal of canalesDisponibles" [value]="canal.id">
+                <mat-option *ngFor="let canal of canalesDisponibles" [value]="canal.canalId">
                   {{ canal.nombre }}
                 </mat-option>
               </mat-select>
