@@ -27,6 +27,7 @@ import {
 } from '../models/backend-models';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { ModalEliminarMediosComponent } from '../flow-chart/modal-eliminar-medios.component';
 
 interface FilaMedio {
   tipo: 'nombre' | 'salidas' | 'valor' | 'encabezado-medio' | 'spots' | 'inversiones';
@@ -2015,7 +2016,42 @@ export class PlanMediosResumen implements OnInit {
     return tieneMedios;
   }
 
+  onEliminarMasivo(): void {
+    // Preparar los datos para el modal
+    const mediosActivos = this.periodoSeleccionado.medios.map(m => m.nombre);
+    const itemsPorMedio: { [medio: string]: any[] } = {};
+    
+    this.periodoSeleccionado.medios.forEach(medio => {
+      itemsPorMedio[medio.nombre] = [{
+        planMedioItemId: medio.planMedioItemId,
+        proveedor: medio.proveedor,
+        valorTotal: this.calcularValorTotal(medio)
+      }];
+    });
 
+    const dialogRef = this.dialog.open(ModalEliminarMediosComponent, {
+      width: '700px',
+      data: {
+        mediosActivos,
+        itemsPorMedio
+      },
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.mediosEliminados && result.mediosEliminados.length > 0) {
+        // Actualizar la vista después de eliminar
+        this.snackBar.open(
+          `Se eliminaron ${result.totalEliminados} medios exitosamente`, 
+          'Cerrar', 
+          { duration: 3000 }
+        );
+        
+        // Recargar los datos
+        this.verificarYRecargarDatos();
+      }
+    });
+  }
 }
 
 // Componente Modal para Agregar Medio

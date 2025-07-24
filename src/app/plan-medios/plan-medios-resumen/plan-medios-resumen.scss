@@ -133,6 +133,16 @@
       }
     }
 
+    &.red-button {
+      background-color: #ffebee;
+      color: #d32f2f;
+      border: none;
+
+      &:hover {
+        background-color: darken(#ffebee, 5%);
+      }
+    }
+
     &.green-button {
       background-color: #c8e6c9;
       color: #2e7d32;
