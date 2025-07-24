@@ -2714,7 +2714,7 @@ export class ModalAgregarMedioComponent implements OnInit {
           proveedorId: valores.proveedor,
           canal: canalSeleccionado.nombre,
           canalId: valores.canal,
-          planMedioItemId: response.planMedioItemId, // Agregar ID del backend
+          planMedioItemId: response.planMedioItemId,
           datos: {
             tarifa: Number(valores.tarifa),
             spotsPorFecha: {}
@@ -2725,13 +2725,29 @@ export class ModalAgregarMedioComponent implements OnInit {
           valorNeto: 0,
           totalSpots: 0,
           diasSeleccionados: [],
-          totalDiasSeleccionados: 0
+          totalDiasSeleccionados: 0,
+          semanas: new Array(this.numSemanas).fill(true) // Agregamos el array de semanas
         };
 
-        const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
-        pautas.push(nuevaPauta);
-        localStorage.setItem('respuestasPautas', JSON.stringify(pautas));
-        console.log('ℹ️ Guardado en localStorage para compatibilidad temporal');
+        // Obtener pautas existentes o inicializar array vacío
+        let pautasExistentes: RespuestaPauta[] = [];
+        try {
+          const pautasStr = localStorage.getItem('respuestasPautas');
+          if (pautasStr) {
+            pautasExistentes = JSON.parse(pautasStr);
+          }
+        } catch (error) {
+          console.error('Error al leer pautas del localStorage:', error);
+        }
+
+        // Agregar nueva pauta y guardar
+        pautasExistentes.push(nuevaPauta);
+        try {
+          localStorage.setItem('respuestasPautas', JSON.stringify(pautasExistentes));
+          console.log('ℹ️ Guardado en localStorage para compatibilidad temporal');
+        } catch (error) {
+          console.error('Error al guardar en localStorage:', error);
+        }
 
         this.snackBar.open('✅ Medio agregado correctamente', '', {
           duration: 2000,

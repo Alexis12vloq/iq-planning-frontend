@@ -51,22 +51,21 @@ export interface PlanMedioItemFlowchartBackend {
   planMedioId: number;
   version: number;
   medioId: number;
+  medioNombre: string;
   proveedorId: number;
+  proveedorNombre: string;
+  canalId: number; // ✅ Agregar ID del canal
+  canalNombre: string; // ✅ Agregar nombre del canal
   tarifa: number;
   dataJson: string;
+  dataPlantillaJson: string;
+  calendarioJson: string;
+  fechaRegistro: string;
+  fechaModificacion?: string;
+  usuarioRegistro: string;
+  usuarioModifico?: string;
   pasoPorFlowchart: boolean;
   plantillaCompletada: boolean;
-  dataPlantillaJson: string | null;
-  calendarioJson: string | null;
-  fechaRegistro: string;
-  usuarioRegistro: string;
-  fechaModificacion?: string;
-  usuarioModifico?: string;
-  // Propiedades adicionales con detalles
-  medioNombre: string;
-  proveedorNombre: string;
-  planNumeroPlan: string;
-  planCampania: string;
 }
 
 // Requests para operaciones CRUD básicas

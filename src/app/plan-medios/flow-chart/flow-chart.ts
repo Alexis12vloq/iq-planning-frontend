@@ -1732,6 +1732,8 @@ export class FlowChart implements OnInit {
       proveedorId: item.proveedorId.toString(),
       plantillaId: item.medioId.toString(), // Usar medioId como plantillaId
       planMedioItemId: item.planMedioItemId, // ✅ ID REAL DEL BACKEND para guardarCalendario
+      canalId: item.canalId?.toString(), // ✅ Agregar canalId
+      canal: item.canalNombre, // ✅ Agregar nombre del canal
       paisFacturacion: datos.pais || 'Default',
       fechaCreacion: item.fechaRegistro,
       fechaModificacion: item.fechaModificacion,
@@ -1739,7 +1741,7 @@ export class FlowChart implements OnInit {
       totalSpots: totalSpotsDefault,
       valorTotal: valorTotal,
       valorNeto: datos.valor_neto || valorTotal,
-      semanas: datos.semanas || [],
+      semanas: Array.isArray(datos.semanas) ? datos.semanas.map(Boolean) : new Array(5).fill(false), // Asegurar array de booleanos
       diasSeleccionados: Object.keys(programacion).filter(fecha => programacion[fecha] > 0),
       totalDiasSeleccionados: Object.keys(programacion).filter(fecha => programacion[fecha] > 0).length
     };
@@ -1822,16 +1824,22 @@ export class FlowChart implements OnInit {
     this.cargarPautasExistentes();
   }
 
-  // ✅ VALIDAR DUPLICADOS (medio + proveedor)
-  private validarDuplicado(medioNombre: string, proveedorId: number, itemIdExcluir?: string): boolean {
+  // ✅ VALIDAR DUPLICADOS (medio + proveedor + canal)
+  private validarDuplicado(medioNombre: string, proveedorId: number, canalId: number, itemIdExcluir?: string): boolean {
     const duplicado = this.itemsPauta.find(item => 
       item.medio === medioNombre && 
       item.proveedorId === proveedorId.toString() && 
+      item.canalId === canalId.toString() &&
       item.id !== itemIdExcluir
     );
     
     if (duplicado) {
-      console.warn('⚠️ Item duplicado encontrado:', { medioNombre, proveedorId, duplicado });
+      console.warn('⚠️ Item duplicado encontrado:', { 
+        medioNombre, 
+        proveedorId, 
+        canalId,
+        duplicado 
+      });
       return true;
     }
     
@@ -2830,19 +2838,32 @@ export class FlowChart implements OnInit {
               <mat-select 
                 formControlName="canal"
                 [placeholder]="cargandoCanales ? 'Cargando canales...' : 'Seleccionar canal'"
-                [disabled]="cargandoCanales || canalesDisponibles.length === 0">
-                <mat-option *ngIf="!cargandoCanales && canalesDisponibles.length === 0" disabled>
-                  No hay canales disponibles para este proveedor
+                [disabled]="cargandoCanales">
+                <mat-option *ngIf="cargandoCanales">
+                  Cargando canales...
                 </mat-option>
-                <mat-option *ngFor="let canal of canalesDisponibles" [value]="canal.id.toString()">
+                <mat-option *ngIf="!cargandoCanales && canalesDisponibles.length === 0" disabled>
+                  No hay canales configurados para este proveedor
+                </mat-option>
+                <mat-option *ngIf="!cargandoCanales && canalesDisponibles.length > 0 && canalesFiltrados.length === 0" disabled>
+                  Todos los canales para este proveedor ya están en uso
+                </mat-option>
+                <mat-option *ngFor="let canal of canalesFiltrados" [value]="canal.canalId">
                   {{ canal.nombre }}
                 </mat-option>
               </mat-select>
               <mat-hint *ngIf="cargandoCanales">Cargando canales...</mat-hint>
               <mat-hint *ngIf="!cargandoCanales && canalesDisponibles.length === 0" class="warning-hint">
                 <mat-icon class="hint-icon">warning</mat-icon>
-                No hay canales disponibles para este proveedor
+                No hay canales configurados para este proveedor
               </mat-hint>
+              <mat-hint *ngIf="!cargandoCanales && canalesDisponibles.length > 0 && canalesFiltrados.length === 0" class="warning-hint">
+                <mat-icon class="hint-icon">warning</mat-icon>
+                Todos los canales para este proveedor ya están en uso
+              </mat-hint>
+              <mat-error *ngIf="seleccionForm.get('canal')?.hasError('required')">
+                El canal es obligatorio
+              </mat-error>
             </mat-form-field>
           </form>
         </mat-card-content>
@@ -3200,7 +3221,7 @@ export class ModalNuevaPautaComponent implements OnInit {
   private lookupCache = new Map<string, any[]>();
   
   // Medios y proveedores cargados dinámicamente desde backend
-  todosLosMedios: MedioBackend[] = [];
+  todosLosMedios: MedioBackend[] = []; // Cambiar a array de MedioBackend
   mediosDisponibles: MedioBackend[] = [];
   proveedoresDisponibles: any[] = [];
   proveedoresFiltrados: any[] = []; // ✅ FILTRADOS para evitar duplicados
@@ -3208,6 +3229,7 @@ export class ModalNuevaPautaComponent implements OnInit {
   
   // Canales disponibles
   canalesDisponibles: any[] = [];
+  canalesFiltrados: any[] = []; // ✅ NUEVO: Canales filtrados (sin duplicados)
   cargandoCanales: boolean = false;
   
   // Estados de carga
@@ -3224,18 +3246,21 @@ export class ModalNuevaPautaComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.seleccionForm = this.fb.group({
-      medio: [''],
-      proveedor: [''],
-      canal: ['']
+      medio: ['', [Validators.required]],
+      proveedor: ['', [Validators.required]],
+      canal: ['', [Validators.required]]
     });
 
-    this.seleccionForm.get('medio')?.valueChanges.subscribe(medioSeleccionado => {
-      if (medioSeleccionado) {
-        console.log('🔄 Medio seleccionado:', medioSeleccionado);
-        this.onMedioChange(medioSeleccionado);
+    // Suscribirse a cambios del medio
+    this.seleccionForm.get('medio')?.valueChanges.subscribe(medio => {
+      if (medio) {
+        console.log('🔄 Medio seleccionado:', medio);
+        this.onMedioChange(medio);
       } else {
         this.proveedoresDisponibles = [];
+        this.proveedoresFiltrados = [];
         this.canalesDisponibles = [];
+        this.canalesFiltrados = [];
         this.plantillaActual = null;
         this.errorPlantilla = null;
         this.cargandoPlantilla = false;
@@ -3243,12 +3268,14 @@ export class ModalNuevaPautaComponent implements OnInit {
       }
     });
 
-    this.seleccionForm.get('proveedor')?.valueChanges.subscribe(proveedorSeleccionado => {
-      if (proveedorSeleccionado) {
-        console.log('🔄 Proveedor seleccionado:', proveedorSeleccionado);
-        this.onProveedorChange(proveedorSeleccionado);
+    // Suscribirse a cambios del proveedor
+    this.seleccionForm.get('proveedor')?.valueChanges.subscribe(proveedorId => {
+      if (proveedorId) {
+        console.log('🔄 Proveedor seleccionado:', proveedorId);
+        this.onProveedorChange(proveedorId);
       } else {
         this.canalesDisponibles = [];
+        this.canalesFiltrados = [];
         this.seleccionForm.patchValue({ canal: '' });
       }
     });
@@ -3259,15 +3286,10 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.errorPlantilla = null;
     this.plantillaActual = null;
     
-    console.log('🚀 Iniciando ModalNuevaPautaComponent');
-    console.log('📋 Data recibida:', this.data);
-    console.log('🔧 Modo de operación:', this.data?.action);
-    console.log('📄 Datos de pauta (edición):', this.data?.pautaData);
-    
     // Cargar medios desde backend
     this.cargarMediosDisponibles();
     
-    // ✅ CARGAR MEDIOS EXISTENTES para filtro de proveedores
+    // ✅ CARGAR MEDIOS EXISTENTES para filtro de proveedores y canales
     this.cargarMediosExistentes();
     
     // En modo edición, los datos se cargarán después de que se carguen los medios
@@ -3593,8 +3615,8 @@ export class ModalNuevaPautaComponent implements OnInit {
   puedeGuardar(): boolean {
     const medioSeleccionado = this.seleccionForm.get('medio')?.value;
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
-    const canalId = this.seleccionForm.get('canal')?.value;
-    const tarifaValida = this.pautaForm.get('tarifa')?.value > 0;
+    const canalId = Number(this.seleccionForm.get('canal')?.value);
+    const tarifaValida = this.pautaForm?.get('tarifa')?.value > 0;
 
     // ✅ En modo EDICIÓN: Solo verificar que haya proveedores disponibles
     // ✅ En modo CREACIÓN: Validar que haya proveedores filtrados disponibles (solo si no está cargando)
@@ -3605,7 +3627,7 @@ export class ModalNuevaPautaComponent implements OnInit {
     // ✅ Validar canales disponibles
     const tieneCanalesDisponibles = this.data.action === 'edit' ? 
       (this.cargandoCanales || this.canalesDisponibles.length > 0) :
-      (this.cargandoCanales || this.canalesDisponibles.length > 0);
+      (this.cargandoCanales || this.canalesFiltrados.length > 0);
 
     const esValido = !!(
       medioSeleccionado && 
@@ -3613,10 +3635,11 @@ export class ModalNuevaPautaComponent implements OnInit {
       proveedorId && 
       Number(proveedorId) > 0 &&
       canalId &&
+      Number(canalId) > 0 &&
       tarifaValida &&
       tieneProveedoresDisponibles &&
       tieneCanalesDisponibles &&
-      this.pautaForm.valid &&
+      this.pautaForm?.valid &&
       !this.cargandoProveedores &&  // ✅ No permitir guardar mientras carga proveedores
       !this.cargandoCanales  // ✅ No permitir guardar mientras carga canales
     );
@@ -3632,7 +3655,7 @@ export class ModalNuevaPautaComponent implements OnInit {
       tarifaValida,
       tieneProveedoresDisponibles,
       tieneCanalesDisponibles,
-      formularioValido: this.pautaForm.valid,
+      formularioValido: this.pautaForm?.valid,
       cargandoProveedores: this.cargandoProveedores,
       cargandoCanales: this.cargandoCanales,
       resultado: esValido
@@ -3729,6 +3752,9 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.mediosExistentes = itemsExistentes.map((item: any) => ({
       medio: item.medio,
       proveedor: item.proveedor,
+      proveedorId: item.proveedorId,
+      canal: item.canal,
+      canalId: item.canalId,
       id: item.id
     }));
 
@@ -3737,7 +3763,7 @@ export class ModalNuevaPautaComponent implements OnInit {
   }
 
   onMedioChange(medioSeleccionado: MedioBackend): void {
-    if (medioSeleccionado && medioSeleccionado.nombre) {
+    if (medioSeleccionado && medioSeleccionado.medioId) {
       this.cargandoProveedores = true;
       console.log('🔄 Cargando proveedores para medio:', medioSeleccionado.nombre);
       this.seleccionForm.patchValue({ proveedor: '', canal: '' });
@@ -3750,14 +3776,14 @@ export class ModalNuevaPautaComponent implements OnInit {
     }
   }
 
-  onProveedorChange(proveedorSeleccionado: number): void {
-    console.log('🔄 onProveedorChange ejecutado con:', proveedorSeleccionado);
+  onProveedorChange(proveedorId: number): void {
+    console.log('🔄 onProveedorChange ejecutado con:', proveedorId);
     
     // Limpiar selección de canal
     this.seleccionForm.patchValue({ canal: '' });
     
     // Cargar canales para el proveedor seleccionado
-    this.cargarCanalesPorProveedor(proveedorSeleccionado);
+    this.cargarCanalesPorProveedor(proveedorId);
   }
 
   cargarProveedoresPorMedio(medioId: number, nombreMedio: string, callback?: () => void): void {
@@ -3831,19 +3857,63 @@ export class ModalNuevaPautaComponent implements OnInit {
     console.log('📊 Lista de proveedores filtrados:', this.proveedoresFiltrados.map(p => p.VENDOR));
   }
 
-  cargarCanalesPorProveedor(proveedorId: number): void {
+    cargarCanalesPorProveedor(proveedorId: number): void {
     this.cargandoCanales = true;
+    this.canalesDisponibles = [];
+    this.canalesFiltrados = [];
+    this.seleccionForm.get('canal')?.setValue('');
+    
     console.log('🔄 Cargando canales para proveedor ID:', proveedorId);
 
     this.backendMediosService.getCanalesPorProveedor(proveedorId).subscribe({
       next: (canales) => {
+        // ✅ FILTRAR CANALES YA USADOS para este medio y proveedor
+        const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
+        
+        if (!medioSeleccionado) {
+          console.warn('⚠️ No hay medio seleccionado al cargar canales');
+          this.cargandoCanales = false;
+          return;
+        }
+
+        // Guardar todos los canales disponibles
         this.canalesDisponibles = canales;
+        
+        if (canales.length === 0) {
+          console.warn('⚠️ No hay canales configurados para este proveedor');
+          this.cargandoCanales = false;
+          return;
+        }
+
+        // Obtener canales en uso para este medio y proveedor
+        const canalesEnUso = this.mediosExistentes
+          .filter(me => 
+            me.medio === medioSeleccionado.nombre && 
+            me.proveedorId === proveedorId.toString()
+          )
+          .map(me => Number(me.canalId));
+
+        console.log('🔍 Canales en uso:', canalesEnUso);
+        
+        // Filtrar canales ya usados
+        this.canalesFiltrados = canales.filter(canal => 
+          !canalesEnUso.includes(Number(canal.canalId))
+        );
+        
+        console.log('✅ Canales disponibles:', this.canalesDisponibles.length);
+        console.log('✅ Canales filtrados:', this.canalesFiltrados.length);
+        
+        // Si no hay canales filtrados disponibles, mostrar mensaje
+        if (this.canalesFiltrados.length === 0) {
+          console.warn('⚠️ Todos los canales para este proveedor ya están en uso');
+        }
+
         this.cargandoCanales = false;
-        console.log('✅ Canales cargados para proveedor', proveedorId, ':', this.canalesDisponibles.length);
       },
       error: (error) => {
         console.error('❌ Error cargando canales:', error);
         this.canalesDisponibles = [];
+        this.canalesFiltrados = [];
         this.cargandoCanales = false;
         this.snackBar.open('❌ Error cargando canales desde el servidor', '', {
           duration: 3000,
@@ -3936,6 +4006,7 @@ export class ModalNuevaPautaComponent implements OnInit {
       valorTotal: valores.valor_total || 0,
       valorNeto: valores.valor_neto || 0,
       totalSpots: valores.total_spots || 1,
+      semanas: isEdit ? (this.data.pautaData.semanas || []) : [], // ✅ Agregar semanas requerido
       diasSeleccionados: isEdit ? (this.data.pautaData.diasSeleccionados || []) : [],
       totalDiasSeleccionados: isEdit ? (this.data.pautaData.totalDiasSeleccionados || 0) : 0
     };
@@ -3994,9 +4065,13 @@ export class ModalNuevaPautaComponent implements OnInit {
     });
 
     // ✅ VALIDAR DUPLICADOS antes de crear
+    const canalId = Number(this.seleccionForm.get('canal')?.value);
+    if (!canalId || canalId <= 0) {
+      throw new Error('ERROR CRÍTICO: Canal sin ID válido. CanalId: ' + canalId);
+    }
     const parentComponent = this.getParentFlowChartComponent();
-    if (parentComponent && parentComponent.validarDuplicado(medioSeleccionado.nombre, proveedorId)) {
-      throw new Error(`Ya existe un item para ${medioSeleccionado.nombre} con este proveedor`);
+    if (parentComponent && parentComponent.validarDuplicado(medioSeleccionado.nombre, proveedorId, canalId)) {
+      throw new Error(`Ya existe un item para ${medioSeleccionado.nombre} con este proveedor y canal`);
     }
 
     // Extraer tarifa del formulario
@@ -4070,9 +4145,10 @@ export class ModalNuevaPautaComponent implements OnInit {
     });
 
     // ✅ VALIDAR DUPLICADOS antes de actualizar
+    const canalId = Number(this.seleccionForm.get('canal')?.value);
     const parentComponent = this.getParentFlowChartComponent();
-    if (parentComponent && parentComponent.validarDuplicado(medioSeleccionado.nombre, proveedorId, pautaActualizada.id)) {
-      throw new Error(`Ya existe otro item para ${medioSeleccionado.nombre} con este proveedor`);
+    if (parentComponent && parentComponent.validarDuplicado(medioSeleccionado.nombre, proveedorId, canalId, pautaActualizada.id)) {
+      throw new Error(`Ya existe otro item para ${medioSeleccionado.nombre} con este proveedor y canal`);
     }
 
     // Extraer tarifa del formulario
