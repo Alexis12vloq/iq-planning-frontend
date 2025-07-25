@@ -171,7 +171,6 @@ export class PlanMediosResumen implements OnInit {
   private verificarYRecargarDatos(): void {
     // Si tenemos un planId, recargar los datos
     if (this.planId) {
-      console.log('🔄 Forzando recarga completa de datos...');
       this.recargarResumen();
     }
   }
@@ -467,7 +466,6 @@ export class PlanMediosResumen implements OnInit {
     this.mesActualIndex = 0;
     this.mesActual = this.mesesDisponibles[0];
 
-    console.log('📅 Meses disponibles:', this.mesesDisponibles);
   }
 
   calcularSemanasConFechas(): void {
@@ -499,11 +497,6 @@ export class PlanMediosResumen implements OnInit {
     fechaInicio.setHours(0, 0, 0, 0);
     fechaFin.setHours(23, 59, 59, 999);
 
-    console.log('📅 Calculando semanas para mes:', this.mesActual.nombre, {
-      fechaInicio: fechaInicio.toISOString(),
-      fechaFin: fechaFin.toISOString()
-    });
-
     // ✅ SEMANAS COMPLETAS: Encontrar el lunes de la semana que contiene la fecha de inicio
     let inicioSemana = new Date(fechaInicio);
     const diaSemanaInicio = inicioSemana.getDay(); // 0=domingo, 1=lunes, etc.
@@ -524,13 +517,6 @@ export class PlanMediosResumen implements OnInit {
       finPlan.setDate(finPlan.getDate() + diasHastaDomingo);
     }
 
-    console.log('📅 Semanas completas calculadas:', {
-      inicioSemanaCompleta: this.formatearFecha(inicioSemana),
-      finSemanaCompleta: this.formatearFecha(finPlan),
-      fechaOriginalInicio: this.formatearFecha(fechaInicio),
-      fechaOriginalFin: this.formatearFecha(fechaFin)
-    });
-
     let contadorSemana = 1;
 
     // Generar semanas completas de lunes a domingo
@@ -547,16 +533,13 @@ export class PlanMediosResumen implements OnInit {
 
       this.semanasColumnas.push(`S${contadorSemana}`);
 
-      console.log(`📅 Semana ${contadorSemana}: ${this.formatearFecha(inicioSemana)} - ${this.formatearFecha(finSemana)}`);
-
       contadorSemana++;
 
       // Avanzar al próximo lunes
       inicioSemana.setDate(inicioSemana.getDate() + 7);
     }
 
-    console.log('📅 Semanas completas calculadas para', this.mesActual.nombre, ':', this.semanasConFechas);
-    console.log('📅 Columnas de semanas:', this.semanasColumnas);
+
   }
 
   formatearFecha(fecha: Date): string {
@@ -648,8 +631,6 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private ejecutarAccionMedio(medio: any): void {
-    console.log('⚡ Abriendo modal de acciones para medio:', medio);
-
     const dialogRef = this.dialog.open(ModalAccionesMedioComponent, {
       width: '400px',
       data: {
@@ -661,18 +642,14 @@ export class PlanMediosResumen implements OnInit {
 
     dialogRef.afterClosed().subscribe((result: any) => {
       if (result && result.accion === 'editar') {
-        console.log('✏️ Acción: Editar medio con planMedioItemId:', medio.planMedioItemId);
         this.editarMedio(medio);
       } else if (result && result.accion === 'eliminar') {
-        console.log('🗑️ Acción: Eliminar medio con planMedioItemId:', medio.planMedioItemId);
         this.eliminarMedio(medio);
       }
     });
   }
 
   private editarMedio(medio: any): void {
-    console.log('🔄 ABRIENDO MODAL EDITAR MEDIO:', medio);
-    
     const dialogRef = this.dialog.open(ModalEditarMedioComponent, {
       width: '500px',
       data: {
@@ -684,20 +661,14 @@ export class PlanMediosResumen implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe((result: any) => {
-      console.log('📊 RESULTADO DEL MODAL:', result);
-      
       if (result && result.shouldRefresh) {
-        console.log('✅ Medio editado, recargando resumen');
-        
         if (result.medioActualizado) {
           // Actualización específica para cambios de tarifa
-          console.log('🔄 Actualizando vista para cambios de tarifa');
           
           // Actualizar inmediatamente la tarifa en el modelo local (para respuesta inmediata)
           this.actualizarTarifaEnModelo(result.medioActualizadoId || medio.planMedioItemId, result.nuevaTarifa);
           
           // Recargar datos desde el backend para obtener valores actualizados
-          console.log('🔄 Recargando datos desde backend para confirmar cambios');
           this.recargarResumen();
           
           // Marcar que hay cambios para detectar cambios futuros
@@ -715,19 +686,13 @@ export class PlanMediosResumen implements OnInit {
   private actualizarTarifaEnModelo(planMedioItemId: number, nuevaTarifa: number): void {
     if (!planMedioItemId || !nuevaTarifa) return;
     
-    console.log('🔄 ACTUALIZANDO TARIFA EN MODELO LOCAL (TEMPORAL):', planMedioItemId, nuevaTarifa);
-    
     // Buscar y actualizar en periodoSeleccionado
     const medioEncontrado = this.periodoSeleccionado.medios.find(m => m.planMedioItemId === planMedioItemId);
     if (medioEncontrado) {
-      console.log('✅ Medio encontrado en modelo, actualizando tarifa temporalmente:', medioEncontrado.nombre);
       medioEncontrado.tarifa = nuevaTarifa;
       
       // Forzar actualización inmediata del dataSource
       this.prepararDataSource();
-      console.log('✅ Tarifa actualizada temporalmente y dataSource refrescado');
-    } else {
-      console.log('❌ Medio no encontrado en modelo local');
     }
   }
 
@@ -743,11 +708,9 @@ export class PlanMediosResumen implements OnInit {
 
     dialogRef.afterClosed().subscribe((result: any) => {
       if (result && result.shouldRefresh) {
-        console.log('✅ Medio eliminado, recargando resumen');
         this.recargarResumen();
         
         // ✅ EJECUTAR GUARDAR RESUMEN AUTOMÁTICAMENTE DESPUÉS DE ELIMINAR
-        console.log('💾 Ejecutando Guardar Resumen automáticamente tras eliminar medio...');
         setTimeout(() => {
           this.guardarResumen();
         }, 1000); // Pequeño delay para asegurar que la recarga termine
@@ -779,7 +742,6 @@ export class PlanMediosResumen implements OnInit {
   }
 
   private ejecutarDescargaFlow(): void {
-    console.log('🔄 Ejecutando descarga FlowChart');
     // TODO: Implementar lógica de descarga
     this.snackBar.open('📥 Descarga FlowChart iniciada', '', {
       duration: 2000,
@@ -839,8 +801,7 @@ export class PlanMediosResumen implements OnInit {
         planMedioItemId: medio.planMedioItemId
       }));
 
-    console.log('🔄 Abriendo modal para agregar medio:', planData);
-    console.log('📋 Medios existentes enviados al modal:', mediosExistentes);
+
 
     const dialogRef = this.dialog.open(ModalAgregarMedioComponent, {
       width: '600px',
@@ -854,7 +815,6 @@ export class PlanMediosResumen implements OnInit {
 
     dialogRef.afterClosed().subscribe((result: any) => {
       if (result && result.shouldRefresh) {
-        console.log('✅ Medio agregado, recargando resumen');
         this.recargarResumen();
         // Marcar cambios pendientes tras agregar medio
         this.cambiosPendientes = true;
@@ -1003,7 +963,7 @@ export class PlanMediosResumen implements OnInit {
   private ejecutarNavegacion(ruta: string, stateData?: any): void {
     if (stateData) {
       if (ruta === '/plan-medios-nueva-pauta') {
-        console.log('🔄 Navegando a nueva pauta con plan data:', stateData);
+    
         this.router.navigate([ruta], { state: { planData: stateData } });
       } else {
         this.router.navigate([ruta], { state: stateData });
@@ -1103,30 +1063,14 @@ export class PlanMediosResumen implements OnInit {
     const planNumerico = Number(planId);
     const versionNumerico = Number(version);
 
-    console.log('🔄 Cargando datos desde backend para plan:', planNumerico, 'versión:', versionNumerico);
-
     // Cargar de forma asíncrona desde el backend
     this.cargarDatosDesdeBackend(planNumerico, versionNumerico);
   }
 
   private cargarDatosDesdeBackend(planMedioId: number, version: number): void {
-    console.log('🔄 CONSULTANDO BACKEND para plan:', planMedioId, 'versión:', version);
-    
     this.cargandoDatos = true;
     this.backendMediosService.getPlanMedioItemsPorPlan(planMedioId, version).subscribe(
       (planMedioItems: PlanMedioItemBackend[]) => {
-        console.log('📥 RESPUESTA COMPLETA DEL BACKEND:', planMedioItems);
-        
-        // Log detallado de cada item para verificar las tarifas
-        planMedioItems.forEach((item, index) => {
-          console.log(`📊 Item ${index + 1}:`, {
-            planMedioItemId: item.planMedioItemId,
-            medioNombre: item.medioNombre,
-            proveedorNombre: item.proveedorNombre,
-            tarifa: item.tarifa,
-            dataJson: item.dataJson
-          });
-        });
         
         if (planMedioItems.length > 0) {
           const periodosConDatos = this.procesarPlanMedioItemsDesdeBackend(planMedioItems);
@@ -1137,9 +1081,6 @@ export class PlanMediosResumen implements OnInit {
           this.calcularSemanasConFechas();
           this.prepararDataSource();
 
-          // Log de éxito sin notificación que pueda distraer
-          console.log(`✅ Cargados exitosamente ${planMedioItems.length} medios desde servidor`);
-          console.log('📊 DataSource actualizado con nuevos datos');
           this.cargandoDatos = false;
         } else {
           // Plan existe pero sin medios - crear período vacío para que funcione el resumen
@@ -1151,17 +1092,10 @@ export class PlanMediosResumen implements OnInit {
           this.calcularSemanasConFechas();
           this.prepararDataSource();
 
-          // Log informativo sin notificación
-          console.log('ℹ️ Plan sin medios cargado - listo para agregar medios');
           this.cargandoDatos = false;
         }
       },
       (error) => {
-        console.error('❌ ERROR COMPLETO CARGANDO DATOS:', error);
-        console.error('❌ Status:', error.status);
-        console.error('❌ Message:', error.message);
-        console.error('❌ Error body:', error.error);
-        
         // Crear período vacío funcional para poder agregar medios
         const periodoVacio = this.crearPeriodoVacio(this.resumenPlan.fechaInicio, this.resumenPlan.fechaFin);
         this.resumenPlan.periodos = [periodoVacio];
@@ -1171,7 +1105,6 @@ export class PlanMediosResumen implements OnInit {
         this.calcularSemanasConFechas();
         this.prepararDataSource();
         
-        console.error('❌ Error cargando datos del servidor - Plan configurado para agregar medios');
         this.cargandoDatos = false;
       }
     );
@@ -1202,11 +1135,7 @@ export class PlanMediosResumen implements OnInit {
           totalSpots = dataJsonParsed.totalSpots || 0;
           valorTotal = dataJsonParsed.valorTotal || 0;
           
-          console.log('✅ JSON parseado para', medio, proveedor, ':', {
-            spotsPorFecha,
-            totalSpots,
-            valorTotal
-          });
+
         } catch (error) {
           console.error('❌ Error parseando dataJson para', medio, proveedor, ':', error);
         }
@@ -1216,7 +1145,7 @@ export class PlanMediosResumen implements OnInit {
       if (totalSpots === 0) {
         totalSpots = 0;
         valorTotal = 0;
-        console.log('ℹ️ No hay spots programados para', medio, proveedor);
+
       }
 
       // Generar semanas boolean basado en spots por fecha
@@ -1377,15 +1306,7 @@ export class PlanMediosResumen implements OnInit {
     const anioFin = fechaFinal.getUTCFullYear();
 
     // Debug: Agregar logs temporales
-    console.log('Calculando período:', {
-      fechaInicio,
-      fechaFin,
-      mesInicio,
-      mesFin,
-      mesInicioNombre: meses[mesInicio],
-      mesFinNombre: meses[mesFin],
-      sonIguales: mesInicio === mesFin
-    });
+    
 
     // Si es el mismo año
     if (anioInicio === anioFin) {
@@ -1433,16 +1354,8 @@ export class PlanMediosResumen implements OnInit {
         return {};
       }
 
-      console.log('🔄 PROCESANDO CALENDARIO DE FLOWCHART:', {
-        calendarioCompleto: calendarioData,
-        spotsPorFecha: spotsPorFecha,
-        totalDias: Object.keys(spotsPorFecha).length,
-        fechasEncontradas: Object.keys(spotsPorFecha)
-      });
-
       // Validar que hay datos para procesar
       if (Object.keys(spotsPorFecha).length === 0) {
-        console.log('⚠️ No hay spots por fecha para procesar');
         return {};
       }
 
@@ -1470,12 +1383,7 @@ export class PlanMediosResumen implements OnInit {
         fechaInicioSemana.setHours(0, 0, 0, 0);
         fechaFinSemana.setHours(23, 59, 59, 999);
 
-        console.log(`📅 PROCESANDO SEMANA ${semana.nombre}:`, {
-          fechaInicio: semana.fechaInicio,
-          fechaFin: semana.fechaFin,
-          fechaInicioDate: fechaInicioSemana.toISOString().split('T')[0],
-          fechaFinDate: fechaFinSemana.toISOString().split('T')[0]
-        });
+
 
         // ✅ CORRECCIÓN: Sumar spots de todos los días de esta semana
         Object.keys(spotsPorFecha).forEach(fechaStr => {
@@ -1501,24 +1409,16 @@ export class PlanMediosResumen implements OnInit {
             const spots = spotsPorFecha[fechaStr] || 0;
             totalSpotsSemana += spots;
             
-            console.log(`   📅 Día ${fechaStr} (${fechaDia.toDateString()}) incluido en semana ${semana.nombre}: ${spots} spots`);
+
           }
         });
 
         // ✅ CORRECCIÓN: Guardar el total de spots de la semana (incluso si es 0 para mostrar consistencia)
         spotsPorSemana[semana.fechaInicio] = totalSpotsSemana;
         
-        if (totalSpotsSemana > 0) {
-          console.log(`✅ Semana ${semana.nombre} (${semana.fechaInicio}): ${totalSpotsSemana} spots`);
-        } else {
-          console.log(`📝 Semana ${semana.nombre} (${semana.fechaInicio}): 0 spots`);
-        }
+        
       });
 
-      console.log('✅ SPOTS POR SEMANA CALCULADOS DESDE FLOWCHART:', spotsPorSemana);
-      console.log(`📊 RESUMEN: ${Object.keys(spotsPorSemana).length} semanas procesadas`);
-      console.log(`📊 TOTAL SPOTS: ${Object.values(spotsPorSemana).reduce((sum, spots) => sum + spots, 0)}`);
-      
       return spotsPorSemana;
 
     } catch (error) {
@@ -1535,7 +1435,6 @@ export class PlanMediosResumen implements OnInit {
       const planNumerico = Number(this.planId);
       const version = this.resumenPlan.version;
 
-      console.log('🔄 Recargando datos desde servidor...');
       this.cargandoDatos = true;
       this.cargarDatosDesdeBackend(planNumerico, version);
     } else {
@@ -1581,8 +1480,6 @@ export class PlanMediosResumen implements OnInit {
       return;
     }
 
-    console.log(`💾 Guardando resumen: ${totalMedios} medios por actualizar`);
-
     // Guardar todos los medios
     this.periodoSeleccionado.medios.forEach(medio => {
       if (medio.planMedioItemId) {
@@ -1598,7 +1495,7 @@ export class PlanMediosResumen implements OnInit {
               verticalPosition: 'top',
               panelClass: ['success-snackbar']
             });
-            console.log('✅ Todos los medios actualizados correctamente');
+
           }
         }).catch((error) => {
           console.error('❌ Error guardando medio:', medio.nombre, error);
@@ -1691,8 +1588,7 @@ export class PlanMediosResumen implements OnInit {
   private actualizarSpotsEnBackend(medio: MedioPlan): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!medio.planMedioItemId || !this.planId) {
-        console.log('⚠️ No se puede actualizar en backend: falta planMedioItemId o planId');
-        reject('Falta planMedioItemId o planId');
+              reject('Falta planMedioItemId o planId');
         return;
       }
 
@@ -1713,11 +1609,8 @@ export class PlanMediosResumen implements OnInit {
         usuarioModifico: 'SYSTEM' // TODO: Obtener usuario actual
       };
 
-      console.log('📤 Actualizando spots en backend:', actualizarRequest);
-
       this.backendMediosService.actualizarPlanMedioItem(actualizarRequest).subscribe(
         (response: PlanMedioItemBackend) => {
-          console.log('✅ Spots actualizados en backend:', response);
           resolve();
         },
         (error: any) => {
@@ -1821,7 +1714,7 @@ export class PlanMediosResumen implements OnInit {
   // Método temporal para limpiar logs de debugging
   limpiarLogsDebugging(): void {
     console.clear();
-    console.log('🧹 Logs de debugging limpiados');
+
     this.snackBar.open('🧹 Logs de debugging limpiados', '', {
       duration: 1000,
       horizontalPosition: 'right',
@@ -1831,26 +1724,12 @@ export class PlanMediosResumen implements OnInit {
 
   // Método para debugging - mostrar estado actual del resumen
   mostrarEstadoResumen(): void {
-    console.log('📊 === ESTADO ACTUAL DEL RESUMEN ===');
-    console.log('✅ Plan ID:', this.planId);
-    console.log('✅ Resumen Plan:', this.resumenPlan);
-    console.log('✅ Período Seleccionado:', this.periodoSeleccionado);
-    console.log('✅ Medios en período:', this.periodoSeleccionado?.medios || []);
-    console.log('✅ DataSource:', this.dataSource);
-    console.log('✅ Cambios Pendientes:', this.cambiosPendientes);
-    console.log('📊 === FIN ESTADO RESUMEN ===');
+
   }
 
   // Método para mostrar información sobre la integración con el backend
   mostrarInfoBackend(): void {
-    console.log('🔧 === INFORMACIÓN DE INTEGRACIÓN BACKEND ===');
-    console.log('✅ Servicio de consulta integrado: /api/PlanMedioItem/by-plan/{id}/version/{version}');
-    console.log('✅ Carga de datos desde backend implementada');
-    console.log('✅ Parsing de dataJson para spots por fecha');
-    console.log('✅ Actualización automática en backend al editar spots');
-    console.log('✅ Eliminación de dependencia de localStorage');
-    console.log('✅ Notificaciones de estado para todas las operaciones');
-    console.log('🔧 === FIN INFORMACIÓN ===');
+
 
     this.snackBar.open('ℹ️ Integración backend completada - Ver consola para detalles', '', {
       duration: 3000,
@@ -1864,35 +1743,8 @@ export class PlanMediosResumen implements OnInit {
    * ✅ NUEVO: Método para mostrar información de debugging sobre flowchart
    */
   mostrarInfoFlowchart(): void {
-    console.log('🔄 === INFORMACIÓN DE INTEGRACIÓN FLOWCHART ===');
-    
     const mediosFlowchart = this.periodoSeleccionado?.medios?.filter(m => m.pasoPorFlowchart) || [];
     const mediosNormales = this.periodoSeleccionado?.medios?.filter(m => !m.pasoPorFlowchart) || [];
-    
-    console.log('📊 ESTADÍSTICAS:');
-    console.log(`  ✅ Medios totales: ${this.periodoSeleccionado?.medios?.length || 0}`);
-    console.log(`  🔄 Medios de FlowChart: ${mediosFlowchart.length}`);
-    console.log(`  ✏️  Medios editables: ${mediosNormales.length}`);
-    
-    if (mediosFlowchart.length > 0) {
-      console.log('📋 MEDIOS DESDE FLOWCHART:');
-      mediosFlowchart.forEach((medio, index) => {
-        console.log(`  ${index + 1}. ${medio.nombre} - ${medio.proveedor}`);
-        console.log(`     Spots totales: ${medio.salidas}`);
-        console.log(`     Valor total: ${medio.valorNeto}`);
-        console.log(`     Tiene calendario: ${!!medio.calendarioJson}`);
-        console.log(`     Spots por semana:`, Object.keys(medio.spotsPorFecha || {}).length);
-      });
-    }
-    
-    if (mediosNormales.length > 0) {
-      console.log('✏️ MEDIOS EDITABLES:');
-      mediosNormales.forEach((medio, index) => {
-        console.log(`  ${index + 1}. ${medio.nombre} - ${medio.proveedor} (Editable)`);
-      });
-    }
-    
-    console.log('🔄 === FIN INFORMACIÓN FLOWCHART ===');
 
     this.snackBar.open(`ℹ️ FlowChart: ${mediosFlowchart.length} medios bloqueados, ${mediosNormales.length} editables - Ver consola`, '', {
       duration: 4000,
@@ -2053,10 +1905,7 @@ export class PlanMediosResumen implements OnInit {
     const mediosActivos = Array.from(mediosAgrupados.keys());
     const itemsPorMedio = Object.fromEntries(mediosAgrupados);
 
-    console.log('📊 Medios agrupados para eliminar:', {
-      mediosActivos,
-      itemsPorMedio
-    });
+
 
     const dialogRef = this.dialog.open(ModalEliminarMediosComponent, {
       width: '700px',
@@ -2419,26 +2268,20 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   private cargarMediosExistentes(): void {
-    // Siempre usar los datos más recientes del backend
-    if (this.data.mediosExistentes) {
-      // Filtrar solo los medios que realmente existen en el backend
-      this.mediosExistentes = this.data.mediosExistentes.filter((me: { planMedioItemId?: number }) => me.planMedioItemId);
-      console.log('✅ MEDIOS EXISTENTES FILTRADOS:', this.mediosExistentes);
-      console.log(`📊 Total medios existentes: ${this.mediosExistentes.length}`);
-    } else {
-      this.mediosExistentes = [];
-      console.log('⚠️ No hay medios existentes');
-    }
+          // Siempre usar los datos más recientes del backend
+      if (this.data.mediosExistentes) {
+        // Filtrar solo los medios que realmente existen en el backend
+        this.mediosExistentes = this.data.mediosExistentes.filter((me: { planMedioItemId?: number }) => me.planMedioItemId);
+      } else {
+        this.mediosExistentes = [];
+      }
   }
 
   onMedioChange(medio: MedioBackend): void {
     if (medio && medio.medioId) {
       this.cargandoProveedores = true;
-      console.log('🔄 Cargando proveedores para medio:', medio.nombre, 'ID:', medio.medioId);
-
       this.backendMediosService.getProveedoresPorMedio(medio.medioId).subscribe(
         (proveedoresBackend: ProveedorBackend[]) => {
-          console.log('✅ Proveedores del backend obtenidos:', proveedoresBackend);
 
           // Convertir proveedores del backend a formato compatible
           this.proveedoresDisponibles = proveedoresBackend.map(p => ({
@@ -2476,8 +2319,6 @@ export class ModalAgregarMedioComponent implements OnInit {
 
   cargarCanalesPorProveedor(proveedorId: string): void {
     this.cargandoCanales = true;
-    console.log('🔄 Cargando canales para proveedor ID:', proveedorId);
-
     this.backendMediosService.getCanalesPorProveedor(Number(proveedorId)).subscribe({
       next: (canales) => {
         // Filtrar canales que ya están en uso para este medio y proveedor
@@ -2489,17 +2330,13 @@ export class ModalAgregarMedioComponent implements OnInit {
               me.proveedor === this.proveedoresDisponibles.find(p => p.id === proveedorId)?.VENDOR
             )
             .map(me => me.canalId);
-
-          console.log('🔍 Canales en uso:', canalesEnUso);
           
           this.canalesDisponibles = canales.filter(canal => !canalesEnUso.includes(canal.canalId));
-          console.log('✅ Canales disponibles después de filtrar:', this.canalesDisponibles);
         } else {
           this.canalesDisponibles = canales;
         }
 
         this.cargandoCanales = false;
-        console.log('✅ Total canales disponibles:', this.canalesDisponibles.length);
       },
       error: (error) => {
         console.error('❌ Error cargando canales:', error);
@@ -2518,11 +2355,8 @@ export class ModalAgregarMedioComponent implements OnInit {
   // Método para cargar medios desde el backend
   private cargarMediosDesdeBackend(): void {
     this.cargandoMedios = true;
-    console.log('🔄 Cargando medios desde el backend...');
-
     this.backendMediosService.getMedios().subscribe(
       (medios: MedioBackend[]) => {
-        console.log('✅ Medios del backend obtenidos:', medios);
         this.mediosDisponibles = medios.filter(m => m.estado); // Solo medios activos
         this.cargandoMedios = false;
       },
@@ -2546,10 +2380,7 @@ export class ModalAgregarMedioComponent implements OnInit {
     // No filtramos proveedores ya que un mismo proveedor puede tener diferentes canales
     this.proveedoresFiltrados = this.proveedoresDisponibles;
 
-          console.log('🔍 PROVEEDORES DISPONIBLES PARA:', nombreMedio);
-      console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
-      console.log('📋 Proveedores totales disponibles:', this.proveedoresDisponibles.length);
-      console.log('📊 Lista de proveedores:', this.proveedoresFiltrados.map(p => p.VENDOR));
+
   }
 
   private validarCombinacionDuplicada(): void {
@@ -2568,20 +2399,12 @@ export class ModalAgregarMedioComponent implements OnInit {
           me.canalId === valores.canal
         );
 
-        console.log('🔍 VALIDANDO DUPLICADO - COMBINACIÓN A VERIFICAR:');
-        console.log('📊 Medio:', medioSeleccionado.nombre);
-        console.log('📊 Proveedor:', proveedorSeleccionado.VENDOR);
-        console.log('📊 Canal:', canalSeleccionado.nombre);
-        console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
-        console.log('❓ Combinación ya existe:', this.existeCombinacion ? '❌ SÍ' : '✅ NO');
-        
         if (this.existeCombinacion) {
           const medioConflicto = this.mediosExistentes.find(me =>
             me.medio === medioSeleccionado.nombre &&
             me.proveedor === proveedorSeleccionado.VENDOR &&
             me.canalId === valores.canal
           );
-          console.log('⚠️ CONFLICTO ENCONTRADO CON:', medioConflicto);
         }
       }
     } else {
@@ -2676,7 +2499,7 @@ export class ModalAgregarMedioComponent implements OnInit {
       usuarioRegistro: 'SYSTEM' // TODO: Obtener usuario actual
     };
 
-    console.log('📤 Enviando request al backend:', crearRequest);
+
 
     // Guardar en el backend
     this.backendMediosService.crearPlanMedioItem(crearRequest).subscribe(
@@ -2722,7 +2545,7 @@ export class ModalAgregarMedioComponent implements OnInit {
         pautasExistentes.push(nuevaPauta);
         try {
           localStorage.setItem('respuestasPautas', JSON.stringify(pautasExistentes));
-          console.log('ℹ️ Guardado en localStorage para compatibilidad temporal');
+
         } catch (error) {
           console.error('Error al guardar en localStorage:', error);
         }
