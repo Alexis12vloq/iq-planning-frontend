@@ -804,12 +804,14 @@ export class PlanMediosResumen implements OnInit {
         if (medio.proveedores && medio.proveedores.length > 0) {
           // Si el medio tiene proveedores, crear una entrada por cada proveedor/canal
           for (const proveedor of medio.proveedores) {
+            console.log('  📋 Proveedor:', proveedor.nombre, 'Canal:', proveedor.canal, 'CanalDesc:', proveedor.canalDescripcion);
             mediosExistentes.push({
               medio: medio.nombre || 'Sin nombre',
               proveedor: proveedor.nombre || 'Sin proveedor',
-              canal: proveedor.canalDescripcion || proveedor.canal || 'Sin canal',
+              canal: proveedor.canal || 'Sin canal', // proveedor.canal ES el nombre del canal
               canalId: proveedor.canalId,
-              canalDescripcion: proveedor.canalDescripcion,
+              canalNombre: proveedor.canal, // Nombre del canal (prioritario)
+              canalDescripcion: proveedor.canalDescripcion, // Descripción del canal
               tarifa: proveedor.tarifa || 0,
               planMedioItemId: proveedor.planMedioItemId
             });
@@ -819,8 +821,9 @@ export class PlanMediosResumen implements OnInit {
           mediosExistentes.push({
             medio: medio.nombre || 'Sin nombre',
             proveedor: medio.proveedor || 'Sin proveedor',
-            canal: medio.canalDescripcion || medio.canal || 'Sin canal',
+            canal: medio.canalNombre || medio.canal || 'Sin canal', // Priorizar canalNombre para el medio principal
             canalId: medio.canalId,
+            canalNombre: medio.canalNombre || medio.canal, // Priorizar canalNombre
             canalDescripcion: medio.canalDescripcion,
             tarifa: medio.tarifa || 0,
             planMedioItemId: medio.planMedioItemId
@@ -1151,7 +1154,15 @@ export class PlanMediosResumen implements OnInit {
     planMedioItems.forEach((item: PlanMedioItemBackend) => {
       const medio = item.medioNombre || 'Medio desconocido';
       const proveedor = item.proveedorNombre || 'Proveedor desconocido';
-      const canal = item.canalDescripcion || item.canalNombre || 'Sin canal';
+      const canal = item.canalNombre || item.canalDescripcion || 'Sin canal';
+      
+      console.log('🔍 Procesando item:', {
+        medio, 
+        proveedor, 
+        canalNombre: item.canalNombre, 
+        canalDescripcion: item.canalDescripcion, 
+        canalUsado: canal
+      });
 
       // Parsear el dataJson si existe
       let spotsPorFecha: { [fecha: string]: number } = {};
@@ -2023,7 +2034,7 @@ export class PlanMediosResumen implements OnInit {
         <h4>Medios ya agregados al plan:</h4>
         <div class="medio-existente" *ngFor="let medioExistente of mediosExistentes">
           <mat-icon>info</mat-icon>
-          <span>{{ medioExistente.medio }} - {{ medioExistente.proveedor }} - {{ medioExistente.canal }} (Tarifa: {{ medioExistente.tarifa | currency:'USD':'symbol':'1.2-2' }})</span>
+          <span>{{ medioExistente.medio }} - {{ medioExistente.proveedor }} - {{ medioExistente.canalNombre || medioExistente.canal }} (Tarifa: {{ medioExistente.tarifa | currency:'USD':'symbol':'1.2-2' }})</span>
         </div>
       </div>
 
