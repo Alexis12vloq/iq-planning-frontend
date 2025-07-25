@@ -86,7 +86,7 @@ export class PlanMediosResumen implements OnInit {
   periodos: PeriodoPlan[] = [];
   periodoSeleccionado!: PeriodoPlan;
   resumenPlan!: ResumenPlan;
-  displayedColumns: string[] = ['medio', 'proveedor', 'semanas', 'valor-mensual', 'total', 'soi'];
+  displayedColumns: string[] = ['medio', 'proveedor', 'canal', 'semanas', 'valor-mensual', 'total', 'soi'];
   semanasColumnas: string[] = []; // Ahora será dinámico
   semanasConFechas: Array<{ nombre: string, fechaInicio: string, fechaFin: string, fechaCompacta: string }> = [];
   dataSource: FilaMedio[] = [];
@@ -798,7 +798,7 @@ export class PlanMediosResumen implements OnInit {
     };
 
     // ✅ PREPARAR MEDIOS EXISTENTES ACTUALIZADOS desde el período seleccionado
-    console.log('🔍 Preparando medios existentes desde periodoSeleccionado:', this.periodoSeleccionado);
+
     console.log('📊 Medios disponibles en periodo:', this.periodoSeleccionado?.medios || []);
     
     const mediosExistentes = [];
@@ -811,7 +811,7 @@ export class PlanMediosResumen implements OnInit {
         if (medio.proveedores && medio.proveedores.length > 0) {
           // Si el medio tiene proveedores, crear una entrada por cada proveedor/canal
           for (const proveedor of medio.proveedores) {
-            console.log('  📋 Proveedor:', proveedor.nombre, 'Canal:', proveedor.canal, 'CanalDesc:', proveedor.canalDescripcion);
+  
             mediosExistentes.push({
               medio: medio.nombre || 'Sin nombre',
               proveedor: proveedor.nombre || 'Sin proveedor',
@@ -839,7 +839,7 @@ export class PlanMediosResumen implements OnInit {
       }
     }
     
-    console.log('✅ Medios existentes preparados:', mediosExistentes.length, 'entradas');
+
 
 
 
@@ -1165,13 +1165,7 @@ export class PlanMediosResumen implements OnInit {
       const proveedor = item.proveedorNombre || 'Proveedor desconocido';
       const canal = item.canalNombre || item.canalDescripcion || 'Sin canal';
       
-      console.log('🔍 Procesando item:', {
-        medio, 
-        proveedor, 
-        canalNombre: item.canalNombre, 
-        canalDescripcion: item.canalDescripcion, 
-        canalUsado: canal
-      });
+      
 
       // Parsear el dataJson si existe
       let spotsPorFecha: { [fecha: string]: number } = {};
@@ -2378,31 +2372,15 @@ export class ModalAgregarMedioComponent implements OnInit {
         const medioSeleccionado = this.medioForm.get('medio')?.value as MedioBackend;
         if (medioSeleccionado) {
           const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === proveedorId);
-          console.log('🔍 Filtrando canales para:', {
-            medio: medioSeleccionado.nombre,
-            proveedorId,
-            proveedorVENDOR: proveedorSeleccionado?.VENDOR,
-            mediosExistentes: this.mediosExistentes
-          });
-          
           const canalesEnUso = this.mediosExistentes
             .filter(me => {
               const coincideMedio = me.medio === medioSeleccionado.nombre;
               const coincideProveedor = me.proveedor === proveedorSeleccionado?.VENDOR;
-              console.log('  🔎 Comparando:', {
-                medioExistente: me.medio,
-                proveedorExistente: me.proveedor,
-                coincideMedio,
-                coincideProveedor,
-                canalId: me.canalId
-              });
               return coincideMedio && coincideProveedor;
             })
             .map(me => me.canalId);
           
-          console.log('✅ Canales en uso encontrados:', canalesEnUso);
           this.canalesDisponibles = canales.filter(canal => !canalesEnUso.includes(canal.canalId));
-          console.log('✅ Canales disponibles después del filtro:', this.canalesDisponibles.length);
         } else {
           this.canalesDisponibles = canales;
         }
@@ -2463,27 +2441,12 @@ export class ModalAgregarMedioComponent implements OnInit {
       const canalSeleccionado = this.canalesDisponibles.find(c => c.canalId === valores.canal);
 
       if (proveedorSeleccionado && medioSeleccionado && canalSeleccionado) {
-        console.log('🔍 Validando combinación duplicada:', {
-          medio: medioSeleccionado.nombre,
-          proveedor: proveedorSeleccionado.VENDOR,
-          canalId: valores.canal
-        });
-        
-        // Verificar si existe la combinación exacta de medio-proveedor-canal
+                // Verificar si existe la combinación exacta de medio-proveedor-canal
         this.existeCombinacion = this.mediosExistentes.some(me => {
-          const coincide = me.medio === medioSeleccionado.nombre &&
-                          me.proveedor === proveedorSeleccionado.VENDOR &&
-                          me.canalId === valores.canal;
-          console.log('  🔎 Comparando con existente:', {
-            medioExistente: me.medio,
-            proveedorExistente: me.proveedor,
-            canalIdExistente: me.canalId,
-            coincide
-          });
-          return coincide;
+          return me.medio === medioSeleccionado.nombre &&
+                 me.proveedor === proveedorSeleccionado.VENDOR &&
+                 me.canalId === valores.canal;
         });
-
-        console.log('✅ Existe combinación duplicada:', this.existeCombinacion);
 
         if (this.existeCombinacion) {
           const medioConflicto = this.mediosExistentes.find(me =>
@@ -3093,12 +3056,12 @@ export class ModalEditarMedioComponent implements OnInit {
         this.medioActual = medios.find(m => m.nombre === this.data.medio.nombre) || null;
         
         if (this.medioActual) {
-          console.log('✅ Medio encontrado:', this.medioActual);
+  
           
           // Cargar proveedores para este medio
           this.backendMediosService.getProveedoresPorMedio(this.medioActual.medioId).subscribe(
             (proveedoresBackend: ProveedorBackend[]) => {
-              console.log('✅ Proveedores cargados para edición:', proveedoresBackend);
+      
 
               // Convertir proveedores del backend a formato compatible
               this.proveedoresDisponibles = proveedoresBackend.map(p => ({
@@ -3247,8 +3210,7 @@ export class ModalEditarMedioComponent implements OnInit {
 
       this.backendMediosService.updatePlanMedioItem(updateDto).subscribe(
         (response: PlanMedioItemBackend) => {
-          console.log('✅ RESPUESTA DEL BACKEND:', response);
-          console.log('✅ Tarifa actualizada en backend:', response.tarifa);
+          
 
           this.snackBar.open('✅ Tarifa actualizada y spots reiniciados automáticamente', '', {
             duration: 3000,
@@ -3461,7 +3423,7 @@ export class ModalConfirmarEliminacionComponent {
 
     this.backendMediosService.eliminarPlanMedioItem(planMedioItemId).subscribe(
       (response) => {
-        console.log('✅ PlanMedioItem eliminado del backend:', response);
+        
 
         if (response.success) {
           // Eliminar también de localStorage
