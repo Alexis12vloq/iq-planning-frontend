@@ -24,7 +24,6 @@ export class PlanMediosService {
   setBackendUrl(index: number): void {
     if (index >= 0 && index < this.backendUrls.length) {
       this.apiUrl = this.backendUrls[index];
-      console.log(`Backend URL cambiada a: ${this.apiUrl}`);
     }
   }
 
@@ -47,7 +46,6 @@ export class PlanMediosService {
    */
   consultarPaginado(pageNumber: number = 1, pageSize: number = 1000): Observable<any> {
     const query = { pagination: { pageNumber, pageSize } };
-    console.log(`Consultando: ${this.apiUrl}`);
     return this.http.post<any>(this.apiUrl, query);
   }
 
@@ -56,7 +54,6 @@ export class PlanMediosService {
    */
   consultarPlanesConDetalles(): Observable<any> {
     const url = `${this.config.apiUrl}/api/PlanMedios/with-details`;
-    console.log(`Consultando planes con detalles: ${url}`);
     return this.http.get<any>(url);
   }
 
@@ -165,7 +162,6 @@ export class PlanMediosService {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
-    console.log(filtros)
     // Filtros opcionales
     if (filtros.version) {
       params = params.set('version', filtros.version);
@@ -173,7 +169,6 @@ export class PlanMediosService {
 
     if (filtros.fechaCreacion) {
       const fechaFormateada = this.formatDateCreacion(filtros.fechaCreacion); // "2025-07-18"
-      console.log(fechaFormateada)
       if (fechaFormateada) {
         params = params.set('fechaCreacion', fechaFormateada);
       }

@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { PlantillaPauta, LookupData, CampoPlantilla } from '../models/plantilla-pauta.model';
 import { BackendMediosService } from './backend-medios.service';
 import { MedioBackend, ProveedorBackend } from '../models/backend-models';
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 interface ProveedorKinesso {
   id?: string;
@@ -129,7 +131,6 @@ export class PlantillaPautaService {
     localStorage.removeItem('plantillasPautas');
     localStorage.removeItem('lookupData');
     this.inicializarDatosEjemplo();
-    console.log('🧹 Plantillas reinicializadas correctamente');
   }
 
   // Inicializar datos de ejemplo (solo la primera vez)
@@ -907,7 +908,6 @@ export class PlantillaPautaService {
     ];
     
     localStorage.setItem('provedoresKinesso', JSON.stringify(proveedoresEjemplo));
-    console.log('📦 Proveedores ampliados cargados:', proveedoresEjemplo.length, 'proveedores en total');
   }
 
   // Método para obtener proveedores desde backend (modo sincrónico)
@@ -951,7 +951,6 @@ export class PlantillaPautaService {
         const cacheKey = `proveedores_${medio}`;
         localStorage.setItem(cacheKey, JSON.stringify(proveedoresKinesso));
         
-        console.log(`✅ Proveedores del backend cargados para ${medio}:`, proveedoresKinesso);
       },
       (error: any) => {
         console.error(`❌ Error cargando proveedores del backend para ${medio}:`, error);
@@ -984,7 +983,6 @@ export class PlantillaPautaService {
     this.backendMediosService.getMedios().subscribe(
       (medios: MedioBackend[]) => {
         localStorage.setItem('mediosBackend', JSON.stringify(medios));
-        console.log('✅ Medios del backend cargados:', medios);
       },
       (error: any) => {
         console.error('❌ Error cargando medios del backend:', error);

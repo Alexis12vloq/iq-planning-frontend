@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject, of } from 'rxjs';
+import { Observable, BehaviorSubject, of, throwError } from 'rxjs';
 import { map, tap, catchError, switchMap } from 'rxjs/operators';
 import { BackendMediosService } from './backend-medios.service';
 import { TemplatePantallaJsonBackend } from '../models/backend-models';
@@ -421,11 +421,6 @@ export class TemplateDinamicoService {
    * 🚧 TEMPORAL: Cargar plantilla usando datos hardcodeados
    */
   obtenerPlantillaPorMedio(medioNombre: string): Observable<PlantillaPauta | null> {
-    console.log('🔄 [TEMPORAL] Obteniendo plantilla hardcodeada para medio:', medioNombre);
-
-    // ✅ BÚSQUEDA DIRECTA EN MAPEO (incluye todas las variaciones de case)
-    console.log('🔍 Buscando medio exacto:', medioNombre);
-    
     const medioId = this.medioNombreToId[medioNombre];
     
     if (!medioId) {
@@ -434,11 +429,8 @@ export class TemplateDinamicoService {
       return of(null);
     }
     
-    console.log('✅ Medio encontrado:', medioNombre, '→', medioId);
-
     // Verificar cache primero
     if (this.plantillasCache.has(medioId)) {
-      console.log('✅ [TEMPORAL] Plantilla encontrada en cache para:', medioNombre);
       return of(this.plantillasCache.get(medioId)!);
     }
 
@@ -453,7 +445,6 @@ export class TemplateDinamicoService {
     const plantilla = this.convertirTemplateBackendALocal(template);
     this.plantillasCache.set(medioId, plantilla);
     
-    console.log('✅ [TEMPORAL] Plantilla hardcodeada cargada y cacheada:', medioNombre);
     return of(plantilla);
   }
 
@@ -461,11 +452,8 @@ export class TemplateDinamicoService {
    * 🚧 TEMPORAL: Obtener plantilla por medioId usando datos hardcodeados
    */
   obtenerPlantillaPorMedioId(medioId: number): Observable<PlantillaPauta | null> {
-    console.log('🔄 [TEMPORAL] Obteniendo plantilla hardcodeada para medioId:', medioId);
-
     // Verificar cache primero
     if (this.plantillasCache.has(medioId)) {
-      console.log('✅ [TEMPORAL] Plantilla encontrada en cache para medioId:', medioId);
       return of(this.plantillasCache.get(medioId)!);
     }
 
@@ -480,7 +468,6 @@ export class TemplateDinamicoService {
     const plantilla = this.convertirTemplateBackendALocal(template);
     this.plantillasCache.set(medioId, plantilla);
     
-    console.log('✅ [TEMPORAL] Plantilla hardcodeada cargada y cacheada para medioId:', medioId);
     return of(plantilla);
 
     // TODO: Descomentar cuando se conecte al backend real
@@ -576,17 +563,13 @@ export class TemplateDinamicoService {
    * Convertir template del backend al formato local
    */
   private convertirTemplateBackendALocal(template: TemplatePantallaJsonBackend): PlantillaPauta {
-    console.log('🔄 Convirtiendo template backend:', template.templateId);
-    
     let campos: CampoPlantilla[] = [];
     
     try {
       // Parsear el jsonSchema para obtener los campos
       const schema = JSON.parse(template.jsonSchema);
       campos = this.extraerCamposDeSchema(schema);
-      console.log('✅ Campos extraídos del schema:', campos.length);
     } catch (error) {
-      console.error('❌ Error parseando jsonSchema:', error);
       // Fallback a campos por defecto si falla el parsing
       campos = this.generarCamposPorDefecto(template.medioNombre);
     }
@@ -602,7 +585,6 @@ export class TemplateDinamicoService {
       activa: template.estado
     };
 
-    console.log('✅ Template convertido:', plantilla);
     return plantilla;
   }
 
@@ -614,7 +596,6 @@ export class TemplateDinamicoService {
     
     // ✅ TEMPORAL: Manejar estructura con "fields" array
     if (schema.fields && Array.isArray(schema.fields)) {
-      console.log('📋 [TEMPORAL] Procesando estructura con fields array:', schema.fields.length);
       
       schema.fields.forEach((field: any) => {
         const campo: CampoPlantilla = {
@@ -630,12 +611,10 @@ export class TemplateDinamicoService {
         };
         
         campos.push(campo);
-        console.log(`📋 Campo procesado: ${field.name} (${field.type}) - ${field.label}`);
       });
     } 
     // Estructura tradicional con properties (para futuro uso con backend real)
     else if (schema.properties) {
-      console.log('📋 Procesando estructura con properties');
       
       Object.keys(schema.properties).forEach(fieldName => {
         const property = schema.properties[fieldName];
@@ -655,8 +634,6 @@ export class TemplateDinamicoService {
       });
     }
     
-    console.log('📋 Total campos extraídos del schema:', campos.length);
-    console.log('📋 Campos procesados:', campos.map(c => `${c.name}(${c.type})`).join(', '));
     return campos;
   }
 
@@ -742,7 +719,6 @@ export class TemplateDinamicoService {
   limpiarCache(): void {
     this.plantillasCache.clear();
     this.plantillasCargadas.next(false);
-    console.log('🧹 Cache de plantillas limpiado');
   }
 
   /**

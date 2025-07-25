@@ -28,6 +28,10 @@ import {
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { ModalEliminarMediosComponent } from '../flow-chart/modal-eliminar-medios.component';
+import { PlanMediosService } from '../services/plan-medios.service';
+import { ActivatedRoute } from '@angular/router';
+import { TemplateDinamicoService } from '../services/template-dinamico.service';
+import { Location } from '@angular/common';
 
 interface FilaMedioBase {
   tipo: 'nombre' | 'encabezado-medio' | 'spots' | 'inversiones';
@@ -108,20 +112,18 @@ export class PlanMediosResumen implements OnInit {
     private router: Router,
     private dialog: MatDialog,
     private plantillaService: PlantillaPautaService,
-    private backendMediosService: BackendMediosService
+    private backendMediosService: BackendMediosService,
+    private planMediosService: PlanMediosService,
+    private route: ActivatedRoute,
+    private templateService: TemplateDinamicoService,
+    private location: Location
   ) {
     const navigation = this.router.getCurrentNavigation();
     const planData = navigation?.extras?.state?.['planData'] as any;
     const fromFlowChart = navigation?.extras?.state?.['fromFlowChart'] as boolean;
     const shouldReload = navigation?.extras?.state?.['shouldReload'] as boolean;
 
-    console.log('📋 === CONSTRUCTOR PLAN MEDIOS RESUMEN ===');
-    console.log('📋 Plan Data recibido:', planData);
-    console.log('📋 planData.id:', planData?.id, 'tipo:', typeof planData?.id);
-    console.log('📋 planData.numeroPlan:', planData?.numeroPlan, 'tipo:', typeof planData?.numeroPlan);
-    console.log('📋 planData.version:', planData?.version, 'tipo:', typeof planData?.version);
-    console.log('📋 Viene del FlowChart:', fromFlowChart);
-    console.log('📋 Debe recargar desde backend:', shouldReload);
+
 
     /*
      * FLUJO DUAL:
@@ -849,7 +851,6 @@ export class PlanMediosResumen implements OnInit {
     };
 
     // ✅ PREPARAR MEDIOS EXISTENTES ACTUALIZADOS desde el período seleccionado
-    debugger;
     const mediosExistentes = this.periodoSeleccionado.medios
       .filter(medio => medio.planMedioItemId) // Solo incluir medios que existan en el backend
       .map(medio => ({
@@ -2612,7 +2613,6 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   guardarMedio(): void {
-    debugger;
     // Marcar todos los campos como tocados para mostrar errores
     this.medioForm.markAllAsTouched();
 
