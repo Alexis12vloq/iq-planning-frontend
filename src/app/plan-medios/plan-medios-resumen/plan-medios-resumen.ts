@@ -227,8 +227,10 @@ export class PlanMediosResumen implements OnInit {
             ...medio,
             proveedor: proveedor.nombre,
             proveedorId: proveedor.proveedorId,
-            canal: proveedor.canal,
+            canal: proveedor.canalDescripcion || proveedor.canal,
             canalId: canalId,
+            canalNombre: proveedor.canal,
+            canalDescripcion: proveedor.canalDescripcion,
             tarifa: tarifa,
             planMedioItemId: planMedioItemId,
             spotsPorFecha: proveedor.spotsPorFecha || {},
@@ -238,11 +240,11 @@ export class PlanMediosResumen implements OnInit {
             semanas: proveedor.semanas || []
           };
 
-          // Fila del proveedor
+          // Fila del proveedor  
           const filaNombre: FilaMedioNombre = {
             tipo: 'nombre',
             medio: medioConProveedor,
-            nombre: `${proveedor.nombre} - ${proveedor.canal}`,
+            nombre: `${proveedor.nombre} - ${proveedor.canalDescripcion || proveedor.canal}`,
             semanas: proveedor.semanas || [],
             soi: soi
           };
@@ -789,17 +791,45 @@ export class PlanMediosResumen implements OnInit {
     };
 
     // ✅ PREPARAR MEDIOS EXISTENTES ACTUALIZADOS desde el período seleccionado
-    debugger;
-    const mediosExistentes = this.periodoSeleccionado.medios
-      .filter(medio => medio.planMedioItemId) // Solo incluir medios que existan en el backend
-      .map(medio => ({
-        medio: medio.nombre,
-        proveedor: medio.proveedor,
-        canal: medio.canal,
-        canalId: medio.canalId,
-        tarifa: medio.tarifa,
-        planMedioItemId: medio.planMedioItemId
-      }));
+    console.log('🔍 Preparando medios existentes desde periodoSeleccionado:', this.periodoSeleccionado);
+    console.log('📊 Medios disponibles en periodo:', this.periodoSeleccionado?.medios || []);
+    
+    const mediosExistentes = [];
+    
+    if (this.periodoSeleccionado && this.periodoSeleccionado.medios && this.periodoSeleccionado.medios.length > 0) {
+      // Procesar cada medio y sus proveedores/canales
+      for (const medio of this.periodoSeleccionado.medios) {
+        console.log('🎯 Procesando medio:', medio.nombre, 'con proveedores:', medio.proveedores);
+        
+        if (medio.proveedores && medio.proveedores.length > 0) {
+          // Si el medio tiene proveedores, crear una entrada por cada proveedor/canal
+          for (const proveedor of medio.proveedores) {
+            mediosExistentes.push({
+              medio: medio.nombre || 'Sin nombre',
+              proveedor: proveedor.nombre || 'Sin proveedor',
+              canal: proveedor.canalDescripcion || proveedor.canal || 'Sin canal',
+              canalId: proveedor.canalId,
+              canalDescripcion: proveedor.canalDescripcion,
+              tarifa: proveedor.tarifa || 0,
+              planMedioItemId: proveedor.planMedioItemId
+            });
+          }
+        } else {
+          // Si no tiene proveedores, crear entrada con los datos del medio principal
+          mediosExistentes.push({
+            medio: medio.nombre || 'Sin nombre',
+            proveedor: medio.proveedor || 'Sin proveedor',
+            canal: medio.canalDescripcion || medio.canal || 'Sin canal',
+            canalId: medio.canalId,
+            canalDescripcion: medio.canalDescripcion,
+            tarifa: medio.tarifa || 0,
+            planMedioItemId: medio.planMedioItemId
+          });
+        }
+      }
+    }
+    
+    console.log('✅ Medios existentes preparados:', mediosExistentes.length, 'entradas');
 
 
 
@@ -1121,7 +1151,7 @@ export class PlanMediosResumen implements OnInit {
     planMedioItems.forEach((item: PlanMedioItemBackend) => {
       const medio = item.medioNombre || 'Medio desconocido';
       const proveedor = item.proveedorNombre || 'Proveedor desconocido';
-      const canal = item.canalNombre || 'Sin canal';
+      const canal = item.canalDescripcion || item.canalNombre || 'Sin canal';
 
       // Parsear el dataJson si existe
       let spotsPorFecha: { [fecha: string]: number } = {};
@@ -2268,13 +2298,16 @@ export class ModalAgregarMedioComponent implements OnInit {
   }
 
   private cargarMediosExistentes(): void {
-          // Siempre usar los datos más recientes del backend
-      if (this.data.mediosExistentes) {
-        // Filtrar solo los medios que realmente existen en el backend
-        this.mediosExistentes = this.data.mediosExistentes.filter((me: { planMedioItemId?: number }) => me.planMedioItemId);
-      } else {
-        this.mediosExistentes = [];
-      }
+    console.log('🔍 Cargando medios existentes:', this.data.mediosExistentes);
+    
+    if (this.data.mediosExistentes && this.data.mediosExistentes.length > 0) {
+      // No filtramos por planMedioItemId ya que necesitamos mostrar todos los medios
+      this.mediosExistentes = this.data.mediosExistentes;
+      console.log('✅ Medios existentes cargados:', this.mediosExistentes.length, 'medios');
+    } else {
+      this.mediosExistentes = [];
+      console.log('⚠️ No hay medios existentes o el array está vacío');
+    }
   }
 
   onMedioChange(medio: MedioBackend): void {
