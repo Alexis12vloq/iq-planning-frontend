@@ -4250,6 +4250,7 @@ export class ModalNuevaPautaComponent implements OnInit {
       version: Number(this.data.planData.version),
       medioId: medioSeleccionado.medioId,
       proveedorId: proveedorId,
+      canalId: canalId, // ✅ INCLUIR canalId en el request
       tarifa: tarifa,
       dataJson: JSON.stringify({}), // JSON básico
       dataPlantillaJson: JSON.stringify(pauta.datos), // Datos de la plantilla
@@ -4334,10 +4335,9 @@ export class ModalNuevaPautaComponent implements OnInit {
       version: Number(this.data.planData.version),
       medioId: medioSeleccionado.medioId,
       proveedorId: proveedorId,
+      canalId: canalId, // ✅ INCLUIR canalId en el request de actualización
       tarifa: tarifa,
       dataJson: JSON.stringify({}), // JSON básico
-      pasoPorFlowchart: true, // ✅ Siempre true cuando se guarda desde FlowChart
-      plantillaCompletada: true, // ✅ Siempre true cuando se completa la plantilla
       dataPlantillaJson: JSON.stringify(pautaActualizada.datos), // Datos de la plantilla
       usuarioModifico: 'SYSTEM' // TODO: Usuario real
     };
