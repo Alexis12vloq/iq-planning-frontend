@@ -383,6 +383,11 @@ export class ModalEliminarMediosComponent implements OnInit {
   itemsPorMedio: { [medio: string]: any[] } = {};
   mediosSeleccionados: string[] = [];
   isLoading = false;
+  
+  // Variables para controlar el progreso de eliminación
+  private mediosEliminados = 0;
+  private mediosConErrores = 0;
+  private totalMediosAEliminar = 0;
 
   constructor(
     private dialogRef: MatDialogRef<ModalEliminarMediosComponent>,
@@ -459,16 +464,17 @@ export class ModalEliminarMediosComponent implements OnInit {
   }
 
   private eliminarMediosSeleccionados(): void {
-    let mediosEliminados = 0;
-    let mediosConErrores = 0;
-    const totalMedios = this.mediosSeleccionados.length;
+    // Inicializar contadores
+    this.mediosEliminados = 0;
+    this.mediosConErrores = 0;
+    this.totalMediosAEliminar = this.mediosSeleccionados.length;
 
     this.mediosSeleccionados.forEach(medio => {
       const itemsDelMedio = this.itemsPorMedio[medio] || [];
       
       if (itemsDelMedio.length === 0) {
-        mediosEliminados++;
-        this.finalizarEliminacion(totalMedios, mediosEliminados, mediosConErrores);
+        this.mediosEliminados++;
+        this.finalizarEliminacion();
         return;
       }
 
@@ -481,8 +487,7 @@ export class ModalEliminarMediosComponent implements OnInit {
         
         if (!planMedioItemId || planMedioItemId <= 0) {
           itemsEliminados++;
-          this.verificarMedioEliminado(medio, itemsDelMedio.length, itemsEliminados, itemsConErrores, 
-            totalMedios, mediosEliminados, mediosConErrores);
+          this.verificarMedioEliminado(medio, itemsDelMedio.length, itemsEliminados, itemsConErrores);
           return;
         }
 
@@ -498,14 +503,12 @@ export class ModalEliminarMediosComponent implements OnInit {
               itemsConErrores++;
             }
             
-            this.verificarMedioEliminado(medio, itemsDelMedio.length, itemsEliminados, itemsConErrores, 
-              totalMedios, mediosEliminados, mediosConErrores);
+            this.verificarMedioEliminado(medio, itemsDelMedio.length, itemsEliminados, itemsConErrores);
           },
           error: (error) => {
             console.error(`❌ Error eliminando item ${planMedioItemId} del backend:`, error);
             itemsConErrores++;
-            this.verificarMedioEliminado(medio, itemsDelMedio.length, itemsEliminados, itemsConErrores, 
-              totalMedios, mediosEliminados, mediosConErrores);
+            this.verificarMedioEliminado(medio, itemsDelMedio.length, itemsEliminados, itemsConErrores);
           }
         });
       });
@@ -516,34 +519,31 @@ export class ModalEliminarMediosComponent implements OnInit {
     medio: string, 
     totalItems: number, 
     itemsEliminados: number, 
-    itemsConErrores: number,
-    totalMedios: number,
-    mediosEliminados: number,
-    mediosConErrores: number
+    itemsConErrores: number
   ): void {
     if (itemsEliminados + itemsConErrores >= totalItems) {
       if (itemsEliminados > 0 && itemsConErrores === 0) {
-        mediosEliminados++;
+        this.mediosEliminados++;
       } else {
-        mediosConErrores++;
+        this.mediosConErrores++;
       }
       
-      this.finalizarEliminacion(totalMedios, mediosEliminados, mediosConErrores);
+      this.finalizarEliminacion();
     }
   }
 
-  private finalizarEliminacion(totalMedios: number, eliminados: number, errores: number): void {
-    if (eliminados + errores >= totalMedios) {
+  private finalizarEliminacion(): void {
+    if (this.mediosEliminados + this.mediosConErrores >= this.totalMediosAEliminar) {
       console.log(`🗑️ === ELIMINACIÓN DE MEDIOS FINALIZADA ===`);
-      console.log(`📊 Resumen: ${eliminados} medios eliminados, ${errores} con errores de ${totalMedios} total`);
+      console.log(`📊 Resumen: ${this.mediosEliminados} medios eliminados, ${this.mediosConErrores} con errores de ${this.totalMediosAEliminar} total`);
 
-      const mediosEliminados = this.mediosSeleccionados.slice(0, eliminados);
+      const mediosEliminados = this.mediosSeleccionados.slice(0, this.mediosEliminados);
 
       this.isLoading = false;
       this.dialogRef.close({
         mediosEliminados: mediosEliminados,
-        totalEliminados: eliminados,
-        totalErrores: errores
+        totalEliminados: this.mediosEliminados,
+        totalErrores: this.mediosConErrores
       });
     }
   }
