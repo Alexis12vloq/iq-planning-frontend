@@ -2859,8 +2859,12 @@ export class ModalAccionesMedioComponent {
           <span class="value">{{ data.medio.nombre }}</span>
         </div>
         <div class="info-item">
-          <span class="label">Proveedor Actual:</span>
+          <span class="label">Proveedor:</span>
           <span class="value">{{ data.medio.proveedor }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Canal:</span>
+          <span class="value">{{ data.medio.canal || 'Sin canal' }}</span>
         </div>
         <div class="info-item">
           <span class="label">Tarifa Actual:</span>
@@ -2869,19 +2873,6 @@ export class ModalAccionesMedioComponent {
       </div>
 
       <form [formGroup]="editarForm">
-        <mat-form-field class="full-width">
-          <mat-label>Proveedor</mat-label>
-          <mat-select formControlName="proveedor" [disabled]="cargandoProveedores">
-            <mat-option *ngFor="let proveedor of proveedoresDisponibles" [value]="proveedor.id">
-              {{ proveedor.VENDOR }}
-            </mat-option>
-          </mat-select>
-          <mat-hint *ngIf="cargandoProveedores">Cargando proveedores...</mat-hint>
-          <mat-error *ngIf="editarForm.get('proveedor')?.hasError('required')">
-            El proveedor es obligatorio
-          </mat-error>
-        </mat-form-field>
-
         <mat-form-field class="full-width">
           <mat-label>Tarifa</mat-label>
           <input matInput type="number" formControlName="tarifa" step="0.01" min="0.01">
@@ -2895,7 +2886,7 @@ export class ModalAccionesMedioComponent {
 
         <div class="validation-message" *ngIf="existeCombinacion">
           <mat-icon color="warn">warning</mat-icon>
-          <span>Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan</span>
+          <span>Esta tarifa ya existe para este medio-proveedor-canal</span>
         </div>
 
         <!-- Mensaje de validación de formulario -->
@@ -2920,7 +2911,7 @@ export class ModalAccionesMedioComponent {
         [disabled]="!editarForm.valid || existeCombinacion"
         (click)="guardarCambios()">
         <mat-icon>save</mat-icon>
-        {{ editarForm.get('tarifa')?.dirty ? 'Actualizar Tarifa (Reiniciará Spots)' : 'Guardar Cambios' }}
+        {{ editarForm.get('tarifa')?.dirty ? 'Actualizar Tarifa (Reiniciará Spots)' : 'Actualizar Tarifa' }}
       </button>
     </mat-dialog-actions>
   `,
@@ -2948,7 +2939,8 @@ export class ModalAccionesMedioComponent {
     }
 
     .medio-info {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 16px;
       margin-bottom: 16px;
       padding: 12px;
@@ -3017,11 +3009,8 @@ export class ModalAccionesMedioComponent {
 })
 export class ModalEditarMedioComponent implements OnInit {
   editarForm!: FormGroup;
-  proveedoresDisponibles: any[] = [];
   existeCombinacion: boolean = false;
   mediosExistentes: any[] = [];
-  cargandoProveedores: boolean = false;
-  medioActual: MedioBackend | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -3031,14 +3020,12 @@ export class ModalEditarMedioComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.editarForm = this.fb.group({
-      proveedor: [data.medio.proveedorId || '', [Validators.required]],
       tarifa: [data.medio.tarifa || 0, [Validators.required, Validators.min(0.01)]]
     });
   }
 
   ngOnInit(): void {
     this.cargarMediosExistentes();
-    this.cargarProveedoresParaMedio();
 
     // Suscribirse a cambios en el formulario para validar duplicados
     this.editarForm.valueChanges.subscribe(() => {
@@ -3046,56 +3033,7 @@ export class ModalEditarMedioComponent implements OnInit {
     });
   }
 
-  private cargarProveedoresParaMedio(): void {
-    this.cargandoProveedores = true;
-    console.log('🔄 Cargando proveedores para medio:', this.data.medio.nombre);
 
-    // Primero buscar el medio en el backend
-    this.backendMediosService.getMedios().subscribe(
-      (medios: MedioBackend[]) => {
-        this.medioActual = medios.find(m => m.nombre === this.data.medio.nombre) || null;
-        
-        if (this.medioActual) {
-  
-          
-          // Cargar proveedores para este medio
-          this.backendMediosService.getProveedoresPorMedio(this.medioActual.medioId).subscribe(
-            (proveedoresBackend: ProveedorBackend[]) => {
-      
-
-              // Convertir proveedores del backend a formato compatible
-              this.proveedoresDisponibles = proveedoresBackend.map(p => ({
-                id: p.proveedorId.toString(),
-                VENDOR: p.nombreProveedor,
-                proveedorId: p.proveedorId,
-                nombreProveedor: p.nombreProveedor,
-                grupoProveedor: p.grupoProveedor,
-                tipoProveedor: p.tipoProveedor,
-                orionBeneficioReal: p.orionBeneficioReal,
-                estado: p.estado
-              }));
-
-              this.cargandoProveedores = false;
-            },
-            (error) => {
-              console.error('❌ Error cargando proveedores:', error);
-              this.proveedoresDisponibles = [];
-              this.cargandoProveedores = false;
-            }
-          );
-        } else {
-          console.warn('⚠️ No se encontró el medio en el backend');
-          this.proveedoresDisponibles = [];
-          this.cargandoProveedores = false;
-        }
-      },
-      (error) => {
-        console.error('❌ Error cargando medios:', error);
-        this.proveedoresDisponibles = [];
-        this.cargandoProveedores = false;
-      }
-    );
-  }
 
   private cargarMediosExistentes(): void {
     const pautas = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
@@ -3111,19 +3049,15 @@ export class ModalEditarMedioComponent implements OnInit {
   private validarCombinacionDuplicada(): void {
     const valores = this.editarForm.value;
 
-    if (valores.proveedor && valores.tarifa > 0) {
-      const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
-
-      if (proveedorSeleccionado) {
-        // Verificar si existe la combinación exacta (excluyendo el medio actual)
-        this.existeCombinacion = this.mediosExistentes.some(me =>
-          me.medio === this.data.medio.nombre &&
-          me.proveedor === proveedorSeleccionado.VENDOR &&
-          Math.abs(me.tarifa - valores.tarifa) < 0.01 &&
-          // Excluir el medio actual de la validación
-          !(me.proveedor === this.data.medio.proveedor && me.tarifa === this.data.medio.tarifa)
-        );
-      }
+    if (valores.tarifa > 0) {
+      // Verificar si existe la combinación exacta de medio-proveedor-canal-tarifa (excluyendo el item actual)
+      this.existeCombinacion = this.mediosExistentes.some(me =>
+        me.medio === this.data.medio.nombre &&
+        me.proveedor === this.data.medio.proveedor &&
+        Math.abs(me.tarifa - valores.tarifa) < 0.01 &&
+        // Excluir el medio actual de la validación
+        !(me.proveedor === this.data.medio.proveedor && me.tarifa === this.data.medio.tarifa)
+      );
     } else {
       this.existeCombinacion = false;
     }
@@ -3139,13 +3073,10 @@ export class ModalEditarMedioComponent implements OnInit {
 
     // Validar campos obligatorios
     if (this.editarForm.invalid) {
-      let mensajeError = 'Por favor completa todos los campos obligatorios:';
+      let mensajeError = 'Por favor completa todos los campos obligatorios';
       
-      if (this.editarForm.get('proveedor')?.hasError('required')) {
-        mensajeError += ' Proveedor';
-      }
       if (this.editarForm.get('tarifa')?.hasError('required')) {
-        mensajeError += ' Tarifa';
+        mensajeError = 'La tarifa es obligatoria';
       }
       if (this.editarForm.get('tarifa')?.hasError('min')) {
         mensajeError = 'La tarifa debe ser mayor a 0';
@@ -3160,7 +3091,7 @@ export class ModalEditarMedioComponent implements OnInit {
 
     // Validar combinación duplicada
     if (this.existeCombinacion) {
-      this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Tarifa ya existe en el plan', '', {
+      this.snackBar.open('❌ Esta combinación de Medio-Proveedor-Canal-Tarifa ya existe en el plan', '', {
         duration: 3000,
         panelClass: ['error-snackbar']
       });
@@ -3168,19 +3099,8 @@ export class ModalEditarMedioComponent implements OnInit {
     }
 
     const valores = this.editarForm.value;
-    const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
-
     console.log('📊 Valores del formulario:', valores);
-    console.log('📊 Proveedor seleccionado:', proveedorSeleccionado);
-
-    // Validar que se haya seleccionado un proveedor
-    if (!proveedorSeleccionado) {
-      this.snackBar.open('❌ Error: Proveedor no encontrado', '', {
-        duration: 3000,
-        panelClass: ['error-snackbar']
-      });
-      return;
-    }
+    console.log('📊 Medio actual:', this.data.medio);
 
     // Verificar que tenemos el planMedioItemId para actualizar en el backend
     if (this.data.medio.planMedioItemId) {
@@ -3194,7 +3114,7 @@ export class ModalEditarMedioComponent implements OnInit {
           planMedioId: Number(this.data.planId),
           version: this.data.resumenPlan?.version || 1,
           medioId: this.data.medio.medioId || 1, // TODO: Obtener medioId real desde el backend
-          proveedorId: Number(valores.proveedor),
+          proveedorId: this.data.medio.proveedorId, // Usar el proveedor existente
           tarifa: Number(valores.tarifa),
           dataJson: JSON.stringify({
             spotsPorFecha: {}, // Reiniciar spots a vacío
