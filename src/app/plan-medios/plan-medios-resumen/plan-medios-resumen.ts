@@ -673,11 +673,18 @@ export class PlanMediosResumen implements OnInit {
           // Recargar datos desde el backend para obtener valores actualizados
           this.recargarResumen();
           
+          // Ejecutar guardarResumen automáticamente después de modificar medio
+          this.guardarResumen();
+          
           // Marcar que hay cambios para detectar cambios futuros
           this.cambiosPendientes = false;
         } else {
           // Recarga normal
           this.recargarResumen();
+          
+          // Ejecutar guardarResumen automáticamente después de modificar medio
+          this.guardarResumen();
+          
           this.cambiosPendientes = false;
         }
       }
@@ -849,6 +856,8 @@ export class PlanMediosResumen implements OnInit {
     dialogRef.afterClosed().subscribe((result: any) => {
       if (result && result.shouldRefresh) {
         this.recargarResumen();
+        // Ejecutar guardarResumen automáticamente después de agregar medio
+        this.guardarResumen();
         // Marcar cambios pendientes tras agregar medio
         this.cambiosPendientes = true;
       }
