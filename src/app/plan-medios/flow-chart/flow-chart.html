@@ -118,6 +118,7 @@
                 <div class="fixed-columns">
                   <div class="header-cell action-col">Acciones</div>
                   <div class="header-cell proveedor-col">Proveedor</div>
+                  <div class="header-cell canal-col">Canal</div>
                 </div>
                 
                 <!-- Columnas dinámicas de campos -->
@@ -188,6 +189,15 @@
                           </mat-icon>
                         </div>
                         <div class="pauta-stats">{{ item.totalSpots || 0 }} spots • {{ (item.valorTotal || 0) | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                      </div>
+                    </div>
+                    
+                    <!-- ✅ CANAL -->
+                    <div class="data-cell canal-col">
+                      <div class="cell-content canal-info">
+                        <div class="canal-name">
+                          {{ item.canal || 'Sin canal' }}
+                        </div>
                       </div>
                     </div>
                   </div>
