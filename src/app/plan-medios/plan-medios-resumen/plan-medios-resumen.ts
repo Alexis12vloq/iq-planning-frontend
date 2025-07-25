@@ -227,7 +227,7 @@ export class PlanMediosResumen implements OnInit {
             ...medio,
             proveedor: proveedor.nombre,
             proveedorId: proveedor.proveedorId,
-            canal: proveedor.canalDescripcion || proveedor.canal,
+            canal: proveedor.canal || proveedor.canalDescripcion,
             canalId: canalId,
             canalNombre: proveedor.canal,
             canalDescripcion: proveedor.canalDescripcion,
