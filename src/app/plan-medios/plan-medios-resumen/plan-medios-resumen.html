@@ -54,8 +54,8 @@
               <mat-icon>analytics</mat-icon>
               Ir a FlowChart
             </button>
-            <button mat-raised-button class="action-button blue-button" (click)="onDescargaFlow()" [disabled]="true">
-              <mat-icon>download</mat-icon> Descarga FlowChart
+            <button mat-raised-button class="action-button blue-button" (click)="onDescargarExcel()" [disabled]="!periodoSeleccionado || periodoSeleccionado.medios.length === 0">
+              <mat-icon>download</mat-icon> Descarga PlanMedio
             </button>
             <button mat-raised-button class="action-button purple-button" (click)="onAprobarPlan()" [disabled]="true">
               <mat-icon>check_circle</mat-icon> Aprobar Plan de Medios

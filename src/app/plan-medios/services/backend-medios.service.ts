@@ -215,4 +215,21 @@ export class BackendMediosService {
     console.log('🔄 GET Canales por proveedor:', url);
     return this.http.get<any[]>(url);
   }
+
+  // ==============================================
+  // 📊 DESCARGA DE EXCEL
+  // ==============================================
+
+  // Descargar plan de medios en Excel
+  descargarPlanMediosExcel(estructuraExcel: any): Observable<Blob> {
+    const url = `${this.baseUrl}/api/PlanMedios/descargar-excel`;
+    console.log('⬇️ POST Descargar Plan de Medios Excel:', url, estructuraExcel);
+    
+    return this.http.post(url, estructuraExcel, {
+      responseType: 'blob',  // 👈 Necesario para recibir archivos
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json'
+      })
+    });
+  }
 } 
