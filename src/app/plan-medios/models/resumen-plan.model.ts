@@ -52,6 +52,7 @@ export interface MedioPlanProveedor {
     proveedorId: string;
     canal: string;
     canalId: number;
+    canalNombre?: string;
     canalDescripcion?: string;
     salidas: number;
     valorNeto: number;

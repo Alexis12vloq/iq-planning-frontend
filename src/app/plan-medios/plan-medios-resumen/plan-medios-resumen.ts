@@ -2368,14 +2368,32 @@ export class ModalAgregarMedioComponent implements OnInit {
         // Filtrar canales que ya están en uso para este medio y proveedor
         const medioSeleccionado = this.medioForm.get('medio')?.value as MedioBackend;
         if (medioSeleccionado) {
+          const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === proveedorId);
+          console.log('🔍 Filtrando canales para:', {
+            medio: medioSeleccionado.nombre,
+            proveedorId,
+            proveedorVENDOR: proveedorSeleccionado?.VENDOR,
+            mediosExistentes: this.mediosExistentes
+          });
+          
           const canalesEnUso = this.mediosExistentes
-            .filter(me => 
-              me.medio === medioSeleccionado.nombre && 
-              me.proveedor === this.proveedoresDisponibles.find(p => p.id === proveedorId)?.VENDOR
-            )
+            .filter(me => {
+              const coincideMedio = me.medio === medioSeleccionado.nombre;
+              const coincideProveedor = me.proveedor === proveedorSeleccionado?.VENDOR;
+              console.log('  🔎 Comparando:', {
+                medioExistente: me.medio,
+                proveedorExistente: me.proveedor,
+                coincideMedio,
+                coincideProveedor,
+                canalId: me.canalId
+              });
+              return coincideMedio && coincideProveedor;
+            })
             .map(me => me.canalId);
           
+          console.log('✅ Canales en uso encontrados:', canalesEnUso);
           this.canalesDisponibles = canales.filter(canal => !canalesEnUso.includes(canal.canalId));
+          console.log('✅ Canales disponibles después del filtro:', this.canalesDisponibles.length);
         } else {
           this.canalesDisponibles = canales;
         }
@@ -2436,12 +2454,27 @@ export class ModalAgregarMedioComponent implements OnInit {
       const canalSeleccionado = this.canalesDisponibles.find(c => c.canalId === valores.canal);
 
       if (proveedorSeleccionado && medioSeleccionado && canalSeleccionado) {
+        console.log('🔍 Validando combinación duplicada:', {
+          medio: medioSeleccionado.nombre,
+          proveedor: proveedorSeleccionado.VENDOR,
+          canalId: valores.canal
+        });
+        
         // Verificar si existe la combinación exacta de medio-proveedor-canal
-        this.existeCombinacion = this.mediosExistentes.some(me =>
-          me.medio === medioSeleccionado.nombre &&
-          me.proveedor === proveedorSeleccionado.VENDOR &&
-          me.canalId === valores.canal
-        );
+        this.existeCombinacion = this.mediosExistentes.some(me => {
+          const coincide = me.medio === medioSeleccionado.nombre &&
+                          me.proveedor === proveedorSeleccionado.VENDOR &&
+                          me.canalId === valores.canal;
+          console.log('  🔎 Comparando con existente:', {
+            medioExistente: me.medio,
+            proveedorExistente: me.proveedor,
+            canalIdExistente: me.canalId,
+            coincide
+          });
+          return coincide;
+        });
+
+        console.log('✅ Existe combinación duplicada:', this.existeCombinacion);
 
         if (this.existeCombinacion) {
           const medioConflicto = this.mediosExistentes.find(me =>
