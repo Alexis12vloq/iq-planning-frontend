@@ -1253,6 +1253,7 @@ export class PlanMediosResumen implements OnInit {
         // Si es un nuevo medio, crear con su primer proveedor
         const nuevoMedio: MedioPlan = {
           nombre: medio,
+          medioId: item.medioId, // Asignar medioId del backend
           proveedor: '', // Ya no usamos un solo proveedor
           proveedorId: '', // Ya no usamos un solo proveedorId
           canal: '', // Ya no usamos un solo canal
@@ -3113,7 +3114,7 @@ export class ModalEditarMedioComponent implements OnInit {
           planMedioItemId: this.data.medio.planMedioItemId,
           planMedioId: Number(this.data.planId),
           version: this.data.resumenPlan?.version || 1,
-          medioId: this.data.medio.medioId || 1, // TODO: Obtener medioId real desde el backend
+          medioId: this.data.medio.medioId, // medioId viene correctamente del backend
           proveedorId: this.data.medio.proveedorId, // Usar el proveedor existente
           canalId: this.data.medio.canalId, // Incluir el canalId para mantener la relación
           tarifa: Number(valores.tarifa),
