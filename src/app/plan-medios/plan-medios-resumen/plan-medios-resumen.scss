@@ -296,24 +296,30 @@
 
 
   .col-medios {
-    width: 8%; // Reducido de 12% a 8% (ahorro de 4%)
+    width: 8%; // Columna medios
     min-width: 80px;
   }
 
   .col-proveedor {
-    width: 18%; // Aumentado de 16% a 18% (ganancia de 2%)
-    min-width: 180px;
+    width: 15%; // Columna proveedor
+    min-width: 150px;
+  }
+
+  .col-canal {
+    width: 13%; // Nueva columna canal
+    min-width: 130px;
+    text-align: center;
   }
 
   .col-semanas {
     text-align: center;
-    width: 44%; // Aumentado de 42% a 44% (ganancia de 2%)
-    min-width: 440px;
+    width: 38%; // Ajustado para dar espacio a canal
+    min-width: 380px;
   }
   
   // Las fechas se distribuyen dentro del porcentaje asignado
   .fechas-subheader .col-fecha {
-    width: calc(44% / var(--num-semanas, 5)); // Distribución dentro del porcentaje actualizado
+    width: calc(38% / var(--num-semanas, 5)); // Distribución dentro del porcentaje actualizado
     min-width: 70px;
   }
 
@@ -323,20 +329,20 @@
   }
 
   .col-valor-mensual {
-    width: 12%; // Mantenido igual
-    min-width: 120px;
+    width: 11%; // Ligeramente reducido
+    min-width: 110px;
     text-align: right;
   }
 
   .col-total {
-    width: 12%; // Mantenido igual
-    min-width: 120px;
+    width: 11%; // Ligeramente reducido
+    min-width: 110px;
     text-align: right;
   }
 
   .col-soi {
-    width: 6%; // Mantenido igual
-    min-width: 60px;
+    width: 4%; // Ligeramente reducido
+    min-width: 40px;
     text-align: right;
   }
 
@@ -418,7 +424,7 @@
     align-items: center;
     min-height: 20px;
     padding: 4px;
-    width: calc(45% / var(--num-semanas, 5)); // Porcentaje dividido por número de semanas
+    width: calc(38% / var(--num-semanas, 5)); // Porcentaje dividido por número de semanas
     min-width: 70px;
   }
 

@@ -231,6 +231,7 @@
               <tr class="fila-total">
                 <td>Total Inversión Neta</td>
                 <td></td>
+                <td></td> <!-- Columna canal -->
                 <td [attr.colspan]="semanasConFechas.length"></td>
                 <td class="valor-mensual">{{ calcularTotalInversionMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}
                 </td>
@@ -241,6 +242,7 @@
               <tr class="fila-iva">
                 <td>IVA 19%</td>
                 <td></td>
+                <td></td> <!-- Columna canal -->
                 <td [attr.colspan]="semanasConFechas.length"></td>
                 <td class="valor-mensual">{{ calcularIvaMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 <td class="valor-total">{{ calcularIvaTotal() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
@@ -249,6 +251,7 @@
               <tr class="fila-total-inversion">
                 <td>Total Inversión</td>
                 <td></td>
+                <td></td> <!-- Columna canal -->
                 <td [attr.colspan]="semanasConFechas.length"></td>
                 <td class="valor-mensual">{{ calcularTotalMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 <td class="valor-total">{{ calcularTotalGeneral() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
