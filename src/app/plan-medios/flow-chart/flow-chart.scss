@@ -323,10 +323,10 @@ $background-light: #f8f9fa;
         }
         
         .delete-medium-btn {
-          width: 24px;
-          height: 24px;
-          min-width: 24px;
-          border-radius: 4px;
+          width: 32px;
+          height: 32px;
+          min-width: 32px;
+          border-radius: 6px;
           color: #d32f2f;
           background: rgba(211, 47, 47, 0.1);
           border: 1px solid rgba(211, 47, 47, 0.2);
@@ -349,9 +349,9 @@ $background-light: #f8f9fa;
           }
           
           mat-icon {
-            font-size: 16px;
-            width: 16px;
-            height: 16px;
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
             line-height: 1;
           }
         }
