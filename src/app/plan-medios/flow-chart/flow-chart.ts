@@ -125,6 +125,9 @@ export class FlowChart implements OnInit {
   // ✅ Control de cambios pendientes (como resumen)
   cambiosPendientes: boolean = false;
   
+  // ✅ Control de loading para guardado de calendario
+  guardandoCalendario: boolean = false;
+  
   // Medios disponibles
   mediosDisponibles: string[] = ['TV NAL', 'Radio', 'Digital', 'Prensa', 'OOH'];
   
@@ -2559,6 +2562,8 @@ export class FlowChart implements OnInit {
       return;
     }
 
+    this.guardandoCalendario = true;
+
     console.log('💾 === GUARDANDO CALENDARIO DE SPOTS ===');
     console.log('📊 Total items a procesar:', this.itemsPauta.length);
     console.log('📅 Programación actual:', this.programacionItems);
@@ -2671,6 +2676,9 @@ export class FlowChart implements OnInit {
         this.cambiosPendientes = false;
         console.log('✅ Cambios pendientes reseteados');
       }
+
+      // ✅ DESACTIVAR LOADING
+      this.guardandoCalendario = false;
 
       // ✅ RECARGAR LA PÁGINA después de guardar (como hace resumen)
       if (exitosos > 0) {
@@ -2865,6 +2873,12 @@ export class FlowChart implements OnInit {
                 El canal es obligatorio
               </mat-error>
             </mat-form-field>
+
+            <!-- ✅ MENSAJE DE VALIDACIÓN DE DUPLICADOS -->
+            <div class="validation-message" *ngIf="existeCombinacion && data.action !== 'edit'">
+              <mat-icon color="warn">warning</mat-icon>
+              <span>Esta combinación de Medio-Proveedor-Canal ya existe en el plan</span>
+            </div>
           </form>
         </mat-card-content>
       </mat-card>
@@ -2967,12 +2981,20 @@ export class FlowChart implements OnInit {
       <button 
         mat-raised-button 
         color="primary" 
-        [disabled]="!plantillaActual || cargandoPlantilla || !puedeGuardar()"
+        [disabled]="!plantillaActual || cargandoPlantilla || !puedeGuardar() || guardandoPauta || (data.action !== 'edit' && existeCombinacion)"
         (click)="guardarPauta()">
         <mat-icon>save</mat-icon>
         {{ data.action === 'edit' ? 'Actualizar' : 'Guardar' }} Pauta
       </button>
     </mat-dialog-actions>
+
+    <!-- Loading Overlay -->
+    <div *ngIf="guardandoPauta" class="loading-overlay">
+      <div class="loading-content">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p class="loading-text">{{ data.action === 'edit' ? 'Actualizando' : 'Guardando' }} pauta...</p>
+      </div>
+    </div>
   `,
   styles: [`
     .modal-header {
@@ -3136,6 +3158,26 @@ export class FlowChart implements OnInit {
       min-height: 32px !important;
     }
 
+    /* ✅ ESTILOS MENSAJE DE VALIDACIÓN */
+    .validation-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f44336;
+      font-size: 14px;
+      margin-top: 8px;
+      padding: 8px;
+      background: #ffebee;
+      border-radius: 4px;
+      border-left: 4px solid #f44336;
+    }
+
+    .validation-message mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
     /* ✅ ESTILOS CAMPO TARIFA */
     .tarifa-field-section {
       margin-bottom: 12px;
@@ -3210,6 +3252,45 @@ export class FlowChart implements OnInit {
       background-color: #f5f5f5 !important;
       color: #666 !important;
     }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      border-radius: 8px;
+
+      .loading-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 30px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        border: 1px solid #e0e0e0;
+
+        .loading-text {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 500;
+          color: #333;
+          text-align: center;
+        }
+
+        mat-spinner {
+          margin: 0;
+        }
+      }
+    }
   `]
 })
 export class ModalNuevaPautaComponent implements OnInit {
@@ -3232,9 +3313,13 @@ export class ModalNuevaPautaComponent implements OnInit {
   canalesFiltrados: any[] = []; // ✅ NUEVO: Canales filtrados (sin duplicados)
   cargandoCanales: boolean = false;
   
+  // Validación de duplicados
+  existeCombinacion: boolean = false;
+  
   // Estados de carga
   cargandoMedios: boolean = true;
   cargandoProveedores: boolean = false;
+  guardandoPauta: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -3291,6 +3376,11 @@ export class ModalNuevaPautaComponent implements OnInit {
     
     // ✅ CARGAR MEDIOS EXISTENTES para filtro de proveedores y canales
     this.cargarMediosExistentes();
+    
+    // ✅ SUSCRIBIRSE A CAMBIOS DEL FORMULARIO PARA VALIDAR DUPLICADOS
+    this.seleccionForm.valueChanges.subscribe(() => {
+      this.validarCombinacionDuplicada();
+    });
     
     // En modo edición, los datos se cargarán después de que se carguen los medios
   }
@@ -3613,21 +3703,46 @@ export class ModalNuevaPautaComponent implements OnInit {
 
   // ✅ VALIDAR SI SE PUEDE GUARDAR
   puedeGuardar(): boolean {
+    const tarifaValida = this.pautaForm?.get('tarifa')?.value > 0;
+
+    // ✅ MODO EDICIÓN: Validación simplificada ya que los datos básicos ya existen
+    if (this.data.action === 'edit') {
+      const esValido = !!(
+        tarifaValida &&
+        this.pautaForm?.valid &&
+        this.data.pautaData?.medio &&  // Usar nombre del medio (string)
+        this.data.pautaData?.proveedorId &&
+        this.data.pautaData?.canalId &&
+        !this.cargandoProveedores &&
+        !this.cargandoCanales
+      );
+
+      console.log('🔍 puedeGuardar() EDICIÓN debug:', {
+        modo: this.data.action,
+        tarifaValida,
+        formularioValido: this.pautaForm?.valid,
+        medio: this.data.pautaData?.medio,
+        proveedorId: this.data.pautaData?.proveedorId,
+        canalId: this.data.pautaData?.canalId,
+        canal: this.data.pautaData?.canal,
+        cargandoProveedores: this.cargandoProveedores,
+        cargandoCanales: this.cargandoCanales,
+        resultado: esValido
+      });
+
+      return esValido;
+    }
+
+    // ✅ MODO CREACIÓN: Validación completa como antes
     const medioSeleccionado = this.seleccionForm.get('medio')?.value;
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
     const canalId = Number(this.seleccionForm.get('canal')?.value);
-    const tarifaValida = this.pautaForm?.get('tarifa')?.value > 0;
 
-    // ✅ En modo EDICIÓN: Solo verificar que haya proveedores disponibles
-    // ✅ En modo CREACIÓN: Validar que haya proveedores filtrados disponibles (solo si no está cargando)
-    const tieneProveedoresDisponibles = this.data.action === 'edit' ? 
-      (this.cargandoProveedores || this.proveedoresDisponibles.length > 0) :
-      (this.cargandoProveedores || this.proveedoresFiltrados.length > 0);
+    // ✅ En modo CREACIÓN: Validar que haya proveedores filtrados disponibles
+    const tieneProveedoresDisponibles = this.cargandoProveedores || this.proveedoresFiltrados.length > 0;
 
     // ✅ Validar canales disponibles
-    const tieneCanalesDisponibles = this.data.action === 'edit' ? 
-      (this.cargandoCanales || this.canalesDisponibles.length > 0) :
-      (this.cargandoCanales || this.canalesFiltrados.length > 0);
+    const tieneCanalesDisponibles = this.cargandoCanales || this.canalesFiltrados.length > 0;
 
     const esValido = !!(
       medioSeleccionado && 
@@ -3644,7 +3759,7 @@ export class ModalNuevaPautaComponent implements OnInit {
       !this.cargandoCanales  // ✅ No permitir guardar mientras carga canales
     );
 
-    console.log('🔍 puedeGuardar() debug:', {
+    console.log('🔍 puedeGuardar() CREACIÓN debug:', {
       modo: this.data.action,
       medioSeleccionado: !!medioSeleccionado,
       medioId: medioSeleccionado?.medioId,
@@ -3837,24 +3952,11 @@ export class ModalNuevaPautaComponent implements OnInit {
     );
   }
 
-  // ✅ FILTRAR PROVEEDORES - COPIADO EXACTO DESDE RESUMEN
+  // ✅ NO FILTRAR PROVEEDORES - Permitir múltiples canales por proveedor (como en resumen)
   private filtrarProveedoresDisponibles(nombreMedio: string): void {
-    // ✅ OBTENER proveedores ya usados para este medio específico
-    const proveedoresUsados = this.mediosExistentes
-      .filter(me => me.medio === nombreMedio)
-      .map(me => me.proveedor);
-
-    // ✅ FILTRAR proveedores disponibles excluyendo los ya usados
-    this.proveedoresFiltrados = this.proveedoresDisponibles.filter(proveedor =>
-      !proveedoresUsados.includes(proveedor.VENDOR)
-    );
-
-    console.log('🔍 FILTRADO DE PROVEEDORES PARA:', nombreMedio);
-    console.log('📋 Medios existentes totales:', this.mediosExistentes.length);
-    console.log('📋 Proveedores ya usados para este medio:', proveedoresUsados);
-    console.log('📋 Proveedores totales disponibles:', this.proveedoresDisponibles.length);
-    console.log('✅ Proveedores filtrados (sin usar):', this.proveedoresFiltrados.length);
-    console.log('📊 Lista de proveedores filtrados:', this.proveedoresFiltrados.map(p => p.VENDOR));
+    // No filtramos proveedores ya que un mismo proveedor puede tener diferentes canales
+    this.proveedoresFiltrados = this.proveedoresDisponibles;
+    console.log('✅ Proveedores disponibles para', nombreMedio, ':', this.proveedoresFiltrados.length);
   }
 
     cargarCanalesPorProveedor(proveedorId: number): void {
@@ -3886,22 +3988,57 @@ export class ModalNuevaPautaComponent implements OnInit {
         }
 
         // Obtener canales en uso para este medio y proveedor
+        console.log('🔍 DEBUG FILTRADO - Datos para filtrar:', {
+          medioSeleccionado: medioSeleccionado.nombre,
+          proveedorId: proveedorId,
+          proveedorIdString: proveedorId.toString(),
+          totalMediosExistentes: this.mediosExistentes.length,
+          mediosExistentes: this.mediosExistentes.map(me => ({
+            medio: me.medio,
+            proveedor: me.proveedor, 
+            proveedorId: me.proveedorId,
+            canal: me.canal,
+            canalId: me.canalId
+          }))
+        });
+
         const canalesEnUso = this.mediosExistentes
-          .filter(me => 
-            me.medio === medioSeleccionado.nombre && 
-            me.proveedorId === proveedorId.toString()
-          )
+          .filter(me => {
+            const medioCoincide = me.medio === medioSeleccionado.nombre;
+            const proveedorCoincide = me.proveedorId === proveedorId.toString();
+            console.log('🔍 Evaluando item:', {
+              item: me,
+              medioCoincide,
+              proveedorCoincide,
+              pasaFiltro: medioCoincide && proveedorCoincide
+            });
+            return medioCoincide && proveedorCoincide;
+          })
           .map(me => Number(me.canalId));
 
-        console.log('🔍 Canales en uso:', canalesEnUso);
+        console.log('🔍 Canales en uso después del filtro:', canalesEnUso);
         
         // Filtrar canales ya usados
-        this.canalesFiltrados = canales.filter(canal => 
-          !canalesEnUso.includes(Number(canal.canalId))
-        );
+        this.canalesFiltrados = canales.filter(canal => {
+          const canalIdNumero = Number(canal.canalId);
+          const estaEnUso = canalesEnUso.includes(canalIdNumero);
+          console.log('🔍 Evaluando canal:', {
+            canal: canal.nombre,
+            canalId: canal.canalId,
+            canalIdNumero,
+            estaEnUso,
+            canalesEnUso,
+            pasa: !estaEnUso
+          });
+          return !estaEnUso;
+        });
         
         console.log('✅ Canales disponibles:', this.canalesDisponibles.length);
         console.log('✅ Canales filtrados:', this.canalesFiltrados.length);
+        console.log('✅ Lista final canales filtrados:', this.canalesFiltrados.map(c => ({
+          nombre: c.nombre,
+          canalId: c.canalId
+        })));
         
         // Si no hay canales filtrados disponibles, mostrar mensaje
         if (this.canalesFiltrados.length === 0) {
@@ -3923,6 +4060,60 @@ export class ModalNuevaPautaComponent implements OnInit {
     });
   }
 
+  // ✅ VALIDACIÓN DE DUPLICADOS - Copiado desde plan-medios-resumen
+  private validarCombinacionDuplicada(): void {
+    const valores = this.seleccionForm.value;
+
+    if (valores.medio && valores.proveedor && valores.canal) {
+      const medioSeleccionado = valores.medio as MedioBackend;
+      const proveedorSeleccionado = this.proveedoresDisponibles.find(p => p.id === valores.proveedor);
+      const canalSeleccionado = this.canalesDisponibles.find(c => c.canalId === valores.canal);
+
+      if (proveedorSeleccionado && medioSeleccionado && canalSeleccionado) {
+        // Verificar si existe la combinación exacta de medio-proveedor-canal
+        console.log('🔍 VALIDANDO DUPLICADOS - Datos actuales:', {
+          medio: medioSeleccionado.nombre,
+          proveedor: proveedorSeleccionado.VENDOR,
+          canalId: valores.canal,
+          mediosExistentes: this.mediosExistentes.map(me => ({
+            medio: me.medio,
+            proveedor: me.proveedor,
+            canalId: me.canalId
+          }))
+        });
+
+        this.existeCombinacion = this.mediosExistentes.some(me => {
+          const medioCoincide = me.medio === medioSeleccionado.nombre;
+          const proveedorCoincide = me.proveedor === proveedorSeleccionado.VENDOR;
+          const canalCoincide = me.canalId === valores.canal;
+          const esDuplicado = medioCoincide && proveedorCoincide && canalCoincide;
+          
+          console.log('🔍 Evaluando duplicado:', {
+            item: me,
+            medioCoincide,
+            proveedorCoincide,
+            canalCoincide,
+            esDuplicado
+          });
+          
+          return esDuplicado;
+        });
+
+        if (this.existeCombinacion) {
+          console.warn('⚠️ Combinación duplicada encontrada:', {
+            medio: medioSeleccionado.nombre,
+            proveedor: proveedorSeleccionado.VENDOR,
+            canalId: valores.canal
+          });
+        } else {
+          console.log('✅ Combinación válida, no hay duplicados');
+        }
+      }
+    } else {
+      this.existeCombinacion = false;
+    }
+  }
+
   obtenerTipoCampo(campo: CampoPlantilla): string {
     switch (campo.type) {
       case 'integer':
@@ -3941,6 +4132,8 @@ export class ModalNuevaPautaComponent implements OnInit {
       this.snackBar.open('Error: No hay plantilla cargada', '', { duration: 3000 });
       return;
     }
+
+    this.guardandoPauta = true;
 
     // ✅ VALIDACIONES CRÍTICAS ANTES DE PROCEDER
     const medioSeleccionado = this.seleccionForm.get('medio')?.value as MedioBackend;
@@ -4082,6 +4275,7 @@ export class ModalNuevaPautaComponent implements OnInit {
       version: Number(this.data.planData.version),
       medioId: medioSeleccionado.medioId,
       proveedorId: proveedorId,
+      canalId: canalId, // ✅ INCLUIR canalId en el request
       tarifa: tarifa,
       dataJson: JSON.stringify({}), // JSON básico
       dataPlantillaJson: JSON.stringify(pauta.datos), // Datos de la plantilla
@@ -4093,15 +4287,21 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.backendMediosService.crearPlanMedioItemFlowchart(request).subscribe({
       next: (response) => {
         console.log('✅ Item creado en backend:', response);
+        this.guardandoPauta = false;
         this.snackBar.open('✅ Item guardado exitosamente', '', { 
           duration: 2000,
           panelClass: ['success-snackbar']
         });
+        this.dialogRef.close({ success: true, data: response });
       },
       error: (error) => {
         console.error('❌ Error guardando en backend:', error);
-      throw error;
-    }
+        this.guardandoPauta = false;
+        this.snackBar.open('❌ Error guardando el item', '', { 
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
     });
   }
 
@@ -4160,10 +4360,9 @@ export class ModalNuevaPautaComponent implements OnInit {
       version: Number(this.data.planData.version),
       medioId: medioSeleccionado.medioId,
       proveedorId: proveedorId,
+      canalId: canalId, // ✅ INCLUIR canalId en el request de actualización
       tarifa: tarifa,
       dataJson: JSON.stringify({}), // JSON básico
-      pasoPorFlowchart: true, // ✅ Siempre true cuando se guarda desde FlowChart
-      plantillaCompletada: true, // ✅ Siempre true cuando se completa la plantilla
       dataPlantillaJson: JSON.stringify(pautaActualizada.datos), // Datos de la plantilla
       usuarioModifico: 'SYSTEM' // TODO: Usuario real
     };
@@ -4173,15 +4372,21 @@ export class ModalNuevaPautaComponent implements OnInit {
     this.backendMediosService.actualizarPlanMedioItemFlowchart(request).subscribe({
       next: (response) => {
         console.log('✅ Item actualizado en backend:', response);
+        this.guardandoPauta = false;
         this.snackBar.open('✅ Item actualizado exitosamente', '', { 
           duration: 2000,
           panelClass: ['success-snackbar']
         });
+        this.dialogRef.close({ success: true, data: response });
       },
       error: (error) => {
         console.error('❌ Error actualizando en backend:', error);
-      throw error;
-    }
+        this.guardandoPauta = false;
+        this.snackBar.open('❌ Error actualizando el item', '', { 
+          duration: 3000,
+          panelClass: ['error-snackbar']
+        });
+      }
     });
   }
 

@@ -98,6 +98,7 @@ export interface PlanMedioItemUpdateDto {
   version: number;
   medioId?: number;
   proveedorId?: number;
+  canalId?: number;
   tarifa?: number;
   dataJson?: string;
   usuarioModifico?: string;
@@ -109,6 +110,7 @@ export interface CrearPlanMedioItemFlowchartRequest {
   version: number;
   medioId: number;
   proveedorId: number;
+  canalId: number; // ✅ AGREGAR campo canalId que faltaba
   tarifa: number;
   dataJson: string;
   dataPlantillaJson: string;
@@ -122,10 +124,9 @@ export interface ActualizarPlanMedioItemFlowchartRequest {
   version: number;
   medioId: number;
   proveedorId: number;
+  canalId: number; // ✅ AGREGAR campo canalId que faltaba
   tarifa: number;
   dataJson: string;
-  pasoPorFlowchart: boolean;
-  plantillaCompletada: boolean;
   dataPlantillaJson: string;
   usuarioModifico: string;
 }

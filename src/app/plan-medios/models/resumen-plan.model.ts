@@ -25,6 +25,7 @@ export interface PeriodoPlan {
 
 export interface MedioPlan {
     nombre: string;
+    medioId?: number; // ID del medio desde el backend
     proveedor?: string;
     proveedorId?: string;
     canal?: string;
@@ -52,6 +53,7 @@ export interface MedioPlanProveedor {
     proveedorId: string;
     canal: string;
     canalId: number;
+    canalNombre?: string;
     canalDescripcion?: string;
     salidas: number;
     valorNeto: number;

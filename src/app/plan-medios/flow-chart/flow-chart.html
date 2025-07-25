@@ -46,13 +46,14 @@
       mat-raised-button 
       [color]="cambiosPendientes ? 'warn' : 'accent'"
       class="save-calendar-btn"
-      [disabled]="itemsPauta.length === 0"
+      [disabled]="itemsPauta.length === 0 || guardandoCalendario"
       (click)="guardarCalendario()"
-      [matTooltip]="cambiosPendientes ? 'Hay cambios pendientes por guardar' : 'Guardar todos los spots programados en el calendario'">
-      <mat-icon>{{ cambiosPendientes ? 'warning' : 'save' }}</mat-icon>
-      {{ cambiosPendientes ? 'Guardar Cambios' : 'Guardar Calendario' }}
-      <span class="save-indicator" *ngIf="itemsPauta.length > 0">({{ itemsPauta.length }} items)</span>
-      <span class="changes-indicator" *ngIf="cambiosPendientes"> • Cambios pendientes</span>
+      [matTooltip]="guardandoCalendario ? 'Guardando calendario...' : (cambiosPendientes ? 'Hay cambios pendientes por guardar' : 'Guardar todos los spots programados en el calendario')">
+      <mat-spinner *ngIf="guardandoCalendario" diameter="20" class="button-spinner"></mat-spinner>
+      <mat-icon *ngIf="!guardandoCalendario">{{ cambiosPendientes ? 'warning' : 'save' }}</mat-icon>
+      {{ guardandoCalendario ? 'Guardando...' : (cambiosPendientes ? 'Guardar Cambios' : 'Guardar Calendario') }}
+      <span class="save-indicator" *ngIf="itemsPauta.length > 0 && !guardandoCalendario">({{ itemsPauta.length }} items)</span>
+      <span class="changes-indicator" *ngIf="cambiosPendientes && !guardandoCalendario"> • Cambios pendientes</span>
     </button>
 
 
@@ -117,6 +118,7 @@
                 <div class="fixed-columns">
                   <div class="header-cell action-col">Acciones</div>
                   <div class="header-cell proveedor-col">Proveedor</div>
+                  <div class="header-cell canal-col">Canal</div>
                 </div>
                 
                 <!-- Columnas dinámicas de campos -->
@@ -187,6 +189,15 @@
                           </mat-icon>
                         </div>
                         <div class="pauta-stats">{{ item.totalSpots || 0 }} spots • {{ (item.valorTotal || 0) | currency:'USD':'symbol-narrow':'1.0-0' }}</div>
+                      </div>
+                    </div>
+                    
+                    <!-- ✅ CANAL -->
+                    <div class="data-cell canal-col">
+                      <div class="cell-content canal-info">
+                        <div class="canal-name">
+                          {{ item.canal || 'Sin canal' }}
+                        </div>
                       </div>
                     </div>
                   </div>

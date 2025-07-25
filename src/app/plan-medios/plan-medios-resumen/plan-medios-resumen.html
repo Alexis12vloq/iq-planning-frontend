@@ -76,6 +76,7 @@
               <tr>
                 <th class="col-medios">MEDIOS</th>
                 <th class="col-proveedor">PROVEEDOR</th>
+                <th class="col-canal">CANAL</th>
                 <th class="col-semanas" [attr.colspan]="semanasConFechas.length">
                   <div class="semanas-header">
                     <button mat-icon-button class="nav-button" [disabled]="!tieneMesAnterior()" (click)="mesAnterior()"
@@ -94,6 +95,7 @@
                 <th class="col-soi">% / SOI</th>
               </tr>
               <tr class="fechas-subheader">
+                <th></th>
                 <th></th>
                 <th></th>
                 <th class="col-fecha" *ngFor="let semana of semanasConFechas">
@@ -118,6 +120,7 @@
                   <tr *ngIf="fila.tipo === 'encabezado-medio'" class="fila-encabezado-medio">
                     <td>{{ fila.nombre }}</td>
                     <td></td>
+                    <td></td>
                     <td [attr.colspan]="semanasConFechas.length"></td>
                     <td class="valor-mensual">{{ fila.valorMensual | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                     <td class="valor-total">{{ fila.valorNeto | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
@@ -129,6 +132,7 @@
                     title="Doble click para ver opciones">
                     <td></td>
                     <td>{{ fila.medio?.proveedor || 'Sin proveedor' }}</td>
+                    <td>{{ fila.medio?.canalNombre || fila.medio?.canal || 'Sin canal' }}</td>
                     <td [attr.colspan]="semanasConFechas.length">
                       <!-- Quitar los checks, dejar en blanco -->
                     </td>
@@ -154,6 +158,7 @@
                         </mat-icon>
                       </div>
                     </td>
+                    <td></td>
                     <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="spots-cell">
                       <!-- ✅ NUEVO: Input condicional basado en si viene de flowchart -->
                       <ng-container *ngIf="!fila.medio.pasoPorFlowchart; else spotsFlowchartTemplate">
@@ -190,6 +195,7 @@
                         </mat-icon>
                       </div>
                     </td>
+                    <td></td>
                     <td *ngFor="let semana of semanasConFechas; let semanaIndex = index" class="inversiones-cell">
                       <div class="inversion-value" [class.inversion-flowchart]="fila.medio.pasoPorFlowchart"
                         [title]="fila.medio.pasoPorFlowchart ? 'Valor calculado automáticamente desde FlowChart' : ''">
@@ -209,7 +215,7 @@
               <!-- Mostrar mensaje cuando no hay pautas -->
               <ng-container *ngIf="periodoSeleccionado.medios.length === 0">
                 <tr class="fila-sin-pautas">
-                  <td [attr.colspan]="semanasConFechas.length + 5" class="text-center">
+                  <td [attr.colspan]="semanasConFechas.length + 6" class="text-center">
                     <div class="mensaje-sin-pautas">
                       <mat-icon>info</mat-icon>
                       <span>No hay pautas creadas para este plan. Utiliza el botón "Agregar Medio" para agregar
@@ -225,6 +231,7 @@
               <tr class="fila-total">
                 <td>Total Inversión Neta</td>
                 <td></td>
+                <td></td> <!-- Columna canal -->
                 <td [attr.colspan]="semanasConFechas.length"></td>
                 <td class="valor-mensual">{{ calcularTotalInversionMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}
                 </td>
@@ -235,6 +242,7 @@
               <tr class="fila-iva">
                 <td>IVA 19%</td>
                 <td></td>
+                <td></td> <!-- Columna canal -->
                 <td [attr.colspan]="semanasConFechas.length"></td>
                 <td class="valor-mensual">{{ calcularIvaMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 <td class="valor-total">{{ calcularIvaTotal() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
@@ -243,6 +251,7 @@
               <tr class="fila-total-inversion">
                 <td>Total Inversión</td>
                 <td></td>
+                <td></td> <!-- Columna canal -->
                 <td [attr.colspan]="semanasConFechas.length"></td>
                 <td class="valor-mensual">{{ calcularTotalMensual() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
                 <td class="valor-total">{{ calcularTotalGeneral() | currency:'USD':'symbol-narrow':'1.0-0' }}</td>
