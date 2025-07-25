@@ -1489,16 +1489,24 @@ export class PlanMediosNuevaPauta implements OnInit {
     </mat-dialog-content>
 
     <mat-dialog-actions class="modal-actions">
-      <button mat-button mat-dialog-close>Cancelar</button>
+      <button mat-button mat-dialog-close [disabled]="guardandoPauta">Cancelar</button>
       <button 
         mat-raised-button 
         color="primary" 
-        [disabled]="!plantillaActual || cargandoPlantilla"
+        [disabled]="!plantillaActual || cargandoPlantilla || guardandoPauta"
         (click)="guardarPauta()">
         <mat-icon>save</mat-icon>
         {{ data.action === 'edit' ? 'Actualizar' : 'Guardar' }} Pauta
       </button>
     </mat-dialog-actions>
+
+    <!-- Loading Overlay -->
+    <div *ngIf="guardandoPauta" class="loading-overlay">
+      <div class="loading-content">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p class="loading-text">{{ data.action === 'edit' ? 'Actualizando' : 'Guardando' }} pauta...</p>
+      </div>
+    </div>
   `,
   styles: [`
     .modal-header {
@@ -1661,6 +1669,45 @@ export class PlanMediosNuevaPauta implements OnInit {
       padding: 6px 16px !important;
       min-height: 32px !important;
     }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      border-radius: 8px;
+
+      .loading-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 30px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        border: 1px solid #e0e0e0;
+
+        .loading-text {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 500;
+          color: #333;
+          text-align: center;
+        }
+
+        mat-spinner {
+          margin: 0;
+        }
+      }
+    }
   `]
 })
 export class ModalNuevaPautaComponent implements OnInit {
@@ -1683,6 +1730,7 @@ export class ModalNuevaPautaComponent implements OnInit {
   // Canales disponibles para el proveedor seleccionado
   canalesDisponibles: any[] = [];
   cargandoCanales: boolean = false;
+  guardandoPauta: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -1921,6 +1969,8 @@ export class ModalNuevaPautaComponent implements OnInit {
       return;
     }
 
+    this.guardandoPauta = true;
+
     const valores = this.pautaForm.value;
     const isEdit = this.data.action === 'edit';
     
@@ -1987,12 +2037,16 @@ export class ModalNuevaPautaComponent implements OnInit {
     const verificacion = JSON.parse(localStorage.getItem('respuestasPautas') || '[]');
     console.log('✅ Verificación: pautas en localStorage después del guardado:', verificacion);
     
-    this.snackBar.open(`Item ${isEdit ? 'actualizado' : 'guardado'} correctamente`, '', { 
-      duration: 2000,
-      panelClass: ['success-snackbar']
-    });
-    
-    this.dialogRef.close({ pauta: pauta, shouldRefresh: true });
+    // Simular un pequeño delay para mostrar el loading
+    setTimeout(() => {
+      this.guardandoPauta = false;
+      this.snackBar.open(`Item ${isEdit ? 'actualizado' : 'guardado'} correctamente`, '', { 
+        duration: 2000,
+        panelClass: ['success-snackbar']
+      });
+      
+      this.dialogRef.close({ pauta: pauta, shouldRefresh: true });
+    }, 500); // 500ms para mostrar el loading
   }
 
   private guardarPautaEnStorage(pauta: RespuestaPauta): void {

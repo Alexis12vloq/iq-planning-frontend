@@ -7,6 +7,7 @@ import { MatDialogModule, MatDialogRef, MatDialog, MAT_DIALOG_DATA } from '@angu
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BackendMediosService } from '../services/backend-medios.service';
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 
@@ -21,7 +22,8 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
     MatDialogModule,
     MatCheckboxModule,
     MatListModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatProgressSpinnerModule
   ],
   template: `
     <div class="modal-header">
@@ -47,15 +49,17 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
         <h4>Medios disponibles:</h4>
         
         <div class="medios-container">
-          <div *ngFor="let medio of mediosActivos" 
-               class="medio-item" 
-               [class.selected]="mediosSeleccionados.includes(medio)"
-               (click)="toggleMedioClick(medio)">
-            <mat-checkbox 
-              [checked]="mediosSeleccionados.includes(medio)"
-              (change)="toggleMedio(medio, $event.checked)"
-              (click)="$event.stopPropagation()"
-              class="medio-checkbox">
+                     <div *ngFor="let medio of mediosActivos" 
+                class="medio-item" 
+                [class.selected]="mediosSeleccionados.includes(medio)"
+                [class.disabled]="isLoading"
+                (click)="!isLoading && toggleMedioClick(medio)">
+             <mat-checkbox 
+               [checked]="mediosSeleccionados.includes(medio)"
+               [disabled]="isLoading"
+               (change)="toggleMedio(medio, $event.checked)"
+               (click)="$event.stopPropagation()"
+               class="medio-checkbox">
             </mat-checkbox>
             
             <div class="medio-info">
@@ -88,6 +92,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
       <button 
         mat-button 
         mat-dialog-close
+        [disabled]="isLoading"
         class="cancel-btn">
         Cancelar
       </button>
@@ -95,13 +100,21 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
       <button 
         mat-raised-button 
         color="warn"
-        [disabled]="mediosSeleccionados.length === 0"
+        [disabled]="mediosSeleccionados.length === 0 || isLoading"
         (click)="confirmarEliminacion()"
         class="delete-btn">
         <mat-icon>delete_forever</mat-icon>
         Eliminar {{ mediosSeleccionados.length }} Medio(s)
       </button>
     </mat-dialog-actions>
+
+    <!-- Loading Overlay -->
+    <div *ngIf="isLoading" class="loading-overlay">
+      <div class="loading-content">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p class="loading-text">Eliminando medios...</p>
+      </div>
+    </div>
   `,
   styles: [`
     .modal-header {
@@ -200,6 +213,17 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
             border-color: #d32f2f;
             background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
             box-shadow: 0 2px 8px rgba(211, 47, 47, 0.1);
+          }
+
+          &.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            
+            &:hover {
+              border-color: #e0e0e0;
+              box-shadow: none;
+              transform: none;
+            }
           }
 
           .medio-checkbox {
@@ -313,12 +337,52 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
         }
       }
     }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      border-radius: 8px;
+
+      .loading-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 30px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        border: 1px solid #e0e0e0;
+
+        .loading-text {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 500;
+          color: #333;
+          text-align: center;
+        }
+
+        mat-spinner {
+          margin: 0;
+        }
+      }
+    }
   `]
 })
 export class ModalEliminarMediosComponent implements OnInit {
   mediosActivos: string[] = [];
   itemsPorMedio: { [medio: string]: any[] } = {};
   mediosSeleccionados: string[] = [];
+  isLoading = false;
 
   constructor(
     private dialogRef: MatDialogRef<ModalEliminarMediosComponent>,
@@ -388,6 +452,7 @@ export class ModalEliminarMediosComponent implements OnInit {
     confirmDialogRef.afterClosed().subscribe(confirmado => {
       if (confirmado) {
         console.log('🗑️ Confirmada eliminación de medios:', this.mediosSeleccionados);
+        this.isLoading = true;
         this.eliminarMediosSeleccionados();
       }
     });
@@ -474,6 +539,7 @@ export class ModalEliminarMediosComponent implements OnInit {
 
       const mediosEliminados = this.mediosSeleccionados.slice(0, eliminados);
 
+      this.isLoading = false;
       this.dialogRef.close({
         mediosEliminados: mediosEliminados,
         totalEliminados: eliminados,

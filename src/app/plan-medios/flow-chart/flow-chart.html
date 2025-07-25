@@ -46,13 +46,14 @@
       mat-raised-button 
       [color]="cambiosPendientes ? 'warn' : 'accent'"
       class="save-calendar-btn"
-      [disabled]="itemsPauta.length === 0"
+      [disabled]="itemsPauta.length === 0 || guardandoCalendario"
       (click)="guardarCalendario()"
-      [matTooltip]="cambiosPendientes ? 'Hay cambios pendientes por guardar' : 'Guardar todos los spots programados en el calendario'">
-      <mat-icon>{{ cambiosPendientes ? 'warning' : 'save' }}</mat-icon>
-      {{ cambiosPendientes ? 'Guardar Cambios' : 'Guardar Calendario' }}
-      <span class="save-indicator" *ngIf="itemsPauta.length > 0">({{ itemsPauta.length }} items)</span>
-      <span class="changes-indicator" *ngIf="cambiosPendientes"> • Cambios pendientes</span>
+      [matTooltip]="guardandoCalendario ? 'Guardando calendario...' : (cambiosPendientes ? 'Hay cambios pendientes por guardar' : 'Guardar todos los spots programados en el calendario')">
+      <mat-spinner *ngIf="guardandoCalendario" diameter="20" class="button-spinner"></mat-spinner>
+      <mat-icon *ngIf="!guardandoCalendario">{{ cambiosPendientes ? 'warning' : 'save' }}</mat-icon>
+      {{ guardandoCalendario ? 'Guardando...' : (cambiosPendientes ? 'Guardar Cambios' : 'Guardar Calendario') }}
+      <span class="save-indicator" *ngIf="itemsPauta.length > 0 && !guardandoCalendario">({{ itemsPauta.length }} items)</span>
+      <span class="changes-indicator" *ngIf="cambiosPendientes && !guardandoCalendario"> • Cambios pendientes</span>
     </button>
 
 

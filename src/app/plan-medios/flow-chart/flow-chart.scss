@@ -156,6 +156,14 @@ $background-light: #f8f9fa;
         animation: pulse-save 2s infinite;
       }
 
+      .button-spinner {
+        margin-right: 8px;
+        
+        ::ng-deep circle {
+          stroke: white !important;
+        }
+      }
+
       .save-indicator {
         margin-left: 4px;
         font-size: 12px;
