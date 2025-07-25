@@ -3115,6 +3115,7 @@ export class ModalEditarMedioComponent implements OnInit {
           version: this.data.resumenPlan?.version || 1,
           medioId: this.data.medio.medioId || 1, // TODO: Obtener medioId real desde el backend
           proveedorId: this.data.medio.proveedorId, // Usar el proveedor existente
+          canalId: this.data.medio.canalId, // Incluir el canalId para mantener la relación
           tarifa: Number(valores.tarifa),
           dataJson: JSON.stringify({
             spotsPorFecha: {}, // Reiniciar spots a vacío

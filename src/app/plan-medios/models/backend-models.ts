@@ -98,6 +98,7 @@ export interface PlanMedioItemUpdateDto {
   version: number;
   medioId?: number;
   proveedorId?: number;
+  canalId?: number;
   tarifa?: number;
   dataJson?: string;
   usuarioModifico?: string;
