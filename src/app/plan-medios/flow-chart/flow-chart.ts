@@ -2981,7 +2981,7 @@ export class FlowChart implements OnInit {
       <button 
         mat-raised-button 
         color="primary" 
-        [disabled]="!plantillaActual || cargandoPlantilla || !puedeGuardar() || guardandoPauta || existeCombinacion"
+        [disabled]="!plantillaActual || cargandoPlantilla || !puedeGuardar() || guardandoPauta || (data.action !== 'edit' && existeCombinacion)"
         (click)="guardarPauta()">
         <mat-icon>save</mat-icon>
         {{ data.action === 'edit' ? 'Actualizar' : 'Guardar' }} Pauta
@@ -3703,21 +3703,46 @@ export class ModalNuevaPautaComponent implements OnInit {
 
   // ✅ VALIDAR SI SE PUEDE GUARDAR
   puedeGuardar(): boolean {
+    const tarifaValida = this.pautaForm?.get('tarifa')?.value > 0;
+
+    // ✅ MODO EDICIÓN: Validación simplificada ya que los datos básicos ya existen
+    if (this.data.action === 'edit') {
+      const esValido = !!(
+        tarifaValida &&
+        this.pautaForm?.valid &&
+        this.data.pautaData?.medio &&  // Usar nombre del medio (string)
+        this.data.pautaData?.proveedorId &&
+        this.data.pautaData?.canalId &&
+        !this.cargandoProveedores &&
+        !this.cargandoCanales
+      );
+
+      console.log('🔍 puedeGuardar() EDICIÓN debug:', {
+        modo: this.data.action,
+        tarifaValida,
+        formularioValido: this.pautaForm?.valid,
+        medio: this.data.pautaData?.medio,
+        proveedorId: this.data.pautaData?.proveedorId,
+        canalId: this.data.pautaData?.canalId,
+        canal: this.data.pautaData?.canal,
+        cargandoProveedores: this.cargandoProveedores,
+        cargandoCanales: this.cargandoCanales,
+        resultado: esValido
+      });
+
+      return esValido;
+    }
+
+    // ✅ MODO CREACIÓN: Validación completa como antes
     const medioSeleccionado = this.seleccionForm.get('medio')?.value;
     const proveedorId = this.seleccionForm.get('proveedor')?.value;
     const canalId = Number(this.seleccionForm.get('canal')?.value);
-    const tarifaValida = this.pautaForm?.get('tarifa')?.value > 0;
 
-    // ✅ En modo EDICIÓN: Solo verificar que haya proveedores disponibles
-    // ✅ En modo CREACIÓN: Validar que haya proveedores filtrados disponibles (solo si no está cargando)
-    const tieneProveedoresDisponibles = this.data.action === 'edit' ? 
-      (this.cargandoProveedores || this.proveedoresDisponibles.length > 0) :
-      (this.cargandoProveedores || this.proveedoresFiltrados.length > 0);
+    // ✅ En modo CREACIÓN: Validar que haya proveedores filtrados disponibles
+    const tieneProveedoresDisponibles = this.cargandoProveedores || this.proveedoresFiltrados.length > 0;
 
     // ✅ Validar canales disponibles
-    const tieneCanalesDisponibles = this.data.action === 'edit' ? 
-      (this.cargandoCanales || this.canalesDisponibles.length > 0) :
-      (this.cargandoCanales || this.canalesFiltrados.length > 0);
+    const tieneCanalesDisponibles = this.cargandoCanales || this.canalesFiltrados.length > 0;
 
     const esValido = !!(
       medioSeleccionado && 
@@ -3734,7 +3759,7 @@ export class ModalNuevaPautaComponent implements OnInit {
       !this.cargandoCanales  // ✅ No permitir guardar mientras carga canales
     );
 
-    console.log('🔍 puedeGuardar() debug:', {
+    console.log('🔍 puedeGuardar() CREACIÓN debug:', {
       modo: this.data.action,
       medioSeleccionado: !!medioSeleccionado,
       medioId: medioSeleccionado?.medioId,
