@@ -68,7 +68,7 @@ import { ConfirmDialogComponent } from './confirm-dialog.component';
             
             <div class="medio-items-preview">
               <div *ngFor="let item of itemsPorMedio[medio]?.slice(0, 3)" class="item-preview">
-                • {{ item.proveedor || 'Sin proveedor' }}
+                • {{ (item.proveedor || 'Sin proveedor') + ' - ' + (item.canal || 'Sin canal') }}
               </div>
               <div *ngIf="(itemsPorMedio[medio]?.length || 0) > 3" class="more-items">
                 ... y {{ (itemsPorMedio[medio]?.length || 0) - 3 }} más
