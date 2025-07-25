@@ -752,7 +752,7 @@ export class PlanMediosResumen implements OnInit {
 
   private ejecutarDescargaFlow(): void {
     // TODO: Implementar lógica de descarga
-    this.snackBar.open('📥 Descarga FlowChart iniciada', '', {
+    this.snackBar.open('📥 Descarga PlanMedio iniciada', '', {
       duration: 2000,
       horizontalPosition: 'center',
       verticalPosition: 'top'
@@ -973,6 +973,235 @@ export class PlanMediosResumen implements OnInit {
 
   onRegresar(): void {
     this.navegarConConfirmacion('/plan-medios-consulta');
+  }
+
+  // Método para descargar el plan de medios en Excel
+  onDescargarExcel(): void {
+    // Preparar la estructura JSON con todos los datos del resumen
+    const estructuraExcel = this.prepararEstructuraExcel();
+
+    // Enviar al backend para generar el Excel
+    this.backendMediosService.descargarPlanMediosExcel(estructuraExcel).subscribe({
+      next: (response: Blob) => {
+        // Crear URL para descarga
+        const url = window.URL.createObjectURL(response);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Plan_Medios_${this.resumenPlan.numeroPlan}_${new Date().getTime()}.xlsx`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+
+        this.snackBar.open('✅ Excel descargado exitosamente', 'Cerrar', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+      },
+      error: (error) => {
+        console.error('Error al descargar Excel:', error);
+        this.snackBar.open('❌ Error al descargar el Excel', 'Cerrar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  // Método auxiliar para preparar la estructura del Excel
+  private prepararEstructuraExcel(): any {
+    const planInfo = {
+      numeroPlan: this.resumenPlan.numeroPlan,
+      version: this.resumenPlan.version,
+      cliente: this.resumenPlan.cliente,
+      producto: this.resumenPlan.producto,
+      campana: this.resumenPlan.campana,
+      fechaInicio: this.resumenPlan.fechaInicio,
+      fechaFin: this.resumenPlan.fechaFin
+      // ✅ QUITAMOS mesActual para eliminar el total mensual del Excel
+    };
+
+    // ✅ OBTENER TODAS LAS SEMANAS DEL PLAN COMPLETO, NO SOLO DEL MES ACTUAL
+    const todasLasSemanas = this.calcularTodasLasSemanasDelPlan();
+
+    // Procesar los medios y su estructura jerárquica usando la nueva estructura con proveedores
+    const medios = [];
+    if (this.periodoSeleccionado && this.periodoSeleccionado.medios) {
+      for (const medio of this.periodoSeleccionado.medios) {
+        // ✅ CORRECCIÓN: Procesar cada proveedor por separado ya que cada uno tiene su propia información
+        if (medio.proveedores && medio.proveedores.length > 0) {
+          // Si el medio tiene proveedores, crear una entrada por cada proveedor
+          for (const proveedor of medio.proveedores) {
+            const medioData = {
+              // Datos del encabezado del medio
+              nombre: medio.nombre,
+              
+              // ✅ CORRECCIÓN: Usar datos del proveedor específico
+              proveedor: proveedor.nombre || 'Sin proveedor',
+              canal: proveedor.canal || proveedor.canalDescripcion || 'Sin canal',
+              
+              // Datos de spots por semana usando TODAS las semanas
+              spotsPorSemana: todasLasSemanas.map((semana, index) => this.obtenerSpotsPorFechaConSemana(proveedor, semana)),
+              totalSpots: this.calcularTotalSpotsProveedor(proveedor),
+              
+              // Datos de inversiones usando la tarifa del proveedor
+              tarifa: proveedor.tarifa || 0,
+              inversionesPorSemana: todasLasSemanas.map((semana) => {
+                const spots = this.obtenerSpotsPorFechaConSemana(proveedor, semana);
+                return spots * (proveedor.tarifa || 0);
+              }),
+              totalInversiones: this.calcularValorTotalProveedor(proveedor),
+              
+              // Metadata adicional
+              pasoPorFlowchart: proveedor.pasoPorFlowchart || false,
+              planMedioItemId: proveedor.planMedioItemId,
+              canalId: proveedor.canalId,
+              proveedorId: proveedor.proveedorId
+            };
+            
+            medios.push(medioData);
+          }
+        } else {
+          // Si no tiene proveedores (estructura antigua), usar datos del medio principal
+          const medioData = {
+            nombre: medio.nombre,
+            proveedor: medio.proveedor || 'Sin proveedor',
+            canal: medio.canalNombre || medio.canal || 'Sin canal',
+            
+            spotsPorSemana: todasLasSemanas.map((semana) => this.obtenerSpotsPorFechaConSemana(medio, semana)),
+            totalSpots: this.calcularTotalSpots(medio),
+            
+            tarifa: medio.tarifa || 0,
+            inversionesPorSemana: todasLasSemanas.map((semana) => {
+              const spots = this.obtenerSpotsPorFechaConSemana(medio, semana);
+              return spots * (medio.tarifa || 0);
+            }),
+            totalInversiones: this.calcularValorTotal(medio),
+            
+            pasoPorFlowchart: medio.pasoPorFlowchart || false,
+            planMedioItemId: medio.planMedioItemId
+          };
+          
+          medios.push(medioData);
+        }
+      }
+    }
+
+    // Calcular totales generales (sin totales mensuales)
+    const totales = {
+      totalInversionNeta: medios.reduce((sum, medio) => sum + medio.totalInversiones, 0),
+      totalSpots: medios.reduce((sum, medio) => sum + medio.totalSpots, 0)
+      // ✅ QUITAMOS totalInversionMensual según la solicitud del usuario
+    };
+
+    return {
+      planInfo,
+      semanas: todasLasSemanas, // ✅ Usar todas las semanas
+      medios,
+      totales,
+      fechaGeneracion: new Date().toISOString()
+    };
+  }
+
+  // ✅ MÉTODO PARA OBTENER TODAS LAS SEMANAS DEL PLAN COMPLETO
+  private calcularTodasLasSemanasDelPlan(): Array<{ nombre: string, fechaInicio: string, fechaFin: string, fechaCompacta: string }> {
+    const todasLasSemanas = [];
+    
+    // Usar las fechas del plan completo, no del mes actual
+    const fechaInicioParts = this.periodoSeleccionado.fechaInicio.split('/');
+    const fechaFinParts = this.periodoSeleccionado.fechaFin.split('/');
+
+    const fechaInicio = new Date(
+      parseInt(fechaInicioParts[2]), // año
+      parseInt(fechaInicioParts[1]) - 1, // mes (0-based)
+      parseInt(fechaInicioParts[0]) // día
+    );
+    const fechaFin = new Date(
+      parseInt(fechaFinParts[2]), // año
+      parseInt(fechaFinParts[1]) - 1, // mes (0-based)
+      parseInt(fechaFinParts[0]) // día
+    );
+
+    // Asegurar que las fechas se parseen correctamente
+    fechaInicio.setHours(0, 0, 0, 0);
+    fechaFin.setHours(23, 59, 59, 999);
+
+    // Encontrar el lunes de la semana que contiene la fecha de inicio
+    let inicioSemana = new Date(fechaInicio);
+    const diaSemanaInicio = inicioSemana.getDay();
+    
+    if (diaSemanaInicio !== 1) {
+      let diasHastaLunes = diaSemanaInicio === 0 ? 6 : diaSemanaInicio - 1;
+      inicioSemana.setDate(inicioSemana.getDate() - diasHastaLunes);
+    }
+
+    // Encontrar el domingo de la semana que contiene la fecha de fin
+    let finPlan = new Date(fechaFin);
+    const diaSemanaFin = finPlan.getDay();
+    
+    if (diaSemanaFin !== 0) {
+      let diasHastaDomingo = 7 - diaSemanaFin;
+      finPlan.setDate(finPlan.getDate() + diasHastaDomingo);
+    }
+
+    let contadorSemana = 1;
+
+    // Generar todas las semanas completas del plan
+    while (inicioSemana <= finPlan) {
+      const finSemana = new Date(inicioSemana);
+      finSemana.setDate(inicioSemana.getDate() + 6);
+
+      todasLasSemanas.push({
+        nombre: `S${contadorSemana}`,
+        fechaInicio: this.formatearFecha(inicioSemana),
+        fechaFin: this.formatearFecha(finSemana),
+        fechaCompacta: this.formatearFechaCompacta(inicioSemana, finSemana)
+      });
+
+      contadorSemana++;
+      inicioSemana.setDate(inicioSemana.getDate() + 7);
+    }
+
+    return todasLasSemanas;
+  }
+
+  // ✅ MÉTODO PARA OBTENER SPOTS POR FECHA CON OBJETO SEMANA
+  private obtenerSpotsPorFechaConSemana(medioOProveedor: any, semana: { fechaInicio: string }): number {
+    if (!medioOProveedor.spotsPorFecha || !semana.fechaInicio) {
+      return 0;
+    }
+    return medioOProveedor.spotsPorFecha[semana.fechaInicio] || 0;
+  }
+
+  // ✅ MÉTODO PARA CALCULAR TOTAL SPOTS DE UN PROVEEDOR
+  private calcularTotalSpotsProveedor(proveedor: any): number {
+    if (!proveedor.spotsPorFecha) {
+      return proveedor.salidas || 0;
+    }
+    return Object.values(proveedor.spotsPorFecha as { [fecha: string]: number }).reduce((total: number, spots: number) => total + (spots || 0), 0);
+  }
+
+  // ✅ MÉTODO PARA CALCULAR VALOR TOTAL DE UN PROVEEDOR
+  private calcularValorTotalProveedor(proveedor: any): number {
+    if (!proveedor.spotsPorFecha) {
+      return proveedor.valorNeto || 0;
+    }
+    
+    const totalSpots = this.calcularTotalSpotsProveedor(proveedor);
+    return totalSpots * (proveedor.tarifa || 0);
+  }
+
+  // Métodos auxiliares para cálculos
+  private calcularValorMensualMedio(medio: any): number {
+    // Calcular valor mensual para el medio completo (encabezado)
+    return this.calcularValorMensual(medio);
+  }
+
+  private calcularValorTotalMedio(medio: any): number {
+    // Calcular valor total para el medio completo (encabezado) 
+    return this.calcularValorTotal(medio);
   }
 
   // Método para navegar con confirmación de cambios pendientes
